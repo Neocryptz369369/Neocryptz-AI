@@ -34,5 +34,9 @@ async def run_browser_task(request: AgentRequest):
 def create_github_repo(repo_name: str):
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
     data = {"name": repo_name, "private": True}
-    response = requests.post("https://github.com", json=data, headers=headers)
+    response = requests.post("https://api.github.com/user/repos", json=data, headers=headers)
     return response.json()
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8001)

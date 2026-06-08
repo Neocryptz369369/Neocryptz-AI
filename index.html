@@ -56,15 +56,17 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ prompt: prompt })
                 });
+
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+
                 const data = await response.json();
                 formatAiResponse(aiMessageId, data.result || 'Task completed successfully.');
             } catch (error) {
-                // Perfect offline playground setup for building your apps!
-                const mockOutput = prompt.toLowerCase().includes('code') || prompt.toLowerCase().includes('html')
-                    ? `Sure! Here is the clean HTML code layout you requested:\n\n\`\`\`html\n<!DOCTYPE html>\n<html lang="en">\n<head>\n    <meta charset="UTF-8">\n    <title>NEOCRYPTZ Project Workspace</title>\n</head>\n<body>\n    <h1>NEOCRYPTZ Custom App Core</h1>\n</body>\n</html>\n\`\`\``
-                    : `System initialized natively. Local playground mode verified successfully. No servers billed!`;
-                
-                formatAiResponse(aiMessageId, mockOutput);
+                console.error('Fetch error:', error);
+                const errorMsg = `[CONNECTION ERROR]\n\n${error.message}\n\nMake sure the backend is running:\nnpm start`;
+                formatAiResponse(aiMessageId, errorMsg);
             }
         }
 
