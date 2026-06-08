@@ -1,6 +1,7 @@
 const { BrowserUse } = require('browser-use-sdk');
 const express = require('express');
 const fs = require('fs');
+const path = require('path');
 const { deployProject } = require('./actions');
 const app = express();
 
@@ -18,15 +19,18 @@ app.use((req, res, next) => {
 
 // Serve HTML
 app.get('/', (req, res) => {
-    try {
-        const path = require('path');
-        const filePath = path.join(__dirname, 'index.html');
+    console.log('GET / request received');
+    const filePath = path.join(__dirname, 'index.html');
+    console.log('Looking for file at:', filePath);
+    
+    if (fs.existsSync(filePath)) {
+        console.log('File found, serving...');
         const html = fs.readFileSync(filePath, 'utf8');
         res.setHeader('Content-Type', 'text/html');
         res.send(html);
-    } catch (err) {
-        console.error('Error loading index.html:', err);
-        res.status(500).send('Error loading index.html: ' + err.message);
+    } else {
+        console.error('File not found at:', filePath);
+        res.status(404).send('index.html not found at: ' + filePath);
     }
 });
 
