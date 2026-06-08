@@ -15,8 +15,12 @@ app.use((req, res, next) => {
     next();
 });
 
+const fs = require('fs');
+
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    const html = fs.readFileSync('./index.html', 'utf8');
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
 });
 
 app.post('/run-task', async (req, res) => {
