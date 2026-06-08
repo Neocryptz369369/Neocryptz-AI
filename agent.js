@@ -19,10 +19,13 @@ app.use((req, res, next) => {
 // Serve HTML
 app.get('/', (req, res) => {
     try {
-        const html = fs.readFileSync('./index.html', 'utf8');
+        const path = require('path');
+        const filePath = path.join(__dirname, 'index.html');
+        const html = fs.readFileSync(filePath, 'utf8');
         res.setHeader('Content-Type', 'text/html');
         res.send(html);
     } catch (err) {
+        console.error('Error loading index.html:', err);
         res.status(500).send('Error loading index.html: ' + err.message);
     }
 });
