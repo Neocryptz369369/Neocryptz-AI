@@ -1,10 +1,17 @@
 const { BrowserUse } = require('browser-use-sdk');
 const express = require('express');
-const cors = require('cors');
 const { deployProject } = require('./actions');
 const app = express();
 app.use(express.json());
-app.use(cors());
+
+// Manual CORS headers
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    res.header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+    if (req.method === 'OPTIONS') return res.sendStatus(200);
+    next();
+});
 
 app.post('/run-task', async (req, res) => {
     try {
