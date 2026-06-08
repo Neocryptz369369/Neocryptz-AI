@@ -1,8 +1,10 @@
 const { BrowserUse } = require('browser-use-sdk');
 const express = require('express');
+const cors = require('cors');
 const { deployProject } = require('./actions');
 const app = express();
 app.use(express.json());
+app.use(cors());
 
 app.post('/run-task', async (req, res) => {
     try {
