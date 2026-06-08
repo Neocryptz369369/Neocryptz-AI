@@ -1,7 +1,7 @@
 {
   "name": "neocryptz-ai",
   "version": "1.0.0",
-  "description": "",
+  "description": "NEOCRYPTZ AI - Local Free Engine",
   "main": "agent.js",
   "scripts": {
     "start": "node agent.js",
