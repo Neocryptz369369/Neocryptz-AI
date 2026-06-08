@@ -1,8 +1,10 @@
 const { BrowserUse } = require('browser-use-sdk');
 const express = require('express');
+const path = require('path');
 const { deployProject } = require('./actions');
 const app = express();
 app.use(express.json());
+app.use(express.static(__dirname));
 
 // Manual CORS headers
 app.use((req, res, next) => {
@@ -11,6 +13,10 @@ app.use((req, res, next) => {
     res.header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
     if (req.method === 'OPTIONS') return res.sendStatus(200);
     next();
+});
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.post('/run-task', async (req, res) => {
