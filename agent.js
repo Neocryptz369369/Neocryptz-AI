@@ -1,12 +1,13 @@
 const { BrowserUse } = require('browser-use-sdk');
 const express = require('express');
-const path = require('path');
+const fs = require('fs');
 const { deployProject } = require('./actions');
 const app = express();
-app.use(express.json());
-app.use(express.static(__dirname));
 
-// Manual CORS headers
+// Middleware
+app.use(express.json());
+
+// CORS headers
 app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
@@ -15,12 +16,15 @@ app.use((req, res, next) => {
     next();
 });
 
-const fs = require('fs');
-
+// Serve HTML
 app.get('/', (req, res) => {
-    const html = fs.readFileSync('./index.html', 'utf8');
-    res.setHeader('Content-Type', 'text/html');
-    res.send(html);
+    try {
+        const html = fs.readFileSync('./index.html', 'utf8');
+        res.setHeader('Content-Type', 'text/html');
+        res.send(html);
+    } catch (err) {
+        res.status(500).send('Error loading index.html: ' + err.message);
+    }
 });
 
 app.post('/run-task', async (req, res) => {
