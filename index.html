@@ -311,7 +311,10 @@
 
             // Populate ad boxes
             for (let i = 1; i <= 4; i++) {
-                if (ads[i-1]) document.getElementById(`ad-${i}`).innerText = ads[i-1].text;
+                const el = document.getElementById(`ad-${i}`);
+                if (el) {
+                    el.innerText = ads[i-1] ? ads[i-1].text : 'Sponsored Content';
+                }
             }
 
             // Update ticker speed
@@ -403,6 +406,7 @@
         async function deleteAd(id) {
             await fetch(`/admin/ads/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
             loadAdminData();
+            loadAds();
         }
 
         async function saveSettings() {
