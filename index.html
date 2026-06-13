@@ -3,117 +3,493 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NEOCRYPTZ AI // BROWSER OS</title>
+    <title>NEOCRYPTZ AI // CLOUD OS V4.1.2</title>
     <style>
-        body { font-family: 'Courier New', monospace; background: #0d1117; color: #c9d1d9; margin: 0; padding: 20px; display: flex; flex-direction: column; height: 95vh; }
-        h1 { color: #58a6ff; font-size: 20px; margin-bottom: 15px; border-bottom: 1px solid #30363d; padding-bottom: 10px; text-shadow: 0 0 10px rgba(88, 166, 255, 0.3); }
-        #chat-window { flex: 1; border: 1px solid #30363d; overflow-y: auto; padding: 20px; background: #161b22; border-radius: 6px; display: flex; flex-direction: column; }
-        .message { margin-bottom: 20px; padding: 12px 16px; border-radius: 6px; line-height: 1.5; max-width: 85%; }
-        .user { background: #21262d; border-left: 4px solid #58a6ff; align-self: flex-start; }
-        .ai { background: #1f242c; border-left: 4px solid #238636; align-self: flex-end; width: 80%; }
-        .code-container { position: relative; background: #05070a; border: 1px solid #30363d; padding: 15px; border-radius: 6px; margin-top: 10px; overflow-x: auto; }
-        pre { margin: 0; color: #39ff14; font-family: 'Consolas', monospace; font-size: 13px; white-space: pre-wrap; }
-        .copy-btn { background: #21262d; color: #58a6ff; border: 1px solid #30363d; padding: 6px 12px; cursor: pointer; border-radius: 4px; font-size: 11px; margin-top: 10px; display: inline-block; transition: all 0.2s; }
-        .copy-btn:hover { background: #58a6ff; color: #0d1117; font-weight: bold; box-shadow: 0 0 8px rgba(88,166,255,0.5); }
-        #input-container { display: flex; margin-top: 15px; gap: 10px; }
-        #input-box { flex: 1; padding: 14px; background: #0d1117; border: 1px solid #30363d; color: #fff; border-radius: 6px; font-family: inherit; font-size: 14px; }
-        #input-box:focus { border-color: #58a6ff; outline: none; }
-        button.send-btn { padding: 0 25px; background: #238636; color: white; border: none; cursor: pointer; border-radius: 6px; font-family: inherit; font-weight: bold; font-size: 14px; }
-        button.send-btn:hover { background: #2ea44f; }
+        :root {
+            --primary: #00ff00;
+            --bg: #000;
+            --text: #fff;
+            --ticker-speed: 25s;
+        }
+        body { font-family: 'Courier New', Courier, monospace; background: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        #sidebar { width: 250px; border-right: 1px solid var(--primary); display: flex; flex-direction: column; padding: 20px; }
+        #main-content { flex: 1; display: flex; flex-direction: column; }
+        #chat-window { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; }
+        .message { margin-bottom: 15px; padding: 10px; border: 1px solid #333; max-width: 800px; align-self: center; width: 100%; }
+        .user { border-color: var(--primary); }
+        .assistant { border-color: #555; }
+        #input-area { padding: 20px; border-top: 1px solid #333; display: flex; justify-content: center; align-items: center; }
+        #message-input { width: 600px; background: #111; border: 1px solid var(--primary); color: #fff; padding: 10px; outline: none; }
+        #send-btn { background: var(--primary); color: #000; border: none; padding: 10px 20px; cursor: pointer; margin-left: 10px; font-weight: bold; }
+        #send-btn:disabled { background: #555; cursor: not-allowed; }
+
+        /* Ticker */
+        #ticker-container { height: 30px; border-top: 1px solid var(--primary); overflow: hidden; background: #050505; white-space: nowrap; }
+        #ticker { display: inline-block; animation: scroll var(--ticker-speed) linear infinite; }
+        @keyframes scroll { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+        .ticker-item { display: inline-block; padding: 5px 20px; color: var(--primary); }
+
+        /* Modals */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { background: #111; border: 1px solid var(--primary); padding: 30px; width: 80%; max-width: 1000px; max-height: 80vh; overflow-y: auto; }
+
+        /* Auth Screen */
+        #auth-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .auth-form { width: 300px; display: flex; flex-direction: column; }
+        .auth-form input { margin-bottom: 10px; padding: 10px; background: #111; border: 1px solid var(--primary); color: #fff; }
+
+        /* Buttons */
+        .btn { background: #222; color: var(--primary); border: 1px solid var(--primary); padding: 5px 10px; cursor: pointer; margin: 5px; }
+        .btn:hover { background: var(--primary); color: #000; }
+
+        pre { position: relative; background: #222; padding: 15px; overflow-x: auto; }
+        .copy-btn { position: absolute; bottom: 5px; right: 5px; font-size: 10px; background: var(--primary); color: #000; border: none; padding: 2px 5px; cursor: pointer; }
+
+        #ad-sidebar { width: 200px; border-left: 1px solid var(--primary); padding: 10px; display: flex; flex-direction: column; }
+        .ad-box { width: 180px; height: 180px; border: 1px solid #333; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; padding: 5px; }
     </style>
 </head>
 <body>
-    <h1>NEOCRYPTZ AI // LOCAL_BROWSER_OS_V1.0</h1>
-    <div id="chat-window"></div>
-    <div id="input-container">
-        <input type="text" id="input-box" placeholder="Ask for code templates, type commands, or automate browser tasks..." onkeypress="handleKeyPress(event)">
-        <button class="send-btn" onclick="sendMessage()">EXECUTE</button>
+    <div id="auth-screen">
+        <h1 style="color: var(--primary);">NEOCRYPTZ AI</h1>
+        <div id="login-form" class="auth-form">
+            <h2 style="text-align:center;">LOGIN</h2>
+            <input type="text" id="login-user" placeholder="Username">
+            <input type="password" id="login-pass" placeholder="Password">
+            <button class="btn" onclick="handleAuth('login')">ENTER OS</button>
+            <p style="text-align:center; font-size: 0.8em; margin-top: 20px;">V4.1.2 Production Ready</p>
+            <button class="btn" style="font-size: 0.7em;" onclick="toggleAuth()">New? Create Account</button>
+        </div>
+        <div id="register-form" class="auth-form" style="display:none;">
+            <h2 style="text-align:center;">REGISTER</h2>
+            <input type="text" id="reg-user" placeholder="Username">
+            <input type="email" id="reg-email" placeholder="Email">
+            <input type="password" id="reg-pass" placeholder="Password">
+            <input type="text" id="reg-name" placeholder="Full Name">
+            <input type="text" id="reg-address" placeholder="Address">
+            <input type="text" id="reg-phone" placeholder="Phone Number">
+            <label style="font-size: 0.7em;"><input type="checkbox" id="reg-tos"> Agree to Code of Conduct</label>
+            <button class="btn" onclick="handleAuth('register')">CREATE ACCOUNT</button>
+            <button class="btn" style="font-size: 0.7em;" onclick="toggleAuth()">Back to Login</button>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <h2 style="color: var(--primary); font-size: 1.2em;">NEOCRYPTZ AI</h2>
+        <div id="user-info" style="margin-bottom: 20px; font-size: 0.9em;"></div>
+        <button class="btn" onclick="openModal('settings-modal')">SETTINGS / OAUTH</button>
+        <button class="btn" onclick="openModal('history-modal')">CHAT HISTORY</button>
+        <button class="btn" onclick="openModal('pricing-modal')">UPGRADE / ADS</button>
+        <div id="admin-section" style="display:none; margin-top: 20px; border-top: 1px solid var(--primary); padding-top: 10px;">
+            <h3 style="font-size: 0.8em; color: var(--primary);">ADMINISTRATIVE</h3>
+            <button class="btn" onclick="openModal('admin-modal')">ADMIN CONSOLE</button>
+        </div>
+        <div style="flex:1;"></div>
+        <button class="btn" style="border-color: #f00; color: #f00;" onclick="logout()">LOGOUT</button>
+    </div>
+
+    <div id="main-content">
+        <div id="chat-window">
+            <div class="message assistant">NEOCRYPTZ AI // CLOUD OS V4.1.2 ONLINE. How can I assist you today?</div>
+        </div>
+        <div id="input-area">
+            <input type="text" id="message-input" placeholder="Enter command or question..." onkeypress="if(event.key==='Enter') sendMessage()">
+            <button id="send-btn" onclick="sendMessage()">EXECUTE</button>
+        </div>
+        <div id="ticker-container">
+            <div id="ticker"></div>
+        </div>
+    </div>
+
+    <div id="ad-sidebar">
+        <div class="ad-box" id="ad-1">Sponsored Content</div>
+        <div class="ad-box" id="ad-2">Sponsored Content</div>
+        <div class="ad-box" id="ad-3">Sponsored Content</div>
+        <div class="ad-box" id="ad-4">Sponsored Content</div>
+    </div>
+
+    <!-- Modals -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <h2>SETTINGS / OAUTH HUB</h2>
+            <input type="text" id="oauth-search" placeholder="Search services..." style="width: 100%; padding: 10px; margin-bottom: 20px; background: #222; border: 1px solid var(--primary); color: #fff;">
+            <div id="oauth-list" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"></div>
+            <button class="btn" onclick="closeModal('settings-modal')" style="margin-top: 20px;">CLOSE</button>
+        </div>
+    </div>
+
+    <div id="admin-modal" class="modal">
+        <div class="modal-content">
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--primary); padding-bottom: 10px;">
+                <button class="btn" onclick="showAdminTab('admin-users')">USERS</button>
+                <button class="btn" onclick="showAdminTab('admin-scrapes')">SCRAPERS</button>
+                <button class="btn" onclick="showAdminTab('admin-ads')">ADS</button>
+                <button class="btn" onclick="showAdminTab('admin-settings')">SETTINGS</button>
+            </div>
+            <div id="admin-users" class="admin-tab">
+                <h3>USER REGISTRY</h3>
+                <table style="width:100%; border-collapse: collapse;">
+                    <thead><tr style="border-bottom: 1px solid #333;"><th>User</th><th>Email</th><th>Plan</th><th>Credits</th><th>Action</th></tr></thead>
+                    <tbody id="admin-user-list"></tbody>
+                </table>
+            </div>
+            <div id="admin-scrapes" class="admin-tab" style="display:none;">
+                <h3>SCRAPE BACKUP</h3>
+                <div id="scrapes-container"></div>
+            </div>
+            <div id="admin-ads" class="admin-tab" style="display:none;">
+                <h3>AD MANAGEMENT</h3>
+                <div style="margin-bottom: 20px;">
+                    <input type="text" id="new-ad-text" placeholder="Ad Text (max 25 words)" style="width:70%; padding:10px;">
+                    <button class="btn" onclick="createAd()">CREATE SYSTEM AD</button>
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label>Ticker Speed: <input type="range" id="speed-slider" min="5" max="150" value="25" oninput="updateSpeedVal(this.value)"> <span id="speed-val">25</span>s</label>
+                    <button class="btn" onclick="saveSettings()">SAVE SPEED</button>
+                </div>
+                <table style="width:100%; border-collapse: collapse;">
+                    <thead><tr style="border-bottom: 1px solid #333;"><th>Type</th><th>Content</th><th>Status</th><th>Action</th></tr></thead>
+                    <tbody id="admin-ad-list"></tbody>
+                </table>
+            </div>
+            <div id="admin-settings" class="admin-tab" style="display:none;">
+                <h3>SYSTEM API KEYS</h3>
+                <div id="keys-container" style="display:flex; flex-direction:column; gap:10px;"></div>
+                <button class="btn" onclick="saveSettings()" style="margin-top:20px;">SAVE KEYS</button>
+            </div>
+            <button class="btn" onclick="closeModal('admin-modal')" style="margin-top: 20px;">CLOSE</button>
+        </div>
+    </div>
+
+    <div id="pricing-modal" class="modal">
+        <div class="modal-content">
+            <h2>AI SERVICE PLANS</h2>
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:20px;">
+                <div style="border:1px solid var(--primary); padding:20px; text-align:center;">
+                    <h3>STARTER</h3>
+                    <p>$9 / month</p>
+                    <p>500 Credits</p>
+                    <button class="btn" onclick="buyPlan('Starter')">BUY NOW</button>
+                </div>
+                <div style="border:1px solid var(--primary); padding:20px; text-align:center; background: rgba(0,255,0,0.1);">
+                    <h3>UNLIMITED TEXT</h3>
+                    <p>$20 / month</p>
+                    <p>Unlimited Credits</p>
+                    <button class="btn" onclick="buyPlan('Unlimited Text')">BUY NOW</button>
+                </div>
+                <div style="border:1px solid var(--primary); padding:20px; text-align:center;">
+                    <h3>POWER</h3>
+                    <p>$79 / month</p>
+                    <p>6,000 Credits</p>
+                    <button class="btn" onclick="buyPlan('Power')">BUY NOW</button>
+                </div>
+            </div>
+            <h2 style="margin-top:40px;">ADVERTISING SERVICES</h2>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+                <div style="border:1px solid var(--primary); padding:20px; text-align:center;">
+                    <h3>TICKER AD (MONTHLY)</h3>
+                    <p>$5 / month</p>
+                    <button class="btn" onclick="buyAd('monthly')">PURCHASE</button>
+                </div>
+                <div style="border:1px solid var(--primary); padding:20px; text-align:center;">
+                    <h3>TICKER AD (YEARLY)</h3>
+                    <p>$50 / year</p>
+                    <button class="btn" onclick="buyAd('yearly')">PURCHASE</button>
+                </div>
+            </div>
+            <button class="btn" onclick="closeModal('pricing-modal')" style="margin-top: 20px;">CLOSE</button>
+        </div>
     </div>
 
     <script>
-        const chatWindow = document.getElementById('chat-window');
-        const inputBox = document.getElementById('input-box');
+        let token = localStorage.getItem('token');
+        let currentUser = null;
+        let session_id = uuidv4();
 
-        function handleKeyPress(e) {
-            if (e.key === 'Enter') sendMessage();
+        function uuidv4() { return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)); }
+
+        async function init() {
+            if (token) {
+                const resp = await fetch('/users/me', { headers: { 'Authorization': `Bearer ${token}` } });
+                if (resp.ok) {
+                    currentUser = await resp.json();
+                    document.getElementById('auth-screen').style.display = 'none';
+                    const creditsDisp = (currentUser.credits >= 999999 || currentUser.credits === null) ? 'Unlimited' : currentUser.credits;
+                    document.getElementById('user-info').innerHTML = `USER: ${currentUser.username}<br>PLAN: ${currentUser.plan}<br>CREDITS: ${creditsDisp}`;
+                    if (currentUser.is_admin) document.getElementById('admin-section').style.display = 'block';
+                } else {
+                    logout();
+                }
+            }
+            loadAds();
+        }
+
+        async function handleAuth(type) {
+            const user = document.getElementById(type === 'login' ? 'login-user' : 'reg-user').value;
+            const pass = document.getElementById(type === 'login' ? 'login-pass' : 'reg-pass').value;
+
+            if (type === 'login') {
+                const formData = new FormData();
+                formData.append('username', user);
+                formData.append('password', pass);
+                const resp = await fetch('/token', { method: 'POST', body: formData });
+                if (resp.ok) {
+                    const data = await resp.json();
+                    localStorage.setItem('token', data.access_token);
+                    location.reload();
+                } else { alert('Login Failed'); }
+            } else {
+                const email = document.getElementById('reg-email').value;
+                const name = document.getElementById('reg-name').value;
+                const addr = document.getElementById('reg-address').value;
+                const phone = document.getElementById('reg-phone').value;
+                if (!document.getElementById('reg-tos').checked) return alert('Agree to terms');
+
+                const resp = await fetch('/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: user, email, password: pass, full_name: name, address: addr, phone: phone })
+                });
+                if (resp.ok) { alert('Registered. Please Login.'); toggleAuth(); } else { alert('Registration Failed'); }
+            }
         }
 
         async function sendMessage() {
-            const prompt = inputBox.value.trim();
-            if (!prompt) return;
+            const input = document.getElementById('message-input');
+            const msg = input.value.trim();
+            if (!msg) return;
 
-            chatWindow.innerHTML += `<div class="message user"><b>YOU:</b><br>${escapeHtml(prompt)}</div>`;
-            inputBox.value = '';
-            chatWindow.scrollTop = chatWindow.scrollHeight;
+            appendMessage('user', msg);
+            input.value = '';
 
-            const aiMessageId = 'ai-' + Date.now();
-            chatWindow.innerHTML += `<div class="message ai" id="${aiMessageId}"><b>NEOCRYPTZ AI:</b><br><span style="color:#8b949e">Thinking and processing automation pipeline...</span></div>`;
-            chatWindow.scrollTop = chatWindow.scrollHeight;
+            const btn = document.getElementById('send-btn');
+            btn.disabled = true;
+            let countdown = 60;
+            const timer = setInterval(() => {
+                btn.innerText = `WAIT ${--countdown}s`;
+                if (countdown <= 0) { clearInterval(timer); btn.disabled = false; btn.innerText = 'EXECUTE'; }
+            }, 1000);
 
-            try {
-                const response = await fetch('http://localhost:8000/run-task', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: prompt })
-                });
-                const data = await response.json();
-                formatAiResponse(aiMessageId, data.result || 'Task completed successfully.');
-            } catch (error) {
-                // Perfect offline playground setup for building your apps!
-                const mockOutput = prompt.toLowerCase().includes('code') || prompt.toLowerCase().includes('html')
-                    ? `Sure! Here is the clean HTML code layout you requested:\n\n\`\`\`html\n<!DOCTYPE html>\n<html lang="en">\n<head>\n    <meta charset="UTF-8">\n    <title>NEOCRYPTZ Project Workspace</title>\n</head>\n<body>\n    <h1>NEOCRYPTZ Custom App Core</h1>\n</body>\n</html>\n\`\`\``
-                    : `System initialized natively. Local playground mode verified successfully. No servers billed!`;
-                
-                formatAiResponse(aiMessageId, mockOutput);
-            }
-        }
-
-        function formatAiResponse(elementId, text) {
-            const container = document.getElementById(elementId);
-            const codeBlockRegex = /```(\w*)\n([\s\S]*?)```/g;
-            let processedHtml = `<b>NEOCRYPTZ AI:</b><br>`;
-            let lastIndex = 0;
-            let matches;
-            let hasCode = false;
-
-            while ((matches = codeBlockRegex.exec(text)) !== null) {
-                const matchIndex = matches.index;
-                const plainText = text.substring(lastIndex, matchIndex);
-                processedHtml += escapeHtml(plainText).replace(/\n/g, '<br>');
-
-                const codeId = 'code-' + Math.random().toString(36).substr(2, 9);
-                const codeBody = matches[2]; // Fixed object mapping glitch!
-                
-                processedHtml += `
-                    <div class="code-container">
-                        <pre id="${codeId}">${escapeHtml(codeBody)}</pre>
-                    </div>
-                    <button class="copy-btn" onclick="copyToClipboard('${codeId}')">📋 Copy to Clipboard</button>
-                `;
-                lastIndex = codeBlockRegex.lastIndex;
-                hasCode = true;
-            }
-
-            if (!hasCode) {
-                processedHtml += escapeHtml(text).replace(/\n/g, '<br>');
-            } else if (lastIndex < text.length) {
-                processedHtml += escapeHtml(text.substring(lastIndex)).replace(/\n/g, '<br>');
-            }
-
-            container.innerHTML = processedHtml;
-            chatWindow.scrollTop = chatWindow.scrollHeight;
-        }
-
-        function escapeHtml(text) {
-            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        }
-
-        function copyToClipboard(elementId) {
-            const text = document.getElementById(elementId).innerText;
-            navigator.clipboard.writeText(text).then(() => {
-                alert('Copied straight to clipboard!');
+            const resp = await fetch('/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ message: msg, session_id: session_id })
             });
+
+            const data = await resp.json();
+            if (resp.ok) { appendMessage('assistant', data.reply); } else { appendMessage('assistant', `ERROR: ${data.detail || 'Request Failed'}`); }
         }
+
+        function appendMessage(role, text) {
+            const win = document.getElementById('chat-window');
+            const div = document.createElement('div');
+            div.className = `message ${role}`;
+            div.innerHTML = formatText(text);
+            win.appendChild(div);
+            win.scrollTop = win.scrollHeight;
+        }
+
+        function formatText(text) {
+            // Simple markdown-ish code block formatting
+            return text.replace(/```([\s\S]*?)```/g, (match, code) => {
+                const id = uuidv4();
+                return `<pre id="${id}">${code}<button class="copy-btn" onclick="copyToClipboard('${id}')">COPY</button></pre>`;
+            }).replace(/\n/g, '<br>');
+        }
+
+        async function copyToClipboard(id) {
+            const code = document.getElementById(id).innerText.replace('COPY', '');
+            await navigator.clipboard.writeText(code);
+            alert('Copied to clipboard');
+        }
+
+        async function loadAds() {
+            const resp = await fetch('/ads/active');
+            const ads = await resp.json();
+            const ticker = document.getElementById('ticker');
+            ticker.innerHTML = ads.map(a => `<span class="ticker-item">${a.text}</span>`).join('');
+
+            // Populate ad boxes
+            for (let i = 1; i <= 4; i++) {
+                if (ads[i-1]) document.getElementById(`ad-${i}`).innerText = ads[i-1].text;
+            }
+
+            // Update ticker speed
+            const settingsResp = await fetch('/admin/settings', { headers: { 'Authorization': `Bearer ${token}` } });
+            if (settingsResp.ok) {
+                const settings = await settingsResp.json();
+                document.documentElement.style.setProperty('--ticker-speed', `${settings.ticker_speed}s`);
+                if (document.getElementById('speed-slider')) {
+                    document.getElementById('speed-slider').value = settings.ticker_speed;
+                    document.getElementById('speed-val').innerText = settings.ticker_speed;
+                }
+            }
+        }
+
+        function toggleAuth() {
+            const l = document.getElementById('login-form');
+            const r = document.getElementById('register-form');
+            l.style.display = l.style.display === 'none' ? 'flex' : 'none';
+            r.style.display = r.style.display === 'none' ? 'flex' : 'none';
+        }
+
+        function openModal(id) { document.getElementById(id).style.display = 'flex'; if (id === 'admin-modal') loadAdminData(); }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        function logout() { localStorage.removeItem('token'); location.reload(); }
+
+        // Admin
+        function showAdminTab(id) {
+            document.querySelectorAll('.admin-tab').forEach(t => t.style.display = 'none');
+            document.getElementById(id).style.display = 'block';
+        }
+
+        async function loadAdminData() {
+            const userResp = await fetch('/admin/users', { headers: { 'Authorization': `Bearer ${token}` } });
+            const users = await userResp.json();
+            const list = document.getElementById('admin-user-list');
+            list.innerHTML = Object.values(users).map(u => `
+                <tr>
+                    <td>${u.username}</td>
+                    <td>${u.email}</td>
+                    <td>${u.plan}</td>
+                    <td>${u.credits}</td>
+                    <td>
+                        <button onclick="grantUnlimited('${u.username}')">GIFT ELITE</button>
+                        <button onclick="banUser('${u.username}')">BAN</button>
+                        <button onclick="viewLogs('${u.username}')">VIEW LOGS</button>
+                    </td>
+                </tr>
+            `).join('');
+
+            const adsResp = await fetch('/ads/active');
+            const ads = await adsResp.json();
+            document.getElementById('admin-ad-list').innerHTML = ads.map(a => `
+                <tr>
+                    <td>${a.type}</td>
+                    <td>${a.text}</td>
+                    <td>${a.status}</td>
+                    <td><button onclick="deleteAd('${a.id}')">DELETE</button></td>
+                </tr>
+            `).join('');
+
+            const scrapesResp = await fetch('/admin/scrapes', { headers: { 'Authorization': `Bearer ${token}` } });
+            const scrapes = await scrapesResp.json();
+            document.getElementById('scrapes-container').innerHTML = scrapes.length ? scrapes.map(s => `
+                <div style="border: 1px solid #333; padding: 10px; margin-bottom: 5px; font-size: 0.8em;">
+                    <div style="color: var(--primary);">${new Date(s.timestamp).toLocaleString()}</div>
+                    <div><strong>QUERY:</strong> ${s.query}</div>
+                    <div style="color: #888;"><strong>REPLY:</strong> ${s.reply.substring(0, 200)}...</div>
+                </div>
+            `).join('') : '<p>No scrapes recorded.</p>';
+
+            const settingsResp = await fetch('/admin/settings', { headers: { 'Authorization': `Bearer ${token}` } });
+            const settings = await settingsResp.json();
+            const keysContainer = document.getElementById('keys-container');
+            keysContainer.innerHTML = Object.keys(settings).filter(k => k.includes('key') || k === 'google_search_cx').map(k => `
+                <label>${k}: <input type="text" id="setting-${k}" value="${settings[k]}" style="width: 100%; padding: 5px;"></label>
+            `).join('');
+        }
+
+        async function grantUnlimited(username) {
+            await fetch(`/admin/grant-unlimited/${username}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
+            loadAdminData();
+        }
+
+        async function banUser(username) {
+            await fetch(`/admin/ban/${username}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
+            loadAdminData();
+        }
+
+        async function deleteAd(id) {
+            await fetch(`/admin/ads/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+            loadAdminData();
+        }
+
+        async function saveSettings() {
+            const speed = document.getElementById('speed-slider').value;
+            const settings = { ticker_speed: parseInt(speed) };
+            document.querySelectorAll('[id^="setting-"]').forEach(input => {
+                settings[input.id.replace('setting-', '')] = input.value;
+            });
+            await fetch('/admin/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(settings)
+            });
+            loadAds();
+            alert('Settings Saved');
+        }
+
+        function updateSpeedVal(val) {
+            document.getElementById('speed-val').innerText = val;
+            document.documentElement.style.setProperty('--ticker-speed', `${val}s`);
+        }
+
+        async function createAd() {
+            const text = document.getElementById('new-ad-text').value;
+            if (!text) return alert('Enter ad text');
+            const resp = await fetch('/admin/ads/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ text: text })
+            });
+            if (resp.ok) {
+                alert('Ad created successfully');
+                document.getElementById('new-ad-text').value = '';
+                loadAdminData();
+                loadAds();
+            } else {
+                alert('Failed to create ad');
+            }
+        }
+
+        async function viewLogs(username) {
+            const resp = await fetch(`/admin/user-logs/${username}`, { headers: { 'Authorization': `Bearer ${token}` } });
+            const logs = await resp.json();
+            if (!logs.length) return alert('No logs found for this user.');
+
+            // Simple grouping by date for "calendar" feel
+            const grouped = {};
+            logs.forEach(l => {
+                const date = new Date(l.timestamp).toDateString();
+                if (!grouped[date]) grouped[date] = [];
+                grouped[date].push(l);
+            });
+
+            let logHtml = `<h2>LOGS FOR ${username}</h2>`;
+            for (const date in grouped) {
+                logHtml += `<div style="border: 1px solid var(--primary); margin-top: 10px; padding: 10px;">
+                    <h3 style="margin: 0; color: var(--primary);">${date}</h3>
+                    ${grouped[date].map(l => `
+                        <div style="margin-top: 10px; border-top: 1px solid #222; padding-top: 5px;">
+                            <div style="font-size: 0.7em; color: #555;">${new Date(l.timestamp).toLocaleTimeString()}</div>
+                            <div><strong>U:</strong> ${l.message}</div>
+                            <div style="color: #aaa;"><strong>A:</strong> ${l.reply}</div>
+                        </div>
+                    `).join('')}
+                </div>`;
+            }
+
+            const logWin = window.open("", "Chat Logs", "width=800,height=600");
+            logWin.document.body.style.background = "#000";
+            logWin.document.body.style.color = "#fff";
+            logWin.document.body.style.fontFamily = "monospace";
+            logWin.document.body.innerHTML = logHtml;
+        }
+
+        function buyPlan(plan) {
+            const email = encodeURIComponent('bestcabautogroup@yahoo.com');
+            const price = { 'Starter': 9, 'Unlimited Text': 20, 'Power': 79 }[plan];
+            window.location.href = `https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=${email}&item_name=${plan}&amount=${price}&currency_code=USD`;
+        }
+
+        function buyAd(plan) {
+            const email = encodeURIComponent('bestcabautogroup@yahoo.com');
+            const price = plan === 'monthly' ? 5 : 50;
+            window.location.href = `https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=${email}&item_name=Ad_${plan}&amount=${price}&currency_code=USD`;
+        }
+
+        init();
     </script>
 </body>
 </html>
