@@ -53,13 +53,7 @@
 
 
 
-  <!-- Lightning bolts like in the logo -->
-  <g stroke="#00ffff" fill="none" stroke-width="6" filter="url(#neonBlue)">
-    <polyline points="100,200 60,280 90,280 50,360" />
-    <polyline points="180,120 140,200 170,200 130,280" />
-    <polyline points="924,200 964,280 934,280 974,360" />
-    <polyline points="844,120 884,200 854,200 894,280" />
-  </g>
+
 
   <!-- Crypt Building -->
   <!-- Base Ground -->
