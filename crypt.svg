@@ -1,0 +1,127 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1024" height="1024" fill="#000000" />
+
+  <defs>
+    <!-- Hot Pink Neon Filter -->
+    <filter id="neonPink" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="5" result="blur1" />
+      <feGaussianBlur stdDeviation="15" result="blur2" />
+      <feGaussianBlur stdDeviation="25" result="blur3" />
+      <feMerge>
+        <feMergeNode in="blur3" />
+        <feMergeNode in="blur2" />
+        <feMergeNode in="blur1" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <!-- Hot Blue Neon Filter -->
+    <filter id="neonBlue" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="5" result="blur1" />
+      <feGaussianBlur stdDeviation="15" result="blur2" />
+      <feGaussianBlur stdDeviation="25" result="blur3" />
+      <feMerge>
+        <feMergeNode in="blur3" />
+        <feMergeNode in="blur2" />
+        <feMergeNode in="blur1" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <!-- Hot Pink Inner Glow -->
+    <filter id="neonPinkInner" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="blur1" />
+      <feMerge>
+        <feMergeNode in="blur1" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <!-- Background Grid -->
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#ff00ff" stroke-width="1" opacity="0.2"/>
+    </pattern>
+
+
+
+  </defs>
+
+  <!-- Background Grid -->
+  <rect width="1024" height="1024" fill="url(#grid)" />
+
+
+
+
+
+  <!-- Lightning bolts like in the logo -->
+  <g stroke="#00ffff" fill="none" stroke-width="6" filter="url(#neonBlue)">
+    <polyline points="100,200 60,280 90,280 50,360" />
+    <polyline points="180,120 140,200 170,200 130,280" />
+    <polyline points="924,200 964,280 934,280 974,360" />
+    <polyline points="844,120 884,200 854,200 894,280" />
+  </g>
+
+  <!-- Crypt Building -->
+  <!-- Base Ground -->
+  <line x1="150" y1="850" x2="874" y2="850" stroke="#00ffff" stroke-width="12" filter="url(#neonBlue)" />
+  <line x1="150" y1="850" x2="874" y2="850" stroke="#ffffff" stroke-width="4" />
+
+  <!-- Steps -->
+  <rect x="250" y="800" width="524" height="50" fill="none" stroke="#ff00ff" stroke-width="8" filter="url(#neonPink)" />
+  <rect x="250" y="800" width="524" height="50" fill="none" stroke="#ffffff" stroke-width="3" />
+
+  <rect x="300" y="750" width="424" height="50" fill="none" stroke="#00ffff" stroke-width="8" filter="url(#neonBlue)" />
+  <rect x="300" y="750" width="424" height="50" fill="none" stroke="#ffffff" stroke-width="3" />
+
+  <!-- Main Body -->
+  <rect x="280" y="450" width="464" height="300" fill="none" stroke="#ff00ff" stroke-width="12" filter="url(#neonPink)" />
+  <rect x="280" y="450" width="464" height="300" fill="none" stroke="#ffffff" stroke-width="4" />
+
+  <!-- Outer Pillars -->
+  <rect x="280" y="450" width="40" height="300" fill="none" stroke="#00ffff" stroke-width="8" filter="url(#neonBlue)" />
+  <rect x="704" y="450" width="40" height="300" fill="none" stroke="#00ffff" stroke-width="8" filter="url(#neonBlue)" />
+
+  <!-- Inner Pillars -->
+  <rect x="380" y="450" width="30" height="300" fill="none" stroke="#00ffff" stroke-width="8" filter="url(#neonBlue)" />
+  <rect x="614" y="450" width="30" height="300" fill="none" stroke="#00ffff" stroke-width="8" filter="url(#neonBlue)" />
+
+  <!-- Crypt Roof -->
+  <polygon points="240,450 512,220 784,450" fill="none" stroke="#ff00ff" stroke-width="12" filter="url(#neonPink)" />
+  <polygon points="240,450 512,220 784,450" fill="none" stroke="#ffffff" stroke-width="4" />
+
+  <!-- Inner Roof Triangle -->
+  <polygon points="300,450 512,270 724,450" fill="none" stroke="#00ffff" stroke-width="8" filter="url(#neonBlue)" />
+
+
+
+  <!-- Decorative Cross on top of the roof -->
+  <line x1="512" y1="120" x2="512" y2="220" stroke="#00ffff" stroke-width="10" filter="url(#neonBlue)" />
+  <line x1="472" y1="160" x2="552" y2="160" stroke="#00ffff" stroke-width="10" filter="url(#neonBlue)" />
+  <line x1="512" y1="120" x2="512" y2="220" stroke="#ffffff" stroke-width="3" />
+  <line x1="472" y1="160" x2="552" y2="160" stroke="#ffffff" stroke-width="3" />
+
+  <!-- Door Arch/Frame -->
+  <path d="M 432 750 L 432 580 A 80 80 0 0 1 592 580 L 592 750" fill="none" stroke="#ff00ff" stroke-width="10" filter="url(#neonPink)" />
+  <path d="M 432 750 L 432 580 A 80 80 0 0 1 592 580 L 592 750" fill="none" stroke="#ffffff" stroke-width="3" />
+
+  <!-- Text: Neocryptz AI on top of the door frame -->
+  <text x="512" y="470" font-family="sans-serif" font-weight="bold" font-size="32" fill="#ff00ff" filter="url(#neonPink)" letter-spacing="2" text-anchor="middle">Neocryptz AI</text>
+  <text x="512" y="470" font-family="sans-serif" font-weight="bold" font-size="32" fill="#ffffff" letter-spacing="2" text-anchor="middle">Neocryptz AI</text>
+
+  <!-- Door -->
+  <path d="M 444 750 L 444 580 A 68 68 0 0 1 580 580 L 580 750" fill="none" stroke="#00ffff" stroke-width="6" filter="url(#neonBlue)" />
+  <!-- Door Handles -->
+  <circle cx="500" cy="650" r="5" fill="#ff00ff" filter="url(#neonPink)" />
+  <circle cx="524" cy="650" r="5" fill="#ff00ff" filter="url(#neonPink)" />
+  <!-- Door Split Line -->
+  <line x1="512" y1="512" x2="512" y2="750" stroke="#00ffff" stroke-width="4" filter="url(#neonBlue)" />
+
+  <!-- Number 1 on the door -->
+  <text x="512" y="620" font-family="'Courier New', Courier, monospace" font-size="60" font-style="italic" font-weight="bold" fill="#ff00ff" text-anchor="middle" filter="url(#neonPink)">1</text>
+  <text x="512" y="620" font-family="'Courier New', Courier, monospace" font-size="60" font-style="italic" font-weight="bold" fill="#ffffff" text-anchor="middle">1</text>
+
+  <!-- Ground reflection/Glow effect -->
+  <ellipse cx="512" cy="850" rx="350" ry="20" fill="#00ffff" opacity="0.3" filter="url(#neonBlue)" />
+  <ellipse cx="512" cy="850" rx="200" ry="10" fill="#ff00ff" opacity="0.4" filter="url(#neonPink)" />
+
+</svg>
