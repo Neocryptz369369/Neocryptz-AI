@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NEOCRYPTZ AI // CLOUD OS V4.1.2</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --primary: #00ff00;
@@ -202,21 +203,31 @@
     </div>
 
     <script>
-        let token = localStorage.getItem('token');
+        const _supabaseUrl = 'https://bxzvxgjnlvbexeuocbey.supabase.co';
+        const _supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ4enZ4Z2pubHZiZXhldW9jYmV5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNzY3NjQsImV4cCI6MjA5NTY1Mjc2NH0.DWlzaP_xciNKfBDO-c_VTxTsaFVZjdfANesVY9Kjih0';
+        const supabase = window.supabase.createClient(_supabaseUrl, _supabaseAnonKey);
+
         let currentUser = null;
         let session_id = uuidv4();
+        let token = localStorage.getItem('token');
 
         function uuidv4() { return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)); }
 
         async function init() {
-            if (token) {
-                // Mock Frontend Login bypassing backend API
-                currentUser = {
-                    username: localStorage.getItem('username') || "admin",
+            const { data: { session } } = await supabase.auth.getSession();
+
+            if (session) {
+                const { data: userProfile, error } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+
+                currentUser = userProfile || {
+                    username: session.user.email.split('@')[0],
                     plan: "Power",
                     credits: 999999,
                     is_admin: true
                 };
+
+                // Add the token back to localStorage so the mocked backend API endpoints for ads keep working
+                localStorage.setItem('token', session.access_token);
 
                 document.getElementById('auth-screen').style.display = 'none';
                 const creditsDisp = (currentUser.credits >= 999999 || currentUser.credits === null) ? 'Unlimited' : currentUser.credits;
@@ -227,19 +238,49 @@
         }
 
         async function handleAuth(type) {
-            const user = document.getElementById(type === 'login' ? 'login-user' : 'reg-user').value || 'admin';
+            const email = document.getElementById(type === 'login' ? 'login-user' : 'reg-email').value;
+            const pass = document.getElementById(type === 'login' ? 'login-pass' : 'reg-pass').value;
+
+            // Re-route legacy username login fields to email format for Supabase if not an email
+            const formatEmail = (input) => input.includes('@') ? input : `${input}@neocryptz.ai`;
+            const validEmail = formatEmail(email);
 
             if (type === 'login') {
-                // Instantly log the user in locally without a backend
-                localStorage.setItem('token', 'mock-frontend-token');
-                localStorage.setItem('username', user);
-                location.reload();
+                if (!email || !pass) return alert("Enter credentials");
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: validEmail,
+                    password: pass
+                });
+
+                if (error) {
+                    alert('Login Failed: ' + error.message);
+                } else {
+                    location.reload();
+                }
             } else {
                 if (!document.getElementById('reg-tos').checked) return alert('Agree to terms');
+                if (!email || !pass) return alert("Enter all details");
 
-                alert('Registered. Please Login.');
-                toggleAuth();
+                const { data, error } = await supabase.auth.signUp({
+                    email: validEmail,
+                    password: pass,
+                    options: { data: { full_name: document.getElementById('reg-name')?.value } }
+                });
+
+                if (error) {
+                    alert('Registration Failed: ' + error.message);
+                } else {
+                    alert('Registered successfully. Please Login.');
+                    toggleAuth();
+                }
             }
+        }
+
+        // Also update the logout function to sign out of Supabase
+        async function logout() {
+            await supabase.auth.signOut();
+            localStorage.removeItem('token');
+            location.reload();
         }
 
         async function sendMessage() {
@@ -299,10 +340,7 @@
 
             // Populate ad boxes
             for (let i = 1; i <= 4; i++) {
-                const el = document.getElementById(`ad-${i}`);
-                if (el) {
-                    el.innerText = ads[i-1] ? ads[i-1].text : 'Sponsored Content';
-                }
+                if (ads[i-1]) document.getElementById(`ad-${i}`).innerText = ads[i-1].text;
             }
 
             // Update ticker speed
@@ -326,7 +364,6 @@
 
         function openModal(id) { document.getElementById(id).style.display = 'flex'; if (id === 'admin-modal') loadAdminData(); }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-        function logout() { localStorage.removeItem('token'); location.reload(); }
 
         // Admin
         function showAdminTab(id) {
@@ -394,7 +431,6 @@
         async function deleteAd(id) {
             await fetch(`/admin/ads/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
             loadAdminData();
-            loadAds();
         }
 
         async function saveSettings() {
