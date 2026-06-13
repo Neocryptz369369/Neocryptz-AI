@@ -211,7 +211,7 @@
     <script>
         const _supabaseUrl = 'https://bxzvxgjnlvbexeuocbey.supabase.co';
         const _supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ4enZ4Z2pubHZiZXhldW9jYmV5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNzY3NjQsImV4cCI6MjA5NTY1Mjc2NH0.DWlzaP_xciNKfBDO-c_VTxTsaFVZjdfANesVY9Kjih0';
-        const supabase = window.supabase.createClient(_supabaseUrl, _supabaseAnonKey);
+        const supabaseClient = window.supabase.createClient(_supabaseUrl, _supabaseAnonKey);
 
         let currentUser = null;
         let session_id = uuidv4();
@@ -226,10 +226,10 @@
             let userProfile = null;
 
             try {
-                const { data } = await supabase.auth.getSession();
+                const { data } = await supabaseClient.auth.getSession();
                 session = data.session;
                 if (session) {
-                    const profileResp = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+                    const profileResp = await supabaseClient.from('profiles').select('*').eq('id', session.user.id).single();
                     userProfile = profileResp.data;
                 }
             } catch (err) {
@@ -291,7 +291,7 @@
                 // Try Supabase first
                 let supaError = null;
                 try {
-                    const { data, error } = await supabase.auth.signInWithPassword({
+                    const { data, error } = await supabaseClient.auth.signInWithPassword({
                         email: validEmail,
                         password: pass
                     });
@@ -329,7 +329,7 @@
 
                 let supaError = null;
                 try {
-                    const { data, error } = await supabase.auth.signUp({
+                    const { data, error } = await supabaseClient.auth.signUp({
                         email: validEmail,
                         password: pass,
                         options: { data: { full_name: fullName } }
@@ -367,7 +367,7 @@
 
         // Also update the logout function to sign out of Supabase
         async function logout() {
-            try { await supabase.auth.signOut(); } catch(e){}
+            try { await supabaseClient.auth.signOut(); } catch(e){}
             localStorage.removeItem('token');
             localStorage.removeItem('currentUser');
             location.reload();
