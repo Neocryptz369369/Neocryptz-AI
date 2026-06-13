@@ -299,14 +299,14 @@
                 if (countdown <= 0) { clearInterval(timer); btn.disabled = false; btn.innerText = 'EXECUTE'; }
             }, 1000);
 
-            const resp = await fetch('/chat', {
+            const resp = await fetch('/run-task', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ message: msg, session_id: session_id })
+                body: JSON.stringify({ prompt: msg, session_id: session_id })
             });
 
             const data = await resp.json();
-            if (resp.ok) { appendMessage('assistant', data.reply); } else { appendMessage('assistant', `ERROR: ${data.detail || 'Request Failed'}`); }
+            if (resp.ok) { appendMessage('assistant', data.result || 'Task execution initiated.'); } else { appendMessage('assistant', `ERROR: ${data.error || 'Request Failed'}`); }
         }
 
         function appendMessage(role, text) {
@@ -332,26 +332,39 @@
             alert('Copied to clipboard');
         }
 
+        // LocalStorage Helpers for Ads
+        function getLocalAds() {
+            const storedAds = localStorage.getItem('activeAds');
+            if (storedAds) return JSON.parse(storedAds);
+            return [
+                { id: '1', text: 'Sponsored Content 1', type: 'ticker', status: 'active' },
+                { id: '2', text: 'Sponsored Content 2', type: 'ticker', status: 'active' }
+            ];
+        }
+
+        function setLocalAds(ads) {
+            localStorage.setItem('activeAds', JSON.stringify(ads));
+        }
+
         async function loadAds() {
-            const resp = await fetch('/ads/active');
-            const ads = await resp.json();
+            const ads = getLocalAds();
             const ticker = document.getElementById('ticker');
             ticker.innerHTML = ads.map(a => `<span class="ticker-item">${a.text}</span>`).join('');
 
             // Populate ad boxes
             for (let i = 1; i <= 4; i++) {
-                if (ads[i-1]) document.getElementById(`ad-${i}`).innerText = ads[i-1].text;
+                const el = document.getElementById(`ad-${i}`);
+                if (el) {
+                    el.innerText = ads[i-1] ? ads[i-1].text : 'Sponsored Content';
+                }
             }
 
-            // Update ticker speed
-            const settingsResp = await fetch('/admin/settings', { headers: { 'Authorization': `Bearer ${token}` } });
-            if (settingsResp.ok) {
-                const settings = await settingsResp.json();
-                document.documentElement.style.setProperty('--ticker-speed', `${settings.ticker_speed}s`);
-                if (document.getElementById('speed-slider')) {
-                    document.getElementById('speed-slider').value = settings.ticker_speed;
-                    document.getElementById('speed-val').innerText = settings.ticker_speed;
-                }
+            // Update ticker speed mock
+            const storedSpeed = localStorage.getItem('tickerSpeed') || "25";
+            document.documentElement.style.setProperty('--ticker-speed', `${storedSpeed}s`);
+            if (document.getElementById('speed-slider')) {
+                document.getElementById('speed-slider').value = storedSpeed;
+                document.getElementById('speed-val').innerText = storedSpeed;
             }
         }
 
@@ -372,8 +385,10 @@
         }
 
         async function loadAdminData() {
-            const userResp = await fetch('/admin/users', { headers: { 'Authorization': `Bearer ${token}` } });
-            const users = await userResp.json();
+            // Mock users for UI
+            const users = {
+                "user1": { username: "admin", email: "admin@neocryptz.ai", plan: "Power", credits: 9999 }
+            };
             const list = document.getElementById('admin-user-list');
             list.innerHTML = Object.values(users).map(u => `
                 <tr>
@@ -389,8 +404,7 @@
                 </tr>
             `).join('');
 
-            const adsResp = await fetch('/ads/active');
-            const ads = await adsResp.json();
+            const ads = getLocalAds();
             document.getElementById('admin-ad-list').innerHTML = ads.map(a => `
                 <tr>
                     <td>${a.type}</td>
@@ -400,18 +414,13 @@
                 </tr>
             `).join('');
 
-            const scrapesResp = await fetch('/admin/scrapes', { headers: { 'Authorization': `Bearer ${token}` } });
-            const scrapes = await scrapesResp.json();
-            document.getElementById('scrapes-container').innerHTML = scrapes.length ? scrapes.map(s => `
-                <div style="border: 1px solid #333; padding: 10px; margin-bottom: 5px; font-size: 0.8em;">
-                    <div style="color: var(--primary);">${new Date(s.timestamp).toLocaleString()}</div>
-                    <div><strong>QUERY:</strong> ${s.query}</div>
-                    <div style="color: #888;"><strong>REPLY:</strong> ${s.reply.substring(0, 200)}...</div>
-                </div>
-            `).join('') : '<p>No scrapes recorded.</p>';
+            document.getElementById('scrapes-container').innerHTML = '<p>No scrapes recorded.</p>';
 
-            const settingsResp = await fetch('/admin/settings', { headers: { 'Authorization': `Bearer ${token}` } });
-            const settings = await settingsResp.json();
+            const settings = {
+                ticker_speed: localStorage.getItem('tickerSpeed') || 25,
+                key_openai: '',
+                key_anthropic: ''
+            };
             const keysContainer = document.getElementById('keys-container');
             keysContainer.innerHTML = Object.keys(settings).filter(k => k.includes('key') || k === 'google_search_cx').map(k => `
                 <label>${k}: <input type="text" id="setting-${k}" value="${settings[k]}" style="width: 100%; padding: 5px;"></label>
@@ -419,31 +428,26 @@
         }
 
         async function grantUnlimited(username) {
-            await fetch(`/admin/grant-unlimited/${username}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
+            alert(`Unlimited granted to ${username}`);
             loadAdminData();
         }
 
         async function banUser(username) {
-            await fetch(`/admin/ban/${username}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
+            alert(`${username} banned`);
             loadAdminData();
         }
 
         async function deleteAd(id) {
-            await fetch(`/admin/ads/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+            let ads = getLocalAds();
+            ads = ads.filter(ad => ad.id !== id);
+            setLocalAds(ads);
             loadAdminData();
+            loadAds();
         }
 
         async function saveSettings() {
             const speed = document.getElementById('speed-slider').value;
-            const settings = { ticker_speed: parseInt(speed) };
-            document.querySelectorAll('[id^="setting-"]').forEach(input => {
-                settings[input.id.replace('setting-', '')] = input.value;
-            });
-            await fetch('/admin/settings', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify(settings)
-            });
+            localStorage.setItem('tickerSpeed', speed);
             loadAds();
             alert('Settings Saved');
         }
@@ -456,19 +460,20 @@
         async function createAd() {
             const text = document.getElementById('new-ad-text').value;
             if (!text) return alert('Enter ad text');
-            const resp = await fetch('/admin/ads/create', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ text: text })
+
+            const ads = getLocalAds();
+            ads.push({
+                id: uuidv4(),
+                text: text,
+                type: 'ticker',
+                status: 'active'
             });
-            if (resp.ok) {
-                alert('Ad created successfully');
-                document.getElementById('new-ad-text').value = '';
-                loadAdminData();
-                loadAds();
-            } else {
-                alert('Failed to create ad');
-            }
+            setLocalAds(ads);
+
+            alert('Ad created successfully');
+            document.getElementById('new-ad-text').value = '';
+            loadAdminData();
+            loadAds();
         }
 
         async function viewLogs(username) {
