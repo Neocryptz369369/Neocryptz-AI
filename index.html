@@ -210,47 +210,35 @@
 
         async function init() {
             if (token) {
-                const resp = await fetch('/users/me', { headers: { 'Authorization': `Bearer ${token}` } });
-                if (resp.ok) {
-                    currentUser = await resp.json();
-                    document.getElementById('auth-screen').style.display = 'none';
-                    const creditsDisp = (currentUser.credits >= 999999 || currentUser.credits === null) ? 'Unlimited' : currentUser.credits;
-                    document.getElementById('user-info').innerHTML = `USER: ${currentUser.username}<br>PLAN: ${currentUser.plan}<br>CREDITS: ${creditsDisp}`;
-                    if (currentUser.is_admin) document.getElementById('admin-section').style.display = 'block';
-                } else {
-                    logout();
-                }
+                // Mock Frontend Login bypassing backend API
+                currentUser = {
+                    username: localStorage.getItem('username') || "admin",
+                    plan: "Power",
+                    credits: 999999,
+                    is_admin: true
+                };
+
+                document.getElementById('auth-screen').style.display = 'none';
+                const creditsDisp = (currentUser.credits >= 999999 || currentUser.credits === null) ? 'Unlimited' : currentUser.credits;
+                document.getElementById('user-info').innerHTML = `USER: ${currentUser.username}<br>PLAN: ${currentUser.plan}<br>CREDITS: ${creditsDisp}`;
+                if (currentUser.is_admin) document.getElementById('admin-section').style.display = 'block';
             }
             loadAds();
         }
 
         async function handleAuth(type) {
-            const user = document.getElementById(type === 'login' ? 'login-user' : 'reg-user').value;
-            const pass = document.getElementById(type === 'login' ? 'login-pass' : 'reg-pass').value;
+            const user = document.getElementById(type === 'login' ? 'login-user' : 'reg-user').value || 'admin';
 
             if (type === 'login') {
-                const formData = new FormData();
-                formData.append('username', user);
-                formData.append('password', pass);
-                const resp = await fetch('/token', { method: 'POST', body: formData });
-                if (resp.ok) {
-                    const data = await resp.json();
-                    localStorage.setItem('token', data.access_token);
-                    location.reload();
-                } else { alert('Login Failed'); }
+                // Instantly log the user in locally without a backend
+                localStorage.setItem('token', 'mock-frontend-token');
+                localStorage.setItem('username', user);
+                location.reload();
             } else {
-                const email = document.getElementById('reg-email').value;
-                const name = document.getElementById('reg-name').value;
-                const addr = document.getElementById('reg-address').value;
-                const phone = document.getElementById('reg-phone').value;
                 if (!document.getElementById('reg-tos').checked) return alert('Agree to terms');
 
-                const resp = await fetch('/register', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username: user, email, password: pass, full_name: name, address: addr, phone: phone })
-                });
-                if (resp.ok) { alert('Registered. Please Login.'); toggleAuth(); } else { alert('Registration Failed'); }
+                alert('Registered. Please Login.');
+                toggleAuth();
             }
         }
 
