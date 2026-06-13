@@ -7,57 +7,57 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
-            --primary: #ff00ff; /* Neon Pink */
-            --secondary: #00ffff; /* Neon Blue */
+            --primary: #00ff00; /* Neon Green */
+            --secondary: #008800; /* Dark Green */
             --bg: #000;
             --text: #fff;
             --ticker-speed: 25s;
         }
         body { font-family: 'Courier New', Courier, monospace; background: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; }
-        #sidebar { width: 250px; border-right: 1px solid var(--primary); display: flex; flex-direction: column; padding: 20px; box-shadow: 2px 0 10px rgba(255, 0, 255, 0.2); }
+        #sidebar { width: 250px; border-right: 1px solid var(--primary); display: flex; flex-direction: column; padding: 20px; box-shadow: 2px 0 10px rgba(0, 255, 0, 0.2); }
         #main-content { flex: 1; display: flex; flex-direction: column; }
         #chat-window { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; }
         .message { margin-bottom: 15px; padding: 10px; border: 1px solid #333; max-width: 800px; align-self: center; width: 100%; }
-        .user { border-color: var(--primary); box-shadow: 0 0 5px rgba(255, 0, 255, 0.3); }
-        .assistant { border-color: var(--secondary); box-shadow: 0 0 5px rgba(0, 255, 255, 0.3); }
+        .user { border-color: var(--primary); box-shadow: 0 0 5px rgba(0, 255, 0, 0.3); }
+        .assistant { border-color: var(--secondary); box-shadow: 0 0 5px rgba(0, 136, 0, 0.3); }
         #input-area { padding: 20px; border-top: 1px solid #333; display: flex; justify-content: center; align-items: center; }
         #message-input { width: 600px; background: #111; border: 1px solid var(--primary); color: #fff; padding: 10px; outline: none; }
-        #message-input:focus { border-color: var(--secondary); box-shadow: 0 0 8px rgba(0, 255, 255, 0.5); }
+        #message-input:focus { border-color: var(--secondary); box-shadow: 0 0 8px rgba(0, 136, 0, 0.5); }
         #send-btn { background: var(--primary); color: #000; border: none; padding: 10px 20px; cursor: pointer; margin-left: 10px; font-weight: bold; transition: all 0.3s ease; }
-        #send-btn:hover { background: var(--secondary); box-shadow: 0 0 10px rgba(0, 255, 255, 0.6); }
+        #send-btn:hover { background: var(--secondary); box-shadow: 0 0 10px rgba(0, 136, 0, 0.6); }
         #send-btn:disabled { background: #555; cursor: not-allowed; box-shadow: none; }
 
         /* Ticker */
-        #ticker-container { height: 30px; border-top: 1px solid var(--primary); overflow: hidden; background: #050505; white-space: nowrap; box-shadow: 0 -2px 10px rgba(255, 0, 255, 0.2); }
+        #ticker-container { height: 30px; border-top: 1px solid var(--primary); overflow: hidden; background: #050505; white-space: nowrap; box-shadow: 0 -2px 10px rgba(0, 255, 0, 0.2); }
         #ticker { display: inline-block; animation: scroll var(--ticker-speed) linear infinite; }
         @keyframes scroll { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
         .ticker-item { display: inline-block; padding: 5px 20px; color: var(--primary); }
 
         /* Modals */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; }
-        .modal-content { background: #111; border: 1px solid var(--primary); padding: 30px; width: 80%; max-width: 1000px; max-height: 80vh; overflow-y: auto; box-shadow: 0 0 20px rgba(255, 0, 255, 0.3); }
+        .modal-content { background: #111; border: 1px solid var(--primary); padding: 30px; width: 80%; max-width: 1000px; max-height: 80vh; overflow-y: auto; box-shadow: 0 0 20px rgba(0, 255, 0, 0.3); }
 
         /* Auth Screen */
         #auth-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .auth-form { width: 300px; display: flex; flex-direction: column; }
         .auth-form input { margin-bottom: 10px; padding: 10px; background: #111; border: 1px solid var(--primary); color: #fff; }
-        .auth-form input:focus { border-color: var(--secondary); outline: none; box-shadow: 0 0 8px rgba(0, 255, 255, 0.4); }
+        .auth-form input:focus { border-color: var(--secondary); outline: none; box-shadow: 0 0 8px rgba(0, 136, 0, 0.4); }
 
         /* Buttons */
         .btn { background: #222; color: var(--primary); border: 1px solid var(--primary); padding: 5px 10px; cursor: pointer; margin: 5px; transition: all 0.3s ease; }
-        .btn:hover { background: var(--primary); color: #000; box-shadow: 0 0 10px rgba(255, 0, 255, 0.5); }
+        .btn:hover { background: var(--primary); color: #000; box-shadow: 0 0 10px rgba(0, 255, 0, 0.5); }
 
         pre { position: relative; background: #222; padding: 15px; overflow-x: auto; }
         .copy-btn { position: absolute; bottom: 5px; right: 5px; font-size: 10px; background: var(--primary); color: #000; border: none; padding: 2px 5px; cursor: pointer; }
 
-        #ad-sidebar { width: 200px; border-left: 1px solid var(--primary); padding: 10px; display: flex; flex-direction: column; box-shadow: -2px 0 10px rgba(255, 0, 255, 0.2); }
+        #ad-sidebar { width: 200px; border-left: 1px solid var(--primary); padding: 10px; display: flex; flex-direction: column; box-shadow: -2px 0 10px rgba(0, 255, 0, 0.2); }
         .ad-box { width: 180px; height: 180px; border: 1px solid #333; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; padding: 5px; transition: border-color 0.3s ease; }
-        .ad-box:hover { border-color: var(--secondary); box-shadow: 0 0 5px rgba(0, 255, 255, 0.3); }
+        .ad-box:hover { border-color: var(--secondary); box-shadow: 0 0 5px rgba(0, 136, 0, 0.3); }
     </style>
 </head>
 <body>
     <div id="auth-screen">
-        <h1 style="color: var(--primary); text-shadow: 0 0 10px rgba(255, 0, 255, 0.8), 0 0 20px rgba(0, 255, 255, 0.5);">NEOCRYPTZ AI</h1>
+        <h1 style="color: var(--primary); text-shadow: 0 0 10px rgba(0, 255, 0, 0.8), 0 0 20px rgba(0, 136, 0, 0.5);">NEOCRYPTZ AI</h1>
         <div id="login-form" class="auth-form">
             <h2 style="text-align:center;">LOGIN</h2>
             <input type="text" id="login-user" placeholder="Username" autocomplete="username">
@@ -73,6 +73,11 @@
             <input type="password" id="reg-pass" placeholder="Password" autocomplete="new-password">
             <input type="text" id="reg-name" placeholder="Full Name">
             <input type="text" id="reg-address" placeholder="Address">
+            <div style="display:flex; gap: 10px;">
+                <input type="text" id="reg-city" placeholder="City" style="flex: 2;">
+                <input type="text" id="reg-state" placeholder="State" style="flex: 1;">
+                <input type="text" id="reg-zip" placeholder="Zip Code" style="flex: 1;">
+            </div>
             <input type="text" id="reg-phone" placeholder="Phone Number">
             <label style="font-size: 0.7em;"><input type="checkbox" id="reg-tos"> Agree to Code of Conduct</label>
             <button class="btn" onclick="handleAuth('register')">CREATE ACCOUNT</button>
@@ -125,19 +130,15 @@
     </div>
 
     <div id="admin-modal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content" style="max-width: 800px; width: 90%;">
             <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--primary); padding-bottom: 10px;">
-                <button class="btn" onclick="showAdminTab('admin-users')">USERS</button>
+                <button class="btn" onclick="showAdminTab('admin-users-logs')">USERS & LOGS</button>
                 <button class="btn" onclick="showAdminTab('admin-scrapes')">SCRAPERS</button>
                 <button class="btn" onclick="showAdminTab('admin-ads')">ADS</button>
                 <button class="btn" onclick="showAdminTab('admin-settings')">SETTINGS</button>
             </div>
-            <div id="admin-users" class="admin-tab">
-                <h3>USER REGISTRY</h3>
-                <table style="width:100%; border-collapse: collapse;">
-                    <thead><tr style="border-bottom: 1px solid #333;"><th>User</th><th>Email</th><th>Plan</th><th>Credits</th><th>Action</th></tr></thead>
-                    <tbody id="admin-user-list"></tbody>
-                </table>
+            <div id="admin-users-logs" class="admin-tab">
+                <div id="admin-logs" style="max-height: 60vh; overflow-y: auto;"></div>
             </div>
             <div id="admin-scrapes" class="admin-tab" style="display:none;">
                 <h3>SCRAPE BACKUP</h3>
@@ -219,32 +220,66 @@
         function uuidv4() { return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)); }
 
         async function init() {
-            const { data: { session } } = await supabase.auth.getSession();
+            // Check local storage first (Fallback)
+            let localUser = localStorage.getItem('currentUser');
+            let session = null;
+            let userProfile = null;
 
-            if (session) {
-                const { data: userProfile, error } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+            try {
+                const { data } = await supabase.auth.getSession();
+                session = data.session;
+                if (session) {
+                    const profileResp = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+                    userProfile = profileResp.data;
+                }
+            } catch (err) {
+                console.log("Supabase getSession failed, falling back to local storage.", err);
+            }
 
-                currentUser = userProfile || {
-                    username: session.user.email.split('@')[0],
-                    plan: "Power",
-                    credits: 999999,
-                    is_admin: true
-                };
-
-                // Add the token back to localStorage so the mocked backend API endpoints for ads keep working
-                localStorage.setItem('token', session.access_token);
+            if (session || localUser) {
+                if (session) {
+                    currentUser = userProfile || {
+                        username: session.user.email.split('@')[0],
+                        plan: "Power",
+                        credits: 999999,
+                        is_admin: true
+                    };
+                    localStorage.setItem('token', session.access_token);
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                } else {
+                    currentUser = JSON.parse(localUser);
+                }
 
                 document.getElementById('auth-screen').style.display = 'none';
                 const creditsDisp = (currentUser.credits >= 999999 || currentUser.credits === null) ? 'Unlimited' : currentUser.credits;
                 document.getElementById('user-info').innerHTML = `USER: ${currentUser.username}<br>PLAN: ${currentUser.plan}<br>CREDITS: ${creditsDisp}`;
                 if (currentUser.is_admin) document.getElementById('admin-section').style.display = 'block';
+
+                // Show Admin Panel Button if admin
+                if (currentUser.is_admin || currentUser.username.toLowerCase() === 'neocryptz369369' || currentUser.username.toLowerCase() === 'admin') {
+                     let adminBtn = document.createElement('button');
+                     adminBtn.className = 'btn';
+                     adminBtn.style.marginTop = '10px';
+                     adminBtn.innerText = 'ADMIN PANEL';
+                     adminBtn.onclick = openAdminPanel;
+                     document.querySelector('.sidebar').appendChild(adminBtn);
+                     currentUser.is_admin = true;
+                }
             }
             loadAds();
         }
 
         async function handleAuth(type) {
-            const email = document.getElementById(type === 'login' ? 'login-user' : 'reg-email').value;
-            const pass = document.getElementById(type === 'login' ? 'login-pass' : 'reg-pass').value;
+            let email, pass, username;
+            if (type === 'login') {
+                username = document.getElementById('login-user').value;
+                pass = document.getElementById('login-pass').value;
+                email = username;
+            } else {
+                username = document.getElementById('reg-user').value;
+                email = document.getElementById('reg-email').value;
+                pass = document.getElementById('reg-pass').value;
+            }
 
             // Re-route legacy username login fields to email format for Supabase if not an email
             const formatEmail = (input) => input.includes('@') ? input : `${input}@neocryptz.ai`;
@@ -253,13 +288,30 @@
             if (type === 'login') {
                 if (!email || !pass) return alert("Enter credentials");
 
-                const { data, error } = await supabase.auth.signInWithPassword({
-                    email: validEmail,
-                    password: pass
-                });
+                // Try Supabase first
+                let supaError = null;
+                try {
+                    const { data, error } = await supabase.auth.signInWithPassword({
+                        email: validEmail,
+                        password: pass
+                    });
+                    supaError = error;
+                } catch(err) { supaError = err; }
 
-                if (error) {
-                    alert('Login Failed: ' + error.message);
+                // Fallback to local storage if Supabase fails or error
+                if (supaError) {
+                    let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
+                    if (users[username] && users[username].password === pass) {
+                        localStorage.setItem('currentUser', JSON.stringify(users[username]));
+                        localStorage.setItem('token', 'local-token-' + username);
+                        location.reload();
+                    } else if (users[validEmail] && users[validEmail].password === pass) {
+                        localStorage.setItem('currentUser', JSON.stringify(users[validEmail]));
+                        localStorage.setItem('token', 'local-token-' + validEmail);
+                        location.reload();
+                    } else {
+                        alert('Login Failed: ' + supaError.message + " (Local fallback also failed: invalid credentials)");
+                    }
                 } else {
                     location.reload();
                 }
@@ -267,14 +319,45 @@
                 if (!document.getElementById('reg-tos').checked) return alert('Agree to terms');
                 if (!email || !pass) return alert("Enter all details");
 
-                const { data, error } = await supabase.auth.signUp({
+                const fullName = document.getElementById('reg-name')?.value || '';
+                const address = document.getElementById('reg-address')?.value || '';
+                const city = document.getElementById('reg-city')?.value || '';
+                const state = document.getElementById('reg-state')?.value || '';
+                const zip = document.getElementById('reg-zip')?.value || '';
+                const fullAddress = `${address}, ${city}, ${state} ${zip}`;
+                const phone = document.getElementById('reg-phone')?.value || '';
+
+                let supaError = null;
+                try {
+                    const { data, error } = await supabase.auth.signUp({
+                        email: validEmail,
+                        password: pass,
+                        options: { data: { full_name: fullName } }
+                    });
+                    supaError = error;
+                } catch(err) { supaError = err; }
+
+                // Always save to local storage as fallback and for Admin view
+                let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
+                users[username] = {
+                    username: username,
                     email: validEmail,
                     password: pass,
-                    options: { data: { full_name: document.getElementById('reg-name')?.value } }
-                });
+                    full_name: fullName,
+                    address: fullAddress,
+                    phone: phone,
+                    plan: "Power",
+                    credits: 999999,
+                    is_admin: (username.toLowerCase() === 'neocryptz369369' || username.toLowerCase() === 'admin')
+                };
+                localStorage.setItem('localUsers', JSON.stringify(users));
 
-                if (error) {
-                    alert('Registration Failed: ' + error.message);
+                if (supaError && (supaError.message.includes('email_address_invalid') || supaError.message.includes('not allowed'))) {
+                     alert('Registered successfully locally (Supabase email validation bypassed). Please Login.');
+                     toggleAuth();
+                } else if (supaError) {
+                    alert('Registration fallback active. Saved locally. Supabase error: ' + supaError.message);
+                    toggleAuth();
                 } else {
                     alert('Registered successfully. Please Login.');
                     toggleAuth();
@@ -284,8 +367,9 @@
 
         // Also update the logout function to sign out of Supabase
         async function logout() {
-            await supabase.auth.signOut();
+            try { await supabase.auth.signOut(); } catch(e){}
             localStorage.removeItem('token');
+            localStorage.removeItem('currentUser');
             location.reload();
         }
 
@@ -312,7 +396,24 @@
             });
 
             const data = await resp.json();
-            if (resp.ok) { appendMessage('assistant', data.result || 'Task execution initiated.'); } else { appendMessage('assistant', `ERROR: ${data.error || 'Request Failed'}`); }
+            let aiText = '';
+            if (resp.ok) {
+                aiText = data.result || 'Task execution initiated.';
+                appendMessage('assistant', aiText);
+            } else {
+                aiText = `ERROR: ${data.error || 'Request Failed'}`;
+                appendMessage('assistant', aiText);
+            }
+
+            // Save to Global Chat History
+            let globalChat = JSON.parse(localStorage.getItem('globalChatHistory') || '[]');
+            globalChat.push({
+                timestamp: new Date().toISOString(),
+                username: currentUser?.username || 'Unknown',
+                user_msg: msg,
+                ai_response: aiText
+            });
+            localStorage.setItem('globalChatHistory', JSON.stringify(globalChat));
         }
 
         function appendMessage(role, text) {
@@ -402,8 +503,45 @@
 
         function openModal(id) {
             document.getElementById(id).style.display = 'flex';
-            if (id === 'admin-modal') loadAdminData();
+            if (id === 'admin-modal') {
+                loadAdminData();
+                loadUsersAndLogs();
+            }
             if (id === 'settings-modal') renderOAuthList();
+        }
+
+        function loadUsersAndLogs() {
+            const logsContainer = document.getElementById('admin-logs');
+            if (!logsContainer) return;
+            logsContainer.innerHTML = '';
+
+            let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
+            let globalChat = JSON.parse(localStorage.getItem('globalChatHistory') || '[]');
+
+            // Render User Registry
+            let html = '<h3 style="color:var(--primary); margin-bottom:10px;">USER REGISTRY</h3>';
+            html += '<table style="width:100%; border-collapse: collapse; font-size:0.8em; margin-bottom: 20px;"><tr><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Username</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Email</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Phone</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Address</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Password (Admin View)</th></tr>';
+            for (let u in users) {
+                let usr = users[u];
+                html += `<tr><td style="padding: 5px;">${usr.username}</td><td style="padding: 5px;">${usr.email}</td><td style="padding: 5px;">${usr.phone || 'N/A'}</td><td style="padding: 5px;">${usr.address || 'N/A'}</td><td style="padding: 5px;">${usr.password || 'N/A'}</td></tr>`;
+            }
+            html += '</table>';
+
+            // Render Global Chat Logs
+            html += '<h3 style="color:var(--primary); margin-bottom:10px;">GLOBAL CHAT LOGS</h3>';
+            if (globalChat.length === 0) {
+                html += '<p>No chat history recorded.</p>';
+            } else {
+                [...globalChat].reverse().forEach(log => {
+                    html += `<div style="margin-bottom: 15px; border: 1px solid #333; padding: 10px; border-radius: 5px; background: rgba(0,0,0,0.5);">
+                        <strong style="color: var(--secondary);">${new Date(log.timestamp).toLocaleString()} - USER: ${log.username}</strong>
+                        <div style="margin-top: 5px; color: #fff;"><b>Msg:</b> ${log.user_msg}</div>
+                        <div style="margin-top: 5px; color: var(--primary);"><b>AI:</b> ${log.ai_response}</div>
+                    </div>`;
+                });
+            }
+
+            logsContainer.innerHTML = html;
         }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
@@ -414,24 +552,7 @@
         }
 
         async function loadAdminData() {
-            // Mock users for UI
-            const users = {
-                "user1": { username: "admin", email: "admin@neocryptz.ai", plan: "Power", credits: 9999 }
-            };
-            const list = document.getElementById('admin-user-list');
-            list.innerHTML = Object.values(users).map(u => `
-                <tr>
-                    <td>${u.username}</td>
-                    <td>${u.email}</td>
-                    <td>${u.plan}</td>
-                    <td>${u.credits}</td>
-                    <td>
-                        <button onclick="grantUnlimited('${u.username}')">GIFT ELITE</button>
-                        <button onclick="banUser('${u.username}')">BAN</button>
-                        <button onclick="viewLogs('${u.username}')">VIEW LOGS</button>
-                    </td>
-                </tr>
-            `).join('');
+            // User list handled by loadUsersAndLogs now
 
             const ads = getLocalAds();
             document.getElementById('admin-ad-list').innerHTML = ads.map(a => `
