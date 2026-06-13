@@ -55,8 +55,8 @@
         <h1 style="color: var(--primary);">NEOCRYPTZ AI</h1>
         <div id="login-form" class="auth-form">
             <h2 style="text-align:center;">LOGIN</h2>
-            <input type="text" id="login-user" placeholder="Username">
-            <input type="password" id="login-pass" placeholder="Password">
+            <input type="text" id="login-user" placeholder="Username" autocomplete="username">
+            <input type="password" id="login-pass" placeholder="Password" autocomplete="current-password">
             <button class="btn" onclick="handleAuth('login')">ENTER OS</button>
             <p style="text-align:center; font-size: 0.8em; margin-top: 20px;">V4.1.2 Production Ready</p>
             <button class="btn" style="font-size: 0.7em;" onclick="toggleAuth()">New? Create Account</button>
@@ -64,8 +64,8 @@
         <div id="register-form" class="auth-form" style="display:none;">
             <h2 style="text-align:center;">REGISTER</h2>
             <input type="text" id="reg-user" placeholder="Username">
-            <input type="email" id="reg-email" placeholder="Email">
-            <input type="password" id="reg-pass" placeholder="Password">
+            <input type="email" id="reg-email" placeholder="Email" autocomplete="username">
+            <input type="password" id="reg-pass" placeholder="Password" autocomplete="new-password">
             <input type="text" id="reg-name" placeholder="Full Name">
             <input type="text" id="reg-address" placeholder="Address">
             <input type="text" id="reg-phone" placeholder="Phone Number">
@@ -247,6 +247,7 @@
 
             if (type === 'login') {
                 if (!email || !pass) return alert("Enter credentials");
+
                 const { data, error } = await supabase.auth.signInWithPassword({
                     email: validEmail,
                     password: pass
