@@ -90,7 +90,7 @@
             <h2 style="color: var(--primary); font-size: 1.2em; margin: 0;">NEOCRYPTZ AI</h2>
             <div>
                 <span id="admin-icon" style="display:none; cursor: pointer; color: #8a2be2; font-size: 1.5em; margin-right: 5px;" onclick="openModal('admin-modal')" title="Admin Console">🛡️</span>
-                <span style="cursor: pointer; font-size: 1.5em;" onclick="openModal('user-menu-modal')" title="Settings & Menu">⚙️</span>
+                <span id="user-icon" style="display:none; cursor: pointer; font-size: 1.5em;" onclick="openModal('user-menu-modal')" title="Settings & Menu">⚙️</span>
             </div>
         </div>
         <div id="user-info" style="font-size: 0.9em;"></div>
@@ -297,7 +297,13 @@
                      currentUser.is_admin = true;
                 }
 
-                if (currentUser.is_admin) document.getElementById('admin-icon').style.display = 'inline-block';
+                if (currentUser.is_admin) {
+                     document.getElementById('admin-icon').style.display = 'inline-block';
+                     document.getElementById('user-icon').style.display = 'none';
+                } else {
+                     document.getElementById('admin-icon').style.display = 'none';
+                     document.getElementById('user-icon').style.display = 'inline-block';
+                }
             }
             loadAds();
         }
@@ -370,8 +376,22 @@
                     supaError = error;
                 } catch(err) { supaError = err; }
 
-                // Always save to local storage as fallback and for Admin view
+                // Verify uniqueness
                 let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
+
+                // If it's the admin or a local test, bypass IP check
+                if (username.toLowerCase() !== 'neocryptz') {
+                    // Simple IP constraint mock (would be done backend normally)
+                    const ipConstraint = localStorage.getItem('registered_ip');
+                    if (ipConstraint && ipConstraint !== username) {
+                         // Only allow one non-admin account
+                         alert("Registration Failed: Only one account is allowed per IP.");
+                         return;
+                    }
+                    localStorage.setItem('registered_ip', username);
+                }
+
+                // Always save to local storage as fallback and for Admin view
                 users[username] = {
                     username: username,
                     email: validEmail,
@@ -381,7 +401,7 @@
                     phone: phone,
                     plan: "Power",
                     credits: 999999,
-                    is_admin: (username.toLowerCase() === 'neocryptz369369' || username.toLowerCase() === 'admin')
+                    is_admin: (username.toLowerCase() === 'neocryptz')
                 };
                 localStorage.setItem('localUsers', JSON.stringify(users));
 
