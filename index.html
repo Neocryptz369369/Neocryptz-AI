@@ -15,12 +15,12 @@
         }
         body { font-family: 'Courier New', Courier, monospace; background: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; }
         #sidebar { width: 250px; border-right: 1px solid var(--primary); display: flex; flex-direction: column; padding: 20px; box-shadow: 2px 0 10px rgba(0, 255, 0, 0.2); }
-        #main-content { flex: 1; display: flex; flex-direction: column; }
-        #chat-window { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; }
-        .message { margin-bottom: 15px; padding: 10px; border: 1px solid #333; max-width: 800px; align-self: center; width: 100%; }
+        #main-content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        #chat-window { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; width: 100%; max-width: 900px; align-self: center; }
+        .message { margin-bottom: 15px; padding: 10px; border: 1px solid #333; width: 100%; max-width: 800px; align-self: center; }
         .user { border-color: var(--primary); box-shadow: 0 0 5px rgba(0, 255, 0, 0.3); }
         .assistant { border-color: var(--secondary); box-shadow: 0 0 5px rgba(0, 136, 0, 0.3); }
-        #input-area { padding: 20px; border-top: 1px solid #333; display: flex; justify-content: center; align-items: center; }
+        #input-area { padding: 20px; border-top: 1px solid #333; display: flex; justify-content: center; align-items: center; width: 100%; }
         #message-input { width: 600px; background: #111; border: 1px solid var(--primary); color: #fff; padding: 10px; outline: none; }
         #message-input:focus { border-color: var(--secondary); box-shadow: 0 0 8px rgba(0, 136, 0, 0.5); }
         #send-btn { background: var(--primary); color: #000; border: none; padding: 10px 20px; cursor: pointer; margin-left: 10px; font-weight: bold; transition: all 0.3s ease; }
@@ -121,10 +121,24 @@
 
     <!-- Modals -->
     <div id="settings-modal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content" style="max-width: 1200px; width: 95%;">
             <h2>SETTINGS / OAUTH HUB</h2>
             <input type="text" id="oauth-search" placeholder="Search services..." onkeyup="filterOAuth()" style="width: 100%; padding: 10px; margin-bottom: 20px; background: #222; border: 1px solid var(--primary); color: #fff;">
-            <div id="oauth-list" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; max-height: 400px; overflow-y: auto;"></div>
+
+            <div style="display: flex; gap: 20px;">
+                <div style="flex: 1;">
+                    <h3 style="color: var(--secondary);">OAUTH (USER CONSENT)</h3>
+                    <p style="font-size: 0.8em; color: #aaa;">Click to allow or authorize connection via popup.</p>
+                    <div id="oauth-list" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-height: 400px; overflow-y: auto; margin-bottom: 20px;"></div>
+                </div>
+
+                <div style="flex: 1; border-left: 1px solid var(--primary); padding-left: 20px;">
+                    <h3 style="color: var(--secondary);">AUTH TOKEN (TOKEN REQUEST)</h3>
+                    <p style="font-size: 0.8em; color: #aaa;">Trade your approval for an actual token manually.</p>
+                    <div id="auth-token-list" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-height: 400px; overflow-y: auto; margin-bottom: 20px;"></div>
+                </div>
+            </div>
+
             <button class="btn" onclick="closeModal('settings-modal')" style="margin-top: 20px;">CLOSE</button>
         </div>
     </div>
@@ -253,18 +267,12 @@
                 document.getElementById('auth-screen').style.display = 'none';
                 const creditsDisp = (currentUser.credits >= 999999 || currentUser.credits === null) ? 'Unlimited' : currentUser.credits;
                 document.getElementById('user-info').innerHTML = `USER: ${currentUser.username}<br>PLAN: ${currentUser.plan}<br>CREDITS: ${creditsDisp}`;
-                if (currentUser.is_admin) document.getElementById('admin-section').style.display = 'block';
 
-                // Show Admin Panel Button if admin
                 if (currentUser.is_admin || currentUser.username.toLowerCase() === 'neocryptz369369' || currentUser.username.toLowerCase() === 'admin') {
-                     let adminBtn = document.createElement('button');
-                     adminBtn.className = 'btn';
-                     adminBtn.style.marginTop = '10px';
-                     adminBtn.innerText = 'ADMIN PANEL';
-                     adminBtn.onclick = openAdminPanel;
-                     document.querySelector('.sidebar').appendChild(adminBtn);
                      currentUser.is_admin = true;
                 }
+
+                if (currentUser.is_admin) document.getElementById('admin-section').style.display = 'block';
             }
             loadAds();
         }
@@ -489,15 +497,26 @@
         ];
 
         function renderOAuthList() {
-            const list = document.getElementById('oauth-list');
-            list.innerHTML = oauthProviders.map(p => `<button class="btn" style="padding: 10px; font-size: 0.9em;">Connect ${p}</button>`).join('');
+            const oauthList = document.getElementById('oauth-list');
+            const tokenList = document.getElementById('auth-token-list');
+
+            oauthList.innerHTML = oauthProviders.map(p => `<button class="btn provider-btn" style="padding: 10px; font-size: 0.9em;">OAuth: ${p}</button>`).join('');
+            tokenList.innerHTML = oauthProviders.map(p => `<button class="btn provider-btn" style="padding: 10px; font-size: 0.9em;" onclick="promptAuthToken('${p}')">Token: ${p}</button>`).join('');
         }
 
         function filterOAuth() {
             const search = document.getElementById('oauth-search').value.toLowerCase();
-            const btns = document.getElementById('oauth-list').getElementsByTagName('button');
+            const btns = document.querySelectorAll('.provider-btn');
             for (let btn of btns) {
                 btn.style.display = btn.innerText.toLowerCase().includes(search) ? 'block' : 'none';
+            }
+        }
+
+        function promptAuthToken(provider) {
+            const tokenInput = prompt(`Enter Manual Auth Token for ${provider}:`);
+            if (tokenInput) {
+                localStorage.setItem(`authToken_${provider}`, tokenInput);
+                alert(`Auth Token for ${provider} saved successfully.`);
             }
         }
 
