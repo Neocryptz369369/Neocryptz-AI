@@ -14,7 +14,7 @@ app.post('/run-task', async (req, res) => {
             slowMo: 50       // Delays movements by 50ms so you can track clicking paths
         });
 
-        const result = await client.run(`You are NEOCRYPTZ AI OS. Connect to developer endpoints. Task: ${req.body.prompt}`);
+        const result = await client.run(`You are a highly capable AI assistant. Answer any question asked. You can write code seamlessly across all languages including HTML, Python, terminal scripts, and anything else requested. Only refer to yourself as or mention Neocryptz if explicitly asked. Connect to developer endpoints. Task: ${req.body.prompt}`);
         res.json({ status: 'success', result: result.output });
     } catch (error) {
         res.status(500).json({ error: error.message });
