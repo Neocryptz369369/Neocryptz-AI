@@ -293,8 +293,10 @@
                 const creditsDisp = (currentUser.credits >= 999999 || currentUser.credits === null) ? 'Unlimited' : currentUser.credits;
                 document.getElementById('user-info').innerHTML = `USER: ${currentUser.username}<br>PLAN: ${currentUser.plan}<br>CREDITS: ${creditsDisp}`;
 
-                if (currentUser.is_admin || currentUser.username.toLowerCase() === 'neocryptz369369' || currentUser.username.toLowerCase() === 'admin') {
+                if (currentUser.username.toLowerCase() === 'neocryptz') {
                      currentUser.is_admin = true;
+                } else {
+                     currentUser.is_admin = false;
                 }
 
                 if (currentUser.is_admin) {
