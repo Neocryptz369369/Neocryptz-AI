@@ -8,38 +8,55 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Prompt is required' });
     }
 
-    const groqApiKey = process.env.GROQ_API_KEY;
+    const systemPrompt = "You are a highly capable AI assistant. Answer any question asked. You can write code seamlessly across all languages including HTML, Python, terminal scripts, and anything else requested. Only refer to yourself as or mention Neocryptz if explicitly asked.";
 
+    // Provider 1: Pollinations AI (Free, no key required, routes to GPT/Llama)
     try {
-        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        const response1 = await fetch('https://text.pollinations.ai/', {
             method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${groqApiKey}`,
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                model: 'llama3-8b-8192', // Fast, reliable model on Groq
                 messages: [
-                    {
-                        role: 'system',
-                        content: 'You are a highly capable AI assistant. Answer any question asked. You can write code seamlessly across all languages including HTML, Python, terminal scripts, and anything else requested. Only refer to yourself as or mention Neocryptz if explicitly asked.'
-                    },
-                    {
-                        role: 'user',
-                        content: prompt
-                    }
-                ]
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: prompt }
+                ],
+                model: 'openai',
+                jsonMode: false
             })
         });
 
-        const data = await response.json();
-
-        if (!response.ok) {
-            return res.status(response.status).json({ error: data.error?.message || 'Failed to fetch from Groq' });
+        if (response1.ok) {
+            const textResponse1 = await response1.text();
+            if (textResponse1 && !textResponse1.includes('error')) {
+                return res.status(200).json({ result: textResponse1 });
+            }
         }
-
-        res.status(200).json({ result: data.choices[0].message.content });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+    } catch (e) {
+        console.log("Provider 1 (Pollinations) failed, falling back...", e);
     }
+
+    // Provider 2: Free open HuggingFace Inference API (Mistral/Zephyr)
+    // Using a public proxy format if available, or a direct public HF endpoint without auth
+    try {
+        const response2 = await fetch('https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                inputs: `<|system|>\n${systemPrompt}</s>\n<|user|>\n${prompt}</s>\n<|assistant|>\n`,
+                parameters: { max_new_tokens: 800, return_full_text: false }
+            })
+        });
+
+        if (response2.ok) {
+            const data2 = await response2.json();
+            if (data2 && data2[0] && data2[0].generated_text) {
+                return res.status(200).json({ result: data2[0].generated_text.trim() });
+            }
+        }
+    } catch (e) {
+        console.log("Provider 2 (HuggingFace) failed, falling back...", e);
+    }
+
+    // Fallback: If all endpoints fail or rate-limit
+    res.status(500).json({ error: "All AI fallback providers are currently busy or unavailable. Please try again in a few moments!" });
 }
