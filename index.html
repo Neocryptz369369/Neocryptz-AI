@@ -201,7 +201,16 @@
             <div id="admin-settings" class="admin-tab" style="display:none;">
                 <h3>SYSTEM API KEYS</h3>
                 <div id="keys-container" style="display:flex; flex-direction:column; gap:10px;"></div>
-                <button class="btn" onclick="saveSettings()" style="margin-top:20px;">SAVE KEYS</button>
+
+                <div style="margin-top: 20px; border-top: 1px solid #333; padding-top: 10px;">
+                    <h4>ADD CUSTOM API KEY</h4>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="new-api-key-name" placeholder="E.g. GROQ_API_KEY" style="flex: 1; padding: 5px; background: #222; border: 1px solid var(--primary); color: #fff;">
+                        <button class="btn" onclick="addCustomApiKey()">ADD KEY FIELD</button>
+                    </div>
+                </div>
+
+                <button class="btn" onclick="saveApiKeys()" style="margin-top:20px; width: 100%;">SAVE ALL KEYS</button>
             </div>
             <button class="btn" onclick="closeModal('admin-modal')" style="margin-top: 20px;">CLOSE</button>
         </div>
@@ -213,7 +222,7 @@
             <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:20px;">
                 <div style="border:1px solid var(--primary); padding:20px; text-align:center;">
                     <h3>STARTER</h3>
-                    <p>$9 / month</p>
+                    <p>$10 / month</p>
                     <p>500 Credits</p>
                     <button class="btn" onclick="buyPlan('Starter')">BUY NOW</button>
                 </div>
@@ -225,7 +234,7 @@
                 </div>
                 <div style="border:1px solid var(--primary); padding:20px; text-align:center;">
                     <h3>POWER</h3>
-                    <p>$79 / month</p>
+                    <p>$80 / month</p>
                     <p>6,000 Credits</p>
                     <button class="btn" onclick="buyPlan('Power')">BUY NOW</button>
                 </div>
@@ -234,12 +243,12 @@
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
                 <div style="border:1px solid var(--primary); padding:20px; text-align:center;">
                     <h3>TICKER AD (MONTHLY)</h3>
-                    <p>$5 / month</p>
+                    <p>$20 / month</p>
                     <button class="btn" onclick="buyAd('monthly')">PURCHASE</button>
                 </div>
                 <div style="border:1px solid var(--primary); padding:20px; text-align:center;">
                     <h3>TICKER AD (YEARLY)</h3>
-                    <p>$50 / year</p>
+                    <p>$240 / year</p>
                     <button class="btn" onclick="buyAd('yearly')">PURCHASE</button>
                 </div>
             </div>
@@ -657,15 +666,45 @@
 
             document.getElementById('scrapes-container').innerHTML = '<p>No scrapes recorded.</p>';
 
-            const settings = {
-                ticker_speed: localStorage.getItem('tickerSpeed') || 25,
-                key_openai: '',
-                key_anthropic: ''
-            };
+            const defaultKeys = ['OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'GOOGLE_API_KEY', 'SUPABASE_URL', 'SUPABASE_KEY', 'GROQ_API_KEY'];
+            let trackedKeys = JSON.parse(localStorage.getItem('trackedApiKeys') || JSON.stringify(defaultKeys));
+
             const keysContainer = document.getElementById('keys-container');
-            keysContainer.innerHTML = Object.keys(settings).filter(k => k.includes('key') || k === 'google_search_cx').map(k => `
-                <label>${k}: <input type="text" id="setting-${k}" value="${settings[k]}" style="width: 100%; padding: 5px;"></label>
-            `).join('');
+            keysContainer.innerHTML = trackedKeys.map(k => {
+                const val = localStorage.getItem(`sys_api_${k}`) || '';
+                return `
+                <label style="display: flex; flex-direction: column;">
+                    <span style="color: var(--secondary); font-size: 0.8em; margin-bottom: 2px;">${escapeHtml(k)}</span>
+                    <input type="text" id="setting-${k}" value="${escapeHtml(val)}" placeholder="Enter ${escapeHtml(k)}" style="width: 100%; padding: 5px; background: #222; border: 1px solid var(--primary); color: #fff;">
+                </label>
+                `;
+            }).join('');
+        }
+
+        function addCustomApiKey() {
+            const newKey = document.getElementById('new-api-key-name').value.trim();
+            if (!newKey) return alert("Enter an API Key Name");
+
+            let trackedKeys = JSON.parse(localStorage.getItem('trackedApiKeys') || '["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY", "SUPABASE_URL", "SUPABASE_KEY", "GROQ_API_KEY"]');
+            if (!trackedKeys.includes(newKey)) {
+                trackedKeys.push(newKey);
+                localStorage.setItem('trackedApiKeys', JSON.stringify(trackedKeys));
+                loadAdminData(); // Refresh UI
+                document.getElementById('new-api-key-name').value = '';
+            } else {
+                alert("Key name already exists!");
+            }
+        }
+
+        function saveApiKeys() {
+            let trackedKeys = JSON.parse(localStorage.getItem('trackedApiKeys') || '["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY", "SUPABASE_URL", "SUPABASE_KEY", "GROQ_API_KEY"]');
+            trackedKeys.forEach(k => {
+                const input = document.getElementById(`setting-${k}`);
+                if (input) {
+                    localStorage.setItem(`sys_api_${k}`, input.value.trim());
+                }
+            });
+            alert('System API Keys Saved Successfully!');
         }
 
         async function grantUnlimited(username) {
@@ -753,13 +792,17 @@
 
         function buyPlan(plan) {
             const email = encodeURIComponent('bestcabautogroup@yahoo.com');
-            const price = { 'Starter': 9, 'Unlimited Text': 20, 'Power': 79 }[plan];
+            const confirmed = confirm("By proceeding, you agree that there are no refunds for this plan. Do you wish to continue?");
+            if (!confirmed) return;
+            const price = { "Starter": 10, "Unlimited Text": 20, "Power": 80 }[plan];
             window.location.href = `https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=${email}&item_name=${plan}&amount=${price}&currency_code=USD`;
         }
 
         function buyAd(plan) {
             const email = encodeURIComponent('bestcabautogroup@yahoo.com');
-            const price = plan === 'monthly' ? 5 : 50;
+            const confirmed = confirm("By proceeding, you agree that there are no refunds for ticker plans. Do you wish to continue?");
+            if (!confirmed) return;
+            const price = plan === "monthly" ? 20 : 240;
             window.location.href = `https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=${email}&item_name=Ad_${plan}&amount=${price}&currency_code=USD`;
         }
 
