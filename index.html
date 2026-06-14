@@ -431,7 +431,7 @@
 
         // Also update the logout function to sign out of Supabase
         async function logout() {
-            try { await supabaseClient.auth.signOut(); } catch(e){}
+            try { await supabaseClient.auth.signOut(); } catch(e){ console.log(e); }
             localStorage.removeItem('token');
             localStorage.removeItem('currentUser');
             location.reload();
@@ -453,9 +453,10 @@
                 if (countdown <= 0) { clearInterval(timer); btn.disabled = false; btn.innerText = 'EXECUTE'; }
             }, 1000);
 
+            let currentToken = localStorage.getItem('token') || 'local-token';
             const resp = await fetch('/api/chat', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentToken}` },
                 body: JSON.stringify({ prompt: msg, session_id: session_id })
             });
 
@@ -757,7 +758,7 @@
         }
 
         async function viewLogs(username) {
-            const resp = await fetch(`/admin/user-logs/${username}`, { headers: { 'Authorization': `Bearer ${token}` } });
+            const resp = await fetch(`/admin/user-logs/${username}`, { headers: { 'Authorization': `Bearer ${currentToken}` } });
             const logs = await resp.json();
             if (!logs.length) return alert('No logs found for this user.');
 
