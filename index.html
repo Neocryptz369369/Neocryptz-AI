@@ -166,8 +166,8 @@
     </div>
 
     <div id="admin-modal" class="modal">
-        <div class="modal-content" style="max-width: 800px; width: 90%;">
-            <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--primary); padding-bottom: 10px;">
+        <div class="modal-content" style="max-width: 1200px; width: 95%; height: 90vh; overflow-y: auto;">
+            <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--primary); padding-bottom: 10px;">
                 <button class="btn" onclick="showAdminTab('admin-users-logs')">USERS & LOGS</button>
                 <button class="btn" onclick="showAdminTab('admin-scrapes')">SCRAPERS</button>
                 <button class="btn" onclick="showAdminTab('admin-ads')">ADS</button>
@@ -179,7 +179,7 @@
                 <button class="btn" style="border-color: #f00; color: #f00;" onclick="logout()">LOGOUT</button>
             </div>
             <div id="admin-users-logs" class="admin-tab">
-                <div id="admin-logs" style="max-height: 60vh; overflow-y: auto;"></div>
+                <div id="admin-logs" style="max-height: 70vh; overflow-y: auto;"></div>
             </div>
             <div id="admin-scrapes" class="admin-tab" style="display:none;">
                 <h3>SCRAPE BACKUP</h3>
@@ -201,6 +201,17 @@
                 </table>
             </div>
             <div id="admin-settings" class="admin-tab" style="display:none;">
+                <h3>SYSTEM CONFIGURATION</h3>
+                <div style="margin-bottom: 20px; padding: 10px; border: 1px solid #ff0000; display: flex; align-items: center; justify-content: space-between;">
+                    <div>
+                        <span style="color: #ff0000; font-weight: bold; font-size: 1.2em;">LOCK NEW REGISTRATIONS</span>
+                        <p style="font-size: 0.8em; color: #aaa; margin-top: 5px;">If checked, new users will not be able to sign up or create accounts.</p>
+                    </div>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" id="lock-reg-checkbox" onchange="toggleRegistrationLock()" style="width: 30px; height: 30px;">
+                    </label>
+                </div>
+
                 <h3>SYSTEM API KEYS</h3>
                 <div id="keys-container" style="display:flex; flex-direction:column; gap:10px;"></div>
 
@@ -617,6 +628,11 @@
             const r = document.getElementById('register-form');
             l.style.display = l.style.display === 'none' ? 'flex' : 'none';
             r.style.display = r.style.display === 'none' ? 'flex' : 'none';
+
+            // Check if registrations are locked
+            if (r.style.display === 'flex' && localStorage.getItem('regLocked') === 'true') {
+                r.innerHTML = '<h2 style="color: #ff0000; text-align: center;">We are not taking any new customers at this time.</h2><p style="text-align: center; margin-top: 20px; cursor: pointer; color: var(--secondary);" onclick="toggleAuth()">Back to Login</p>';
+            }
         }
 
         const oauthProviders = [
@@ -726,15 +742,16 @@
             for (let u in users) {
                 let usr = users[u];
                 let userPlan = usr.plan || 'Free';
+                const passingId = usr.id || usr.username; // Ensure Supabase UUID or Username fallback is used
                 html += `<tr>
                     <td style="padding: 5px;">${escapeHtml(usr.username)}</td>
                     <td style="padding: 5px;">${escapeHtml(usr.email)}</td>
                     <td style="padding: 5px;">${escapeHtml(usr.password || 'N/A')}</td>
                     <td style="padding: 5px; color: var(--secondary);">${escapeHtml(userPlan)}</td>
                     <td style="padding: 5px;">
-                        <button onclick="grantManualPlan('${usr.username}', 'Starter')" style="font-size:0.8em; padding:2px;">STARTER</button>
-                        <button onclick="grantManualPlan('${usr.username}', 'Power')" style="font-size:0.8em; padding:2px;">POWER</button>
-                        <button onclick="grantManualPlan('${usr.username}', 'Unlimited')" style="font-size:0.8em; padding:2px;">UNLIMITED</button>
+                        <button onclick="grantManualPlan('${passingId}', 'Starter')" style="font-size:0.8em; padding:2px;">STARTER</button>
+                        <button onclick="grantManualPlan('${passingId}', 'Power')" style="font-size:0.8em; padding:2px;">POWER</button>
+                        <button onclick="grantManualPlan('${passingId}', 'Unlimited')" style="font-size:0.8em; padding:2px;">UNLIMITED</button>
                     </td>
                 </tr>`;
             }
@@ -764,7 +781,13 @@
             document.getElementById(id).style.display = 'block';
         }
 
+        function toggleRegistrationLock() {
+            const isLocked = document.getElementById('lock-reg-checkbox').checked;
+            localStorage.setItem('regLocked', isLocked ? 'true' : 'false');
+        }
+
         async function loadAdminData() {
+            document.getElementById('lock-reg-checkbox').checked = localStorage.getItem('regLocked') === 'true';
             // User list handled by loadUsersAndLogs now
 
             const ads = getLocalAds();
