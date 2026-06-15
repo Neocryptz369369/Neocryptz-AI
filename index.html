@@ -103,6 +103,7 @@
         </div>
         <div id="input-area">
             <input type="text" id="message-input" placeholder="Enter command or question..." onkeypress="if(event.key==='Enter') sendMessage()">
+            <button id="mic-btn" onclick="toggleVoiceInput()" style="background: none; border: none; font-size: 1.5em; cursor: pointer; color: var(--primary);">🎤</button>
             <button id="send-btn" onclick="sendMessage()">EXECUTE</button>
         </div>
         <div id="ticker-container">
@@ -175,6 +176,7 @@
                 <button class="btn" onclick="closeModal('admin-modal'); openModal('settings-modal')">OAUTH/TOKENS</button>
                 <button class="btn" onclick="closeModal('admin-modal'); openModal('history-modal')">CHAT HISTORY</button>
                 <button class="btn" onclick="closeModal('admin-modal'); openModal('pricing-modal')">UPGRADES</button>
+                <button class="btn" style="border-color: #f00; color: #f00;" onclick="logout()">LOGOUT</button>
             </div>
             <div id="admin-users-logs" class="admin-tab">
                 <div id="admin-logs" style="max-height: 60vh; overflow-y: auto;"></div>
@@ -437,6 +439,43 @@
             location.reload();
         }
 
+        let recognition;
+        function toggleVoiceInput() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                alert("Voice input is not supported in this browser. Try Chrome or Edge.");
+                return;
+            }
+            if (recognition) {
+                recognition.stop();
+                recognition = null;
+                document.getElementById('mic-btn').style.color = 'var(--primary)';
+                return;
+            }
+
+            const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRec();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
+            recognition.onstart = function() {
+                document.getElementById('mic-btn').style.color = '#ff0000'; // Recording red
+                document.getElementById('message-input').placeholder = "Listening...";
+            };
+
+            recognition.onresult = function(event) {
+                const transcript = event.results[0][0].transcript;
+                document.getElementById('message-input').value += (document.getElementById('message-input').value ? ' ' : '') + transcript;
+            };
+
+            recognition.onend = function() {
+                document.getElementById('mic-btn').style.color = 'var(--primary)';
+                document.getElementById('message-input').placeholder = "Enter command or question...";
+                recognition = null;
+            };
+
+            recognition.start();
+        }
+
         async function sendMessage() {
             const input = document.getElementById('message-input');
             const msg = input.value.trim();
@@ -446,11 +485,21 @@
             input.value = '';
 
             const btn = document.getElementById('send-btn');
+            const micBtn = document.getElementById('mic-btn');
             btn.disabled = true;
+            input.disabled = true; // Lock text box during countdown
+            micBtn.disabled = true;
+
             let countdown = 60;
             const timer = setInterval(() => {
                 btn.innerText = `WAIT ${--countdown}s`;
-                if (countdown <= 0) { clearInterval(timer); btn.disabled = false; btn.innerText = 'EXECUTE'; }
+                if (countdown <= 0) {
+                    clearInterval(timer);
+                    btn.disabled = false;
+                    input.disabled = false;
+                    micBtn.disabled = false;
+                    btn.innerText = 'EXECUTE';
+                }
             }, 1000);
 
             let currentToken = localStorage.getItem('token') || 'local-token';
@@ -635,6 +684,34 @@
             logsContainer.innerHTML = html;
         }
 
+        async function grantManualPlan(userId, planName) {
+            // Update the user's plan and status in Supabase
+            const { data, error } = await supabaseClient
+                .from('users')
+                .update({
+                    plan: planName,
+                    status: 'active',
+                    updated_at: new Date()
+                })
+                .eq('id', userId);
+
+            if (error) {
+                alert('Error updating plan: ' + error.message);
+                console.log('Falling back to local storage update.');
+
+                // Fallback update
+                let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
+                let foundUser = Object.keys(users).find(k => users[k].id === userId || users[k].username === userId);
+                if (foundUser) {
+                    users[foundUser].plan = planName;
+                    localStorage.setItem('localUsers', JSON.stringify(users));
+                }
+            } else {
+                alert('Plan updated successfully for user!');
+            }
+            loadAdminData(); // Refresh the admin table so the change shows
+        }
+
         function loadUsersAndLogs() {
             const logsContainer = document.getElementById('admin-logs');
             if (!logsContainer) return;
@@ -644,11 +721,22 @@
             let globalChat = JSON.parse(localStorage.getItem('globalChatHistory') || '[]');
 
             // Render User Registry
-            let html = '<h3 style="color:var(--primary); margin-bottom:10px;">USER REGISTRY</h3>';
-            html += '<table style="width:100%; border-collapse: collapse; font-size:0.8em; margin-bottom: 20px;"><tr><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Username</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Email</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Phone</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Address</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Password (Admin View)</th></tr>';
+            let html = '<h3 style="color:var(--primary); margin-bottom:10px;">USER REGISTRY & PLANS</h3>';
+            html += '<table style="width:100%; border-collapse: collapse; font-size:0.8em; margin-bottom: 20px;"><tr><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Username</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Email</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Password</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Current Plan</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Manual Grant</th></tr>';
             for (let u in users) {
                 let usr = users[u];
-                html += `<tr><td style="padding: 5px;">${escapeHtml(usr.username)}</td><td style="padding: 5px;">${escapeHtml(usr.email)}</td><td style="padding: 5px;">${escapeHtml(usr.phone || 'N/A')}</td><td style="padding: 5px;">${escapeHtml(usr.address || 'N/A')}</td><td style="padding: 5px;">${escapeHtml(usr.password || 'N/A')}</td></tr>`;
+                let userPlan = usr.plan || 'Free';
+                html += `<tr>
+                    <td style="padding: 5px;">${escapeHtml(usr.username)}</td>
+                    <td style="padding: 5px;">${escapeHtml(usr.email)}</td>
+                    <td style="padding: 5px;">${escapeHtml(usr.password || 'N/A')}</td>
+                    <td style="padding: 5px; color: var(--secondary);">${escapeHtml(userPlan)}</td>
+                    <td style="padding: 5px;">
+                        <button onclick="grantManualPlan('${usr.username}', 'Starter')" style="font-size:0.8em; padding:2px;">STARTER</button>
+                        <button onclick="grantManualPlan('${usr.username}', 'Power')" style="font-size:0.8em; padding:2px;">POWER</button>
+                        <button onclick="grantManualPlan('${usr.username}', 'Unlimited')" style="font-size:0.8em; padding:2px;">UNLIMITED</button>
+                    </td>
+                </tr>`;
             }
             html += '</table>';
 
