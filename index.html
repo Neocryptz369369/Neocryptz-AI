@@ -454,10 +454,23 @@
             }, 1000);
 
             let currentToken = localStorage.getItem('token') || 'local-token';
+
+            let keysPayload = {};
+            try {
+                const defaultKeys = ['OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'GOOGLE_API_KEY', 'GROQ_API_KEY'];
+                const trackedKeys = JSON.parse(localStorage.getItem('trackedApiKeys') || JSON.stringify(defaultKeys));
+                trackedKeys.forEach(k => {
+                    const val = localStorage.getItem(`sys_api_${k}`);
+                    if (val) keysPayload[k] = val;
+                });
+            } catch (e) {
+                console.error("Error reading API keys from local storage", e);
+            }
+
             const resp = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentToken}` },
-                body: JSON.stringify({ prompt: msg, session_id: session_id })
+                body: JSON.stringify({ prompt: msg, session_id: session_id, keys: keysPayload })
             });
 
             const data = await resp.json();
@@ -490,9 +503,20 @@
             win.scrollTop = win.scrollHeight;
         }
 
+        function escapeHtml(text) {
+            return String(text)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
         function formatText(text) {
+            // Escape HTML first to prevent XSS
+            const escapedText = escapeHtml(text);
             // Simple markdown-ish code block formatting
-            return text.replace(/```([\s\S]*?)```/g, (match, code) => {
+            return escapedText.replace(/```([\s\S]*?)```/g, (match, code) => {
                 const id = uuidv4();
                 return `<pre id="${id}">${code}<button class="copy-btn" onclick="copyToClipboard('${id}')">COPY</button></pre>`;
             }).replace(/\n/g, '<br>');
@@ -603,9 +627,9 @@
             let html = '';
             [...myLogs].reverse().forEach(log => {
                 html += `<div style="margin-bottom: 15px; border: 1px solid #333; padding: 10px; border-radius: 5px; background: rgba(0,0,0,0.5);">
-                    <strong style="color: var(--secondary);">${new Date(log.timestamp).toLocaleString()}</strong>
-                    <div style="margin-top: 5px; color: #fff;"><b>Me:</b> ${log.user_msg}</div>
-                    <div style="margin-top: 5px; color: var(--primary);"><b>AI:</b> ${log.ai_response}</div>
+                    <strong style="color: var(--secondary);">${escapeHtml(new Date(log.timestamp).toLocaleString())}</strong>
+                    <div style="margin-top: 5px; color: #fff;"><b>Me:</b> ${escapeHtml(log.user_msg)}</div>
+                    <div style="margin-top: 5px; color: var(--primary);"><b>AI:</b> ${escapeHtml(log.ai_response)}</div>
                 </div>`;
             });
             logsContainer.innerHTML = html;
@@ -624,7 +648,7 @@
             html += '<table style="width:100%; border-collapse: collapse; font-size:0.8em; margin-bottom: 20px;"><tr><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Username</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Email</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Phone</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Address</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Password (Admin View)</th></tr>';
             for (let u in users) {
                 let usr = users[u];
-                html += `<tr><td style="padding: 5px;">${usr.username}</td><td style="padding: 5px;">${usr.email}</td><td style="padding: 5px;">${usr.phone || 'N/A'}</td><td style="padding: 5px;">${usr.address || 'N/A'}</td><td style="padding: 5px;">${usr.password || 'N/A'}</td></tr>`;
+                html += `<tr><td style="padding: 5px;">${escapeHtml(usr.username)}</td><td style="padding: 5px;">${escapeHtml(usr.email)}</td><td style="padding: 5px;">${escapeHtml(usr.phone || 'N/A')}</td><td style="padding: 5px;">${escapeHtml(usr.address || 'N/A')}</td><td style="padding: 5px;">${escapeHtml(usr.password || 'N/A')}</td></tr>`;
             }
             html += '</table>';
 
@@ -635,9 +659,9 @@
             } else {
                 [...globalChat].reverse().forEach(log => {
                     html += `<div style="margin-bottom: 15px; border: 1px solid #333; padding: 10px; border-radius: 5px; background: rgba(0,0,0,0.5);">
-                        <strong style="color: var(--secondary);">${new Date(log.timestamp).toLocaleString()} - USER: ${log.username}</strong>
-                        <div style="margin-top: 5px; color: #fff;"><b>Msg:</b> ${log.user_msg}</div>
-                        <div style="margin-top: 5px; color: var(--primary);"><b>AI:</b> ${log.ai_response}</div>
+                        <strong style="color: var(--secondary);">${escapeHtml(new Date(log.timestamp).toLocaleString())} - USER: ${escapeHtml(log.username)}</strong>
+                        <div style="margin-top: 5px; color: #fff;"><b>Msg:</b> ${escapeHtml(log.user_msg)}</div>
+                        <div style="margin-top: 5px; color: var(--primary);"><b>AI:</b> ${escapeHtml(log.ai_response)}</div>
                     </div>`;
                 });
             }
@@ -770,15 +794,15 @@
                 grouped[date].push(l);
             });
 
-            let logHtml = `<h2>LOGS FOR ${username}</h2>`;
+            let logHtml = `<h2>LOGS FOR ${escapeHtml(username)}</h2>`;
             for (const date in grouped) {
                 logHtml += `<div style="border: 1px solid var(--primary); margin-top: 10px; padding: 10px;">
-                    <h3 style="margin: 0; color: var(--primary);">${date}</h3>
+                    <h3 style="margin: 0; color: var(--primary);">${escapeHtml(date)}</h3>
                     ${grouped[date].map(l => `
                         <div style="margin-top: 10px; border-top: 1px solid #222; padding-top: 5px;">
-                            <div style="font-size: 0.7em; color: #555;">${new Date(l.timestamp).toLocaleTimeString()}</div>
-                            <div><strong>U:</strong> ${l.message}</div>
-                            <div style="color: #aaa;"><strong>A:</strong> ${l.reply}</div>
+                            <div style="font-size: 0.7em; color: #555;">${escapeHtml(new Date(l.timestamp).toLocaleTimeString())}</div>
+                            <div><strong>U:</strong> ${escapeHtml(l.message)}</div>
+                            <div style="color: var(--secondary);"><strong>AI:</strong> ${escapeHtml(l.response)}</div>
                         </div>
                     `).join('')}
                 </div>`;
