@@ -68,6 +68,7 @@ export default async function handler(req, res) {
     }
 
     // Provider 3: Groq (Requires GROQ_API_KEY from user settings)
+    let lastError = "";
     const groqKey = keys?.GROQ_API_KEY || process.env.GROQ_API_KEY;
     if (groqKey) {
         try {
@@ -78,7 +79,7 @@ export default async function handler(req, res) {
                     'Authorization': `Bearer ${groqKey}`
                 },
                 body: JSON.stringify({
-                    model: 'llama3-8b-8192',
+                    model: 'llama-3.1-8b-instant',
                     messages: [
                         { role: 'system', content: systemPrompt },
                         { role: 'user', content: prompt }
@@ -92,13 +93,25 @@ export default async function handler(req, res) {
                     return res.status(200).json({ result: data3.choices[0].message.content });
                 }
             } else {
-                console.log("Groq API error:", await response3.text());
+                const errorText = await response3.text();
+                console.log("Groq API error:", errorText);
+                try {
+                    const parsed = JSON.parse(errorText);
+                    lastError = `Groq Error: ${parsed.error?.message || 'Invalid API Key or Rate Limit'}`;
+                } catch(e) {
+                    lastError = "Groq Error: Invalid API Key or Rate Limit";
+                }
             }
         } catch (e) {
             console.log("Provider 3 (Groq) failed, falling back...", e);
+            lastError = "Groq Request Failed completely.";
         }
     }
 
     // Fallback: If no keys are provided or endpoints fail
-    res.status(500).json({ error: "Offline fallback mode: Please provide a valid OpenAI, Google Gemini, or Groq API key in the admin settings to restore full AI functionality." });
+    let errorDetail = "Offline fallback mode: Please provide a valid OpenAI, Google Gemini, or Groq API key in the admin settings to restore full AI functionality.";
+    if (openaiKey || geminiKey || groqKey) {
+        errorDetail = lastError ? lastError : "API Connection Failed: The provided API key(s) were invalid, expired, or rate-limited. Please check your admin settings and try a new key.";
+    }
+    res.status(500).json({ error: errorDetail });
 }
