@@ -141,7 +141,14 @@ export default async function handler(req, res) {
         console.log("Provider 4 (Pollinations) free fallback failed.", e);
     }
 
-    // Fallback: If no keys are provided and free endpoints rate-limit
+    // Ultimate Doomsday Fallback: Return locally scraped data if all AI fails
+    const scrapes = keys?.LOCAL_SCRAPES;
+    if (scrapes && scrapes.length > 0) {
+        const fallbackText = "All Live AI Systems Offline. Displaying cached system scrape context:\n\n" + scrapes.slice(-2).map(s => `[${s.url}]: ${s.text.substring(0, 100)}...`).join("\n");
+        return res.status(200).json({ result: fallbackText });
+    }
+
+    // Fallback: If no keys are provided, free endpoints fail, and no scrapes exist
     let errorDetail = "Offline fallback mode: Please provide a valid OpenAI, Google Gemini, or Groq API key in the admin settings to restore full AI functionality.";
     if (openaiKey || geminiKey || groqKey) {
         errorDetail = lastError ? lastError : "API Connection Failed: The provided API key(s) were invalid, expired, or rate-limited, and the free fallback servers are currently busy. Please check your admin settings or try again shortly.";
