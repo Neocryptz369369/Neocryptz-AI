@@ -83,8 +83,10 @@
                 <input type="text" id="reg-phone" placeholder="Phone Number" style="flex: 2;">
                 <input type="number" id="reg-age" placeholder="Age" style="flex: 1;" min="18">
             </div>
-            <button class="btn" onclick="startTosWorkflow()">TERMS OF SERVICE & PRIVACY POLICY</button>
-            <button class="btn" id="reg-final-btn" style="display:none;" onclick="handleAuth('register')">CREATE ACCOUNT</button>
+            <label style="font-size: 0.7em; display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                <input type="checkbox" id="reg-tos"> I agree to the Terms of Service & Privacy Policy
+            </label>
+            <button class="btn" onclick="handleAuth('register')">CREATE ACCOUNT</button>
             <button class="btn" style="font-size: 0.7em;" onclick="toggleAuth()">Back to Login</button>
         </div>
     </div>
@@ -101,6 +103,10 @@
         <div style="flex:1;"></div>
 
         <div style="border-top: 1px solid #333; padding-top: 10px; font-size: 0.8em; color: #555;">
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <button class="btn" style="flex: 1; font-size: 0.8em; padding: 5px;" onclick="viewLegal('tos')">Terms of Service</button>
+                <button class="btn" style="flex: 1; font-size: 0.8em; padding: 5px;" onclick="viewLegal('privacy')">Privacy Policy</button>
+            </div>
             <a href="mailto:neocryptz@yahoo.com" style="color: var(--secondary); text-decoration: none; display: block; margin-bottom: 5px;">Contact us</a>
             &copy; Copyright 2026 Neocryptz L.L.C.
         </div>
@@ -185,14 +191,12 @@
         </div>
     </div>
 
-    <!-- TOS Verification Modal -->
-    <div id="tos-modal" class="modal">
-        <div class="modal-content" style="max-width: 600px; width: 90%; text-align: center;">
-            <h2 style="color: var(--primary);">VERIFICATION</h2>
-            <div id="tos-full-text" style="text-align: left; max-height: 400px; overflow-y: auto; padding: 15px; border: 1px solid #333; background: #050505; color: #ccc; font-size: 0.9em; margin-bottom: 20px;"></div>
-            <p id="tos-sentence" style="font-size: 1.2em; margin: 20px 0; color: var(--secondary);"></p>
-            <button id="tos-agree-btn" class="btn" style="display: none; background: #25D366; color: #000; font-weight: bold; width: 100%; font-size: 1.2em;" onclick="finishTosAndRegister()">I AGREE TO ALL TERMS & REGISTER</button>
-            <p id="tos-progress" style="font-size: 0.8em; color: #555; margin-top: 20px;"></p>
+    <!-- Legal Modal (TOS / Privacy) -->
+    <div id="legal-modal" class="modal">
+        <div class="modal-content" style="max-width: 800px; width: 95%;">
+            <h2 id="legal-title" style="color: var(--primary); text-align: center;">LEGAL</h2>
+            <div id="legal-content" style="text-align: left; max-height: 60vh; overflow-y: auto; padding: 20px; border: 1px solid #333; background: #050505; color: #ccc; font-size: 0.9em; line-height: 1.5;"></div>
+            <button class="btn" onclick="closeModal('legal-modal')" style="margin-top: 20px; width: 100%;">CLOSE</button>
         </div>
     </div>
 
@@ -424,49 +428,12 @@
 
         let currentTosIndex = 0;
 
-        function startTosWorkflow() {
-            if (localStorage.getItem('regLocked') === 'true') {
-                return alert("We are not taking any new customers at this time.");
-            }
-            if (!document.getElementById('reg-user').value || !document.getElementById('reg-pass').value) {
-                return alert("Please fill out username and password before verifying.");
-            }
-
-            // Populate the full text background
-            document.getElementById('tos-full-text').innerHTML = tosSentences.join(" ");
-
-            currentTosIndex = 0;
-            document.getElementById('tos-agree-btn').style.display = 'none';
-            openModal('tos-modal');
-            playCurrentTos();
-        }
-
-        function playCurrentTos() {
-            if (currentTosIndex >= tosSentences.length) {
-                document.getElementById('tos-sentence').innerText = "Verification complete! Please click I AGREE below to finish your registration.";
-                document.getElementById('tos-progress').innerText = `Step ${currentTosIndex} of ${tosSentences.length}`;
-                document.getElementById('tos-agree-btn').style.display = 'block';
-                return;
-            }
-
-            const sentence = tosSentences[currentTosIndex];
-            document.getElementById('tos-sentence').innerText = "Reading: " + sentence;
-            document.getElementById('tos-progress').innerText = `Step ${currentTosIndex + 1} of ${tosSentences.length}`;
-
-            const utterance = new SpeechSynthesisUtterance(sentence);
-            utterance.onend = () => {
-                currentTosIndex++;
-                playCurrentTos(); // Automatically trigger the next sentence
-            };
-
-            // Speak
-            window.speechSynthesis.cancel();
-            window.speechSynthesis.speak(utterance);
-        }
-
-        function finishTosAndRegister() {
-            closeModal('tos-modal');
-            handleAuth('register');
+        function viewLegal(type) {
+            let title = type === 'tos' ? 'TERMS OF SERVICE' : 'PRIVACY POLICY';
+            let content = type === 'tos' ? tosSentences.slice(0, 14).join(" <br><br>") : tosSentences.slice(14).join(" <br><br>");
+            document.getElementById('legal-title').innerText = title;
+            document.getElementById('legal-content').innerHTML = content;
+            openModal('legal-modal');
         }
 
         async function handleAuth(type) {
