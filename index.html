@@ -95,6 +95,11 @@
         </div>
         <div id="user-info" style="font-size: 0.9em;"></div>
         <div style="flex:1;"></div>
+
+        <div style="border-top: 1px solid #333; padding-top: 10px; font-size: 0.8em; color: #555;">
+            <a href="mailto:neocryptz@yahoo.com" style="color: var(--secondary); text-decoration: none; display: block; margin-bottom: 5px;">Contact us</a>
+            &copy; Copyright 2026 Neocryptz L.L.C.
+        </div>
     </div>
 
     <div id="main-content">
@@ -136,9 +141,21 @@
                 <button class="btn" onclick="closeModal('user-menu-modal'); openModal('settings-modal')">SETTINGS / OAUTH</button>
                 <button class="btn" onclick="closeModal('user-menu-modal'); openModal('history-modal')">CHAT HISTORY</button>
                 <button class="btn" onclick="closeModal('user-menu-modal'); openModal('pricing-modal')">UPGRADE / ADS</button>
+                <button class="btn" onclick="closeModal('user-menu-modal'); openModal('feedback-modal')">PROVIDE FEEDBACK</button>
                 <button class="btn" style="border-color: #f00; color: #f00; margin-top: 20px;" onclick="logout()">LOGOUT</button>
             </div>
             <button class="btn" onclick="closeModal('user-menu-modal')" style="margin-top: 20px;">CLOSE</button>
+        </div>
+    </div>
+
+    <!-- Feedback Modal -->
+    <div id="feedback-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <h2 style="color: var(--primary); text-align: center;">SYSTEM FEEDBACK</h2>
+            <p style="text-align: center; font-size: 0.9em; color: #aaa; margin-bottom: 20px;">We value your input. Let us know how we can improve your experience.</p>
+            <textarea id="feedback-text" placeholder="Type your feedback here..." style="width: 100%; height: 150px; background: rgba(0,0,0,0.5); border: 1px solid var(--primary); color: #fff; padding: 10px; font-family: monospace; resize: vertical;"></textarea>
+            <button class="btn" onclick="submitFeedback()" style="width: 100%; margin-top: 20px;">SUBMIT FEEDBACK</button>
+            <button class="btn" onclick="closeModal('feedback-modal')" style="width: 100%; margin-top: 10px; background: transparent; border-color: #555;">CANCEL</button>
         </div>
     </div>
 
@@ -171,6 +188,7 @@
                 <button class="btn" onclick="showAdminTab('admin-users-logs')">USERS & LOGS</button>
                 <button class="btn" onclick="showAdminTab('admin-scrapes')">SCRAPERS</button>
                 <button class="btn" onclick="showAdminTab('admin-ads')">ADS</button>
+                <button class="btn" onclick="showAdminTab('admin-feedback'); loadAdminData()">FEEDBACK</button>
                 <button class="btn" onclick="showAdminTab('admin-settings')">SETTINGS</button>
                 <div style="border-left: 1px solid #333; margin: 0 10px;"></div>
                 <button class="btn" onclick="closeModal('admin-modal'); openModal('settings-modal')">OAUTH/TOKENS</button>
@@ -199,6 +217,10 @@
                     <thead><tr style="border-bottom: 1px solid #333;"><th>Type</th><th>Content</th><th>Status</th><th>Action</th></tr></thead>
                     <tbody id="admin-ad-list"></tbody>
                 </table>
+            </div>
+            <div id="admin-feedback" class="admin-tab" style="display:none;">
+                <h3>USER FEEDBACK LOGS</h3>
+                <div id="admin-feedback-list" style="max-height: 60vh; overflow-y: auto;"></div>
             </div>
             <div id="admin-settings" class="admin-tab" style="display:none;">
                 <h3>SYSTEM CONFIGURATION</h3>
@@ -786,9 +808,40 @@
             localStorage.setItem('regLocked', isLocked ? 'true' : 'false');
         }
 
+        function submitFeedback() {
+            const text = document.getElementById('feedback-text').value.trim();
+            if (!text) return alert("Please enter some feedback before submitting.");
+
+            let feedbacks = JSON.parse(localStorage.getItem('globalFeedback') || '[]');
+            feedbacks.push({
+                username: currentUser?.username || 'Anonymous',
+                text: text,
+                timestamp: new Date().toISOString()
+            });
+            localStorage.setItem('globalFeedback', JSON.stringify(feedbacks));
+
+            document.getElementById('feedback-text').value = '';
+            closeModal('feedback-modal');
+            alert("Thank you! Your feedback has been submitted successfully.");
+        }
+
         async function loadAdminData() {
             document.getElementById('lock-reg-checkbox').checked = localStorage.getItem('regLocked') === 'true';
             // User list handled by loadUsersAndLogs now
+
+            let feedbacks = JSON.parse(localStorage.getItem('globalFeedback') || '[]');
+            let fbHtml = '';
+            if (feedbacks.length === 0) {
+                fbHtml = '<p style="color: #aaa;">No feedback recorded yet.</p>';
+            } else {
+                [...feedbacks].reverse().forEach(fb => {
+                    fbHtml += `<div style="border: 1px solid #333; padding: 10px; margin-bottom: 10px; background: rgba(0,0,0,0.5);">
+                        <div style="font-size: 0.8em; color: var(--secondary); margin-bottom: 5px;">${escapeHtml(fb.username)} - ${new Date(fb.timestamp).toLocaleString()}</div>
+                        <div style="color: #fff;">${escapeHtml(fb.text)}</div>
+                    </div>`;
+                });
+            }
+            document.getElementById('admin-feedback-list').innerHTML = fbHtml;
 
             const ads = getLocalAds();
             document.getElementById('admin-ad-list').innerHTML = ads.map(a => `
