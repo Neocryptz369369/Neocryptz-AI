@@ -68,6 +68,7 @@
         </div>
         <div id="register-form" class="auth-form" style="display:none;">
             <h2 style="text-align:center;">REGISTER</h2>
+            <p style="text-align:center; font-size: 0.8em; color: var(--secondary); margin-bottom: 10px;">* Standard users are limited to 40 questions per day.</p>
             <input type="text" id="reg-user" placeholder="Username">
             <input type="email" id="reg-email" placeholder="Email" autocomplete="username">
             <input type="password" id="reg-pass" placeholder="Password" autocomplete="new-password">
@@ -78,9 +79,12 @@
                 <input type="text" id="reg-state" placeholder="State" style="flex: 1;">
                 <input type="text" id="reg-zip" placeholder="Zip Code" style="flex: 1;">
             </div>
-            <input type="text" id="reg-phone" placeholder="Phone Number">
-            <label style="font-size: 0.7em;"><input type="checkbox" id="reg-tos"> Agree to Code of Conduct</label>
-            <button class="btn" onclick="handleAuth('register')">CREATE ACCOUNT</button>
+            <div style="display:flex; gap: 10px;">
+                <input type="text" id="reg-phone" placeholder="Phone Number" style="flex: 2;">
+                <input type="number" id="reg-age" placeholder="Age" style="flex: 1;" min="18">
+            </div>
+            <button class="btn" onclick="startTosWorkflow()">START TOS & PRIVACY VERIFICATION</button>
+            <button class="btn" id="reg-final-btn" style="display:none;" onclick="handleAuth('register')">CREATE ACCOUNT</button>
             <button class="btn" style="font-size: 0.7em;" onclick="toggleAuth()">Back to Login</button>
         </div>
     </div>
@@ -107,7 +111,7 @@
             <div class="message assistant">NEOCRYPTZ AI // CLOUD OS V4.1.2 ONLINE. How can I assist you today?</div>
         </div>
         <div id="input-area">
-            <input type="text" id="message-input" placeholder="Enter command or question..." onkeypress="if(event.key==='Enter') sendMessage()">
+            <input type="text" id="message-input" placeholder="Enter command or question (50 words max)..." onkeypress="if(event.key==='Enter') sendMessage()">
             <button id="mic-btn" onclick="toggleVoiceInput()" style="background: none; border: none; font-size: 1.5em; cursor: pointer; color: var(--primary);">🎤</button>
             <button id="send-btn" onclick="sendMessage()">EXECUTE</button>
         </div>
@@ -138,6 +142,7 @@
         <div class="modal-content" style="max-width: 400px; text-align: center;">
             <h2 style="color: var(--primary);">USER MENU</h2>
             <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
+                <button class="btn" onclick="closeModal('user-menu-modal'); openModal('share-modal')">SHARE NEOCRYPTZ</button>
                 <button class="btn" onclick="closeModal('user-menu-modal'); openModal('settings-modal')">SETTINGS / OAUTH</button>
                 <button class="btn" onclick="closeModal('user-menu-modal'); openModal('history-modal')">CHAT HISTORY</button>
                 <button class="btn" onclick="closeModal('user-menu-modal'); openModal('pricing-modal')">UPGRADE / ADS</button>
@@ -145,6 +150,27 @@
                 <button class="btn" style="border-color: #f00; color: #f00; margin-top: 20px;" onclick="logout()">LOGOUT</button>
             </div>
             <button class="btn" onclick="closeModal('user-menu-modal')" style="margin-top: 20px;">CLOSE</button>
+        </div>
+    </div>
+
+    <!-- Share Modal -->
+    <div id="share-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px; text-align: center;">
+            <h2 style="color: var(--primary);">SHARE NEOCRYPTZ AI</h2>
+            <div style="margin: 20px 0; padding: 15px; border: 1px solid #333; background: rgba(0,0,0,0.5); font-size: 0.9em; color: #fff; text-align: left;">
+                Check out Neocryptz AI I'm only letting 25 people in today. You can pay $20 month-to-month, or lock in your spot for a full year for $240 for unlimited AI so you never have to worry about price increases when I expand the server later. Limit 40 questions a day.<br><br>
+                <a href="https://neocryptz-ai.vercel.app/" style="color: var(--secondary); text-decoration: none;">https://neocryptz-ai.vercel.app/</a>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
+                <button class="btn" onclick="shareTo('copy')">📋 COPY LINK / TIKTOK</button>
+                <button class="btn" style="background: #1877F2; border-color: #1877F2; color: #fff;" onclick="shareTo('facebook')">SHARE TO FACEBOOK</button>
+                <button class="btn" style="background: #1DA1F2; border-color: #1DA1F2; color: #fff;" onclick="shareTo('twitter')">SHARE TO TWITTER</button>
+                <button class="btn" style="background: #0084FF; border-color: #0084FF; color: #fff;" onclick="shareTo('messenger')">SHARE TO MESSENGER</button>
+                <button class="btn" style="background: #25D366; border-color: #25D366; color: #fff;" onclick="shareTo('whatsapp')">SHARE TO WHATSAPP</button>
+                <button class="btn" style="border-color: var(--secondary); color: var(--secondary);" onclick="shareTo('native')">📱 SHARE TO CONTACTS / MOBILE</button>
+            </div>
+            <button class="btn" onclick="closeModal('share-modal')" style="margin-top: 20px; width: 100%; background: transparent; border-color: #555;">CANCEL</button>
         </div>
     </div>
 
@@ -156,6 +182,19 @@
             <textarea id="feedback-text" placeholder="Type your feedback here..." style="width: 100%; height: 150px; background: rgba(0,0,0,0.5); border: 1px solid var(--primary); color: #fff; padding: 10px; font-family: monospace; resize: vertical;"></textarea>
             <button class="btn" onclick="submitFeedback()" style="width: 100%; margin-top: 20px;">SUBMIT FEEDBACK</button>
             <button class="btn" onclick="closeModal('feedback-modal')" style="width: 100%; margin-top: 10px; background: transparent; border-color: #555;">CANCEL</button>
+        </div>
+    </div>
+
+    <!-- TOS Verification Modal -->
+    <div id="tos-modal" class="modal">
+        <div class="modal-content" style="max-width: 600px; width: 90%; text-align: center;">
+            <h2 style="color: var(--primary);">VERIFICATION</h2>
+            <p id="tos-sentence" style="font-size: 1.2em; margin: 20px 0;"></p>
+            <label style="display:none; align-items: center; justify-content: center; cursor: pointer; margin-top: 20px;" id="tos-checkbox-container">
+                <input type="checkbox" id="tos-checkbox" style="width: 20px; height: 20px; margin-right: 10px;" onchange="nextTosSentence()">
+                <span>I have heard, read, and understood this statement.</span>
+            </label>
+            <p id="tos-progress" style="font-size: 0.8em; color: #555; margin-top: 20px;"></p>
         </div>
     </div>
 
@@ -191,6 +230,7 @@
                 <button class="btn" onclick="showAdminTab('admin-feedback'); loadAdminData()">FEEDBACK</button>
                 <button class="btn" onclick="showAdminTab('admin-settings')">SETTINGS</button>
                 <div style="border-left: 1px solid #333; margin: 0 10px;"></div>
+                <button class="btn" onclick="closeModal('admin-modal'); openModal('share-modal')">SHARE</button>
                 <button class="btn" onclick="closeModal('admin-modal'); openModal('settings-modal')">OAUTH/TOKENS</button>
                 <button class="btn" onclick="closeModal('admin-modal'); openModal('history-modal')">CHAT HISTORY</button>
                 <button class="btn" onclick="closeModal('admin-modal'); openModal('pricing-modal')">UPGRADES</button>
@@ -354,6 +394,80 @@
             loadAds();
         }
 
+        const tosSentences = [
+            "Terms of service for Neocryptz AI.",
+            "Age Requirements: You must be 18 years or older to use Neocryptz AI meaning some plan members who are under 18 may not have access.",
+            "Usage Limits: The service defines fair usage.",
+            "Free-tier users are generally limited to 10 tasks per day and 3 concurrent tasks.",
+            "Higher usage allowances are available for Neocryptz AI Starter and Power subscribers.",
+            "Intellectual Property: You retain ownership of your code.",
+            "However, Neocryptz AI does claim ownership of the code the AI generates, and AI outputs may not be unique or consistent across different users.",
+            "Privacy and Training: Neocryptz AI is not private by default.",
+            "Your code and repository data used to train Neocryptz AI models and does not remain isolated within your execution environment.",
+            "No Warranties: Neocryptz AI makes no representations or warranties regarding the accuracy, reliability, or completeness of the code or content generated, and advises users to independently verify the output.",
+            "No Refunds: Neocryptz AI Will not issue any refunds for it’s plans or for it’s advertising and when you purchase either a plan or ad you will have to click agree to this agreement before you are sent to Paypal payment page.",
+            "We do keep a copy of this agreement in case you dispute the charges.",
+            "And NEVER use anyone else’s card or stolen cards that can get you banned for life.",
+            "We do record your ip addresses as well.",
+            "Privacy Policy for Neocryptz AI.",
+            "Neocryptz AI is an autonomous coding assistant.",
+            "Code Privacy: Neocryptz AI is not private by default.",
+            "Your codebase is cloned to an isolated on Supabase Cloud virtual machine and evaluated.",
+            "Data Training: Neocryptz AI does use private repository code to train their base AI models.",
+            "Neocryptz AI Life Coaching AI.",
+            "This AI is a personalized life and career coaching tool.",
+            "Data Collection & Identification: It collects a minimal amount of personal data full name, age, email, phone number and address to set up your account.",
+            "Anonymization: Neocryptz AI never passes your identifying information to the large language model handling your chats, ensuring your conversations remain anonymous.",
+            "Limitation of Liability: If Neocryptz AI provides bad advice that causes financial, medical, or legal harm to a user we are not responsible for anything.",
+            "Information & Control: You own your data.",
+            "We do not share your information with any third parties ever we promise this."
+        ];
+
+        let currentTosIndex = 0;
+
+        function startTosWorkflow() {
+            if (localStorage.getItem('regLocked') === 'true') {
+                return alert("We are not taking any new customers at this time.");
+            }
+            if (!document.getElementById('reg-user').value || !document.getElementById('reg-pass').value) {
+                return alert("Please fill out username and password before verifying.");
+            }
+            currentTosIndex = 0;
+            openModal('tos-modal');
+            playCurrentTos();
+        }
+
+        function playCurrentTos() {
+            if (currentTosIndex >= tosSentences.length) {
+                closeModal('tos-modal');
+                document.getElementById('reg-final-btn').style.display = 'inline-block';
+                alert("Verification complete. You may now create your account.");
+                return;
+            }
+
+            const sentence = tosSentences[currentTosIndex];
+            document.getElementById('tos-sentence').innerText = sentence;
+            document.getElementById('tos-checkbox-container').style.display = 'none';
+            document.getElementById('tos-checkbox').checked = false;
+            document.getElementById('tos-progress').innerText = `Step ${currentTosIndex + 1} of ${tosSentences.length}`;
+
+            const utterance = new SpeechSynthesisUtterance(sentence);
+            utterance.onend = () => {
+                document.getElementById('tos-checkbox-container').style.display = 'flex';
+            };
+
+            // Speak
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function nextTosSentence() {
+            if (document.getElementById('tos-checkbox').checked) {
+                currentTosIndex++;
+                playCurrentTos();
+            }
+        }
+
         async function handleAuth(type) {
             let email, pass, username;
             if (type === 'login') {
@@ -386,13 +500,22 @@
                 // Fallback to local storage if Supabase fails or error
                 if (supaError) {
                     let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
-                    if (users[username] && users[username].password === pass) {
-                        localStorage.setItem('currentUser', JSON.stringify(users[username]));
-                        localStorage.setItem('token', 'local-token-' + username);
-                        location.reload();
-                    } else if (users[validEmail] && users[validEmail].password === pass) {
-                        localStorage.setItem('currentUser', JSON.stringify(users[validEmail]));
-                        localStorage.setItem('token', 'local-token-' + validEmail);
+                    const foundUser = users[username] || users[validEmail];
+                    if (foundUser && foundUser.password === pass) {
+                        if (foundUser.banned) {
+                            return alert("ACCESS DENIED: Your account has been banned for violating the terms of service.");
+                        }
+
+                        // Check if plan expired
+                        if (foundUser.plan_expires_at && new Date() > new Date(foundUser.plan_expires_at)) {
+                            foundUser.plan = "Free";
+                            foundUser.plan_expires_at = null;
+                            localStorage.setItem('localUsers', JSON.stringify(users));
+                            alert("Your paid plan has expired. You have been downgraded to the Free plan.");
+                        }
+
+                        localStorage.setItem('currentUser', JSON.stringify(foundUser));
+                        localStorage.setItem('token', 'local-token-' + (users[username] ? username : validEmail));
                         location.reload();
                     } else {
                         alert('Login Failed: ' + supaError.message + " (Local fallback also failed: invalid credentials)");
@@ -411,13 +534,14 @@
                 const zip = document.getElementById('reg-zip')?.value || '';
                 const fullAddress = `${address}, ${city}, ${state} ${zip}`;
                 const phone = document.getElementById('reg-phone')?.value || '';
+                const age = document.getElementById('reg-age')?.value || '';
 
                 let supaError = null;
                 try {
                     const { data, error } = await supabaseClient.auth.signUp({
                         email: validEmail,
                         password: pass,
-                        options: { data: { full_name: fullName } }
+                        options: { data: { full_name: fullName, address: fullAddress, phone: phone, age: age } }
                     });
                     supaError = error;
                 } catch(err) { supaError = err; }
@@ -445,8 +569,10 @@
                     full_name: fullName,
                     address: fullAddress,
                     phone: phone,
-                    plan: "Power",
-                    credits: 999999,
+                    age: age,
+                    plan: "Free",
+                    credits: 25,
+                    banned: false,
                     is_admin: (username.toLowerCase() === 'neocryptz')
                 };
                 localStorage.setItem('localUsers', JSON.stringify(users));
@@ -511,8 +637,51 @@
 
         async function sendMessage() {
             const input = document.getElementById('message-input');
-            const msg = input.value.trim();
+            let msg = input.value.trim();
             if (!msg) return;
+
+            // Enforce 50 word limit for user inputs
+            const wordCount = msg.split(/\s+/).length;
+            if (wordCount > 50) {
+                alert("Please keep your questions brief (50 words or less). Your message is currently " + wordCount + " words.");
+                return;
+            }
+
+            // Immediately apply profanity filter to the user's outgoing message string
+            msg = filterProfanity(msg);
+
+            const myUsername = currentUser?.username || 'Unknown';
+            let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
+            let myPlan = 'Free';
+            if (users[myUsername] && users[myUsername].plan) {
+                myPlan = users[myUsername].plan;
+            }
+
+            // Check Daily Limit (40 Questions)
+            const today = new Date().toDateString();
+            let usageData = JSON.parse(localStorage.getItem('dailyUsage') || '{}');
+            if (!usageData[myUsername]) usageData[myUsername] = { date: today, count: 0 };
+
+            if (usageData[myUsername].date !== today) {
+                usageData[myUsername] = { date: today, count: 0 }; // Reset for new day
+            }
+
+            if (myUsername !== 'Neocryptz' && usageData[myUsername].count >= 40) {
+                appendMessage('assistant', 'ERROR: You have reached your daily limit of 40 questions. Please come back tomorrow!');
+                input.value = '';
+                return;
+            }
+
+            // Check 25 Free Lifetime Credits
+            let lifetimeUsage = JSON.parse(localStorage.getItem('lifetimeUsage') || '{}');
+            if (!lifetimeUsage[myUsername]) lifetimeUsage[myUsername] = 0;
+
+            if (myPlan === 'Free' && lifetimeUsage[myUsername] >= 25 && myUsername !== 'Neocryptz') {
+                appendMessage('assistant', 'You have used all 25 of your free trial credits! Please upgrade your plan to continue using Neocryptz AI.');
+                input.value = '';
+                setTimeout(() => openModal('pricing-modal'), 1500); // Auto pop-up pricing
+                return;
+            }
 
             appendMessage('user', msg);
             input.value = '';
@@ -549,10 +718,16 @@
                 console.error("Error reading API keys from local storage", e);
             }
 
+            let historyPayload = [];
+            try {
+                const allHistory = JSON.parse(localStorage.getItem('globalChatHistory') || '[]');
+                historyPayload = allHistory.filter(h => h.username === myUsername).slice(-2); // Limit history to last 2 messages for extreme token optimization
+            } catch(e) {}
+
             const resp = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentToken}` },
-                body: JSON.stringify({ prompt: msg, session_id: session_id, keys: keysPayload })
+                body: JSON.stringify({ prompt: msg, session_id: session_id, keys: keysPayload, history: historyPayload })
             });
 
             const data = await resp.json();
@@ -560,6 +735,17 @@
             if (resp.ok) {
                 aiText = data.result || 'Task execution initiated.';
                 appendMessage('assistant', aiText);
+
+                // Increment Usage Count on Success
+                if (myUsername !== 'Neocryptz') {
+                    usageData[myUsername].count += 1;
+                    localStorage.setItem('dailyUsage', JSON.stringify(usageData));
+
+                    if (myPlan === 'Free') {
+                        lifetimeUsage[myUsername] += 1;
+                        localStorage.setItem('lifetimeUsage', JSON.stringify(lifetimeUsage));
+                    }
+                }
             } else {
                 aiText = `ERROR: ${data.error || 'Request Failed'}`;
                 appendMessage('assistant', aiText);
@@ -594,9 +780,17 @@
                 .replace(/'/g, "&#039;");
         }
 
+        function filterProfanity(text) {
+            // A comprehensive regex identifying standard variations of profanity/vulgarity
+            const badWords = /\b(fuck|shit|bitch|cunt|asshole|dick|pussy|whore|slut|bastard|fag|nigg|crap|twat|damn)\w*\b/gi;
+            return text.replace(badWords, '!@#$neocryptz6357%^&*');
+        }
+
         function formatText(text) {
-            // Escape HTML first to prevent XSS
-            const escapedText = escapeHtml(text);
+            // First filter vulgarity out of the raw text
+            const cleanText = filterProfanity(text);
+            // Escape HTML to prevent XSS
+            const escapedText = escapeHtml(cleanText);
             // Simple markdown-ish code block formatting
             return escapedText.replace(/```([\s\S]*?)```/g, (match, code) => {
                 const id = uuidv4();
@@ -722,32 +916,56 @@
             logsContainer.innerHTML = html;
         }
 
+        async function banUser(userId) {
+            let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
+            let foundUser = Object.keys(users).find(k => users[k].id === userId || users[k].username === userId);
+            if (foundUser) {
+                users[foundUser].banned = true;
+                localStorage.setItem('localUsers', JSON.stringify(users));
+            }
+
+            try {
+                await supabaseClient.from('users').update({ banned: true }).eq('id', userId);
+            } catch(e) {}
+
+            alert("User has been completely BANNED.");
+            loadAdminData();
+            loadUsersAndLogs();
+        }
+
         async function grantManualPlan(userId, planName) {
-            // Update the user's plan and status in Supabase
+            // Calculate 30 days from now for expiration, unless plan is "Free"
+            const expDate = planName === 'Free' ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+            const grantedDate = planName === 'Free' ? null : new Date().toLocaleDateString();
+
+            // Update the user's plan, expiration, and status in Supabase
             const { data, error } = await supabaseClient
                 .from('users')
                 .update({
                     plan: planName,
-                    status: 'active',
-                    updated_at: new Date()
+                    status: planName === 'Free' ? 'inactive' : 'active',
+                    updated_at: new Date(),
+                    plan_expires_at: expDate,
+                    plan_granted_at: grantedDate
                 })
                 .eq('id', userId);
 
             if (error) {
-                alert('Error updating plan: ' + error.message);
-                console.log('Falling back to local storage update.');
-
-                // Fallback update
+                // Silently fallback to local storage
+                console.log('Supabase users table missing/failing. Falling back to local storage update.');
                 let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
                 let foundUser = Object.keys(users).find(k => users[k].id === userId || users[k].username === userId);
                 if (foundUser) {
                     users[foundUser].plan = planName;
+                    users[foundUser].plan_expires_at = expDate;
+                    users[foundUser].plan_granted_at = grantedDate;
                     localStorage.setItem('localUsers', JSON.stringify(users));
                 }
-            } else {
-                alert('Plan updated successfully for user!');
             }
+
+            alert(planName === 'Free' ? 'User plan revoked.' : `Plan ${planName} updated successfully for 30 days!`);
             loadAdminData(); // Refresh the admin table so the change shows
+            loadUsersAndLogs();
         }
 
         function loadUsersAndLogs() {
@@ -760,20 +978,27 @@
 
             // Render User Registry
             let html = '<h3 style="color:var(--primary); margin-bottom:10px;">USER REGISTRY & PLANS</h3>';
-            html += '<table style="width:100%; border-collapse: collapse; font-size:0.8em; margin-bottom: 20px;"><tr><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Username</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Email</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Password</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Current Plan</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Manual Grant</th></tr>';
+            html += '<table style="width:100%; border-collapse: collapse; font-size:0.8em; margin-bottom: 20px;"><tr><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Username</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Email</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Name/Age</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Phone</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Address</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Plan</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Controls</th></tr>';
             for (let u in users) {
                 let usr = users[u];
                 let userPlan = usr.plan || 'Free';
+                if (usr.plan_granted_at) userPlan += `<br><span style="font-size:0.8em; color:#aaa;">(Granted: ${usr.plan_granted_at})</span>`;
+
                 const passingId = usr.id || usr.username; // Ensure Supabase UUID or Username fallback is used
+                const isBanned = usr.banned ? ' <strong style="color:red;">[BANNED]</strong>' : '';
                 html += `<tr>
-                    <td style="padding: 5px;">${escapeHtml(usr.username)}</td>
+                    <td style="padding: 5px;">${escapeHtml(usr.username)}${isBanned}</td>
                     <td style="padding: 5px;">${escapeHtml(usr.email)}</td>
-                    <td style="padding: 5px;">${escapeHtml(usr.password || 'N/A')}</td>
-                    <td style="padding: 5px; color: var(--secondary);">${escapeHtml(userPlan)}</td>
-                    <td style="padding: 5px;">
+                    <td style="padding: 5px;">${escapeHtml(usr.full_name || 'N/A')}<br>Age: ${escapeHtml(usr.age || 'N/A')}</td>
+                    <td style="padding: 5px;">${escapeHtml(usr.phone || 'N/A')}</td>
+                    <td style="padding: 5px;">${escapeHtml(usr.address || 'N/A')}</td>
+                    <td style="padding: 5px; color: var(--secondary);">${userPlan}</td>
+                    <td style="padding: 5px; display:flex; flex-wrap:wrap; gap:5px;">
                         <button onclick="grantManualPlan('${passingId}', 'Starter')" style="font-size:0.8em; padding:2px;">STARTER</button>
                         <button onclick="grantManualPlan('${passingId}', 'Power')" style="font-size:0.8em; padding:2px;">POWER</button>
                         <button onclick="grantManualPlan('${passingId}', 'Unlimited')" style="font-size:0.8em; padding:2px;">UNLIMITED</button>
+                        <button onclick="grantManualPlan('${passingId}', 'Free')" style="font-size:0.8em; padding:2px; background:#ff8c00; border-color:#ff8c00; color:#fff;">REVOKE</button>
+                        <button onclick="banUser('${passingId}')" style="font-size:0.8em; padding:2px; background:#ff0000; border-color:#ff0000; color:#fff;">BAN</button>
                     </td>
                 </tr>`;
             }
@@ -801,6 +1026,34 @@
         function showAdminTab(id) {
             document.querySelectorAll('.admin-tab').forEach(t => t.style.display = 'none');
             document.getElementById(id).style.display = 'block';
+        }
+
+        function shareTo(platform) {
+            const shareText = "Check out Neocryptz AI I'm only letting 25 people in today. You can pay $20 month-to-month, or lock in your spot for a full year for $240 for unlimited AI so you never have to worry about price increases when I expand the server later. Limit 40 questions a day.";
+            const shareUrl = "https://neocryptz-ai.vercel.app/";
+            const fullText = `${shareText} ${shareUrl}`;
+
+            if (platform === 'copy') {
+                navigator.clipboard.writeText(fullText).then(() => alert('Copied to clipboard! Ready to paste to TikTok or anywhere else.'));
+            } else if (platform === 'facebook') {
+                window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`, '_blank');
+            } else if (platform === 'twitter') {
+                window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`, '_blank');
+            } else if (platform === 'whatsapp') {
+                window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(fullText)}`, '_blank');
+            } else if (platform === 'messenger') {
+                window.open(`fb-messenger://share/?link=${encodeURIComponent(shareUrl)}`, '_blank');
+            } else if (platform === 'native') {
+                if (navigator.share) {
+                    navigator.share({
+                        title: 'Neocryptz AI',
+                        text: shareText,
+                        url: shareUrl
+                    }).catch(console.error);
+                } else {
+                    alert("Native sharing is not supported on this browser. Please use the Copy Link button.");
+                }
+            }
         }
 
         function toggleRegistrationLock() {
@@ -984,7 +1237,8 @@
             const confirmed = confirm("By proceeding, you agree that there are no refunds for this plan. Do you wish to continue?");
             if (!confirmed) return;
             const price = { "Starter": 10, "Unlimited Text": 20, "Power": 80 }[plan];
-            window.location.href = `https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=${email}&item_name=${plan}&amount=${price}&currency_code=USD`;
+            const userId = currentUser?.username || currentUser?.id || 'guest';
+            window.location.href = `https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=${email}&item_name=${plan}&amount=${price}&custom=${encodeURIComponent(userId)}&currency_code=USD`;
         }
 
         function buyAd(plan) {

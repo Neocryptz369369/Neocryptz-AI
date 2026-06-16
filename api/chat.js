@@ -3,12 +3,17 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const { prompt, keys } = req.body;
+    const { prompt, keys, history } = req.body;
     if (!prompt) {
         return res.status(400).json({ error: 'Prompt is required' });
     }
 
-    const systemPrompt = "You are a highly capable AI assistant. Answer any question asked. You can write code seamlessly across all languages including HTML, Python, terminal scripts, and anything else requested. Only refer to yourself as or mention Neocryptz if explicitly asked.";
+    let memoryContext = "";
+    if (history && history.length > 0) {
+        memoryContext = "\n\nRecent Chat History:\n" + history.map(h => `User: ${h.user_msg}\nAI: ${h.ai_response}`).join("\n");
+    }
+
+    const systemPrompt = `You are a highly capable AI assistant. Keep all responses brief (under 50 words). Answer any question asked. You can write code seamlessly across all languages including HTML, Python, terminal scripts, and anything else requested. Only refer to yourself as or mention Neocryptz if explicitly asked.${memoryContext}`;
 
     // Provider 1: OpenAI (Requires OPENAI_API_KEY)
     const openaiKey = keys?.OPENAI_API_KEY || process.env.OPENAI_API_KEY;
@@ -108,10 +113,36 @@ export default async function handler(req, res) {
         }
     }
 
-    // Fallback: If no keys are provided or endpoints fail
+    // Provider 4: Free open Pollinations API (No Key Required)
+    // Absolute fallback when keys fail or token limits hit
+    try {
+        const response4 = await fetch('https://text.pollinations.ai/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: prompt }
+                ],
+                model: 'openai',
+                jsonMode: false
+            })
+        });
+
+        if (response4.ok) {
+            const data4 = await response4.text();
+            if (data4 && !data4.includes('error')) {
+                return res.status(200).json({ result: data4.trim() });
+            }
+        }
+    } catch (e) {
+        console.log("Provider 4 (Pollinations) free fallback failed.", e);
+    }
+
+    // Fallback: If no keys are provided and free endpoints rate-limit
     let errorDetail = "Offline fallback mode: Please provide a valid OpenAI, Google Gemini, or Groq API key in the admin settings to restore full AI functionality.";
     if (openaiKey || geminiKey || groqKey) {
-        errorDetail = lastError ? lastError : "API Connection Failed: The provided API key(s) were invalid, expired, or rate-limited. Please check your admin settings and try a new key.";
+        errorDetail = lastError ? lastError : "API Connection Failed: The provided API key(s) were invalid, expired, or rate-limited, and the free fallback servers are currently busy. Please check your admin settings or try again shortly.";
     }
     res.status(500).json({ error: errorDetail });
 }
