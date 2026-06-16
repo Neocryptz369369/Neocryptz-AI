@@ -83,7 +83,7 @@
                 <input type="text" id="reg-phone" placeholder="Phone Number" style="flex: 2;">
                 <input type="number" id="reg-age" placeholder="Age" style="flex: 1;" min="18">
             </div>
-            <button class="btn" onclick="startTosWorkflow()">START TOS & PRIVACY VERIFICATION</button>
+            <button class="btn" onclick="startTosWorkflow()">TERMS OF SERVICE & PRIVACY POLICY</button>
             <button class="btn" id="reg-final-btn" style="display:none;" onclick="handleAuth('register')">CREATE ACCOUNT</button>
             <button class="btn" style="font-size: 0.7em;" onclick="toggleAuth()">Back to Login</button>
         </div>
@@ -189,11 +189,9 @@
     <div id="tos-modal" class="modal">
         <div class="modal-content" style="max-width: 600px; width: 90%; text-align: center;">
             <h2 style="color: var(--primary);">VERIFICATION</h2>
-            <p id="tos-sentence" style="font-size: 1.2em; margin: 20px 0;"></p>
-            <label style="display:none; align-items: center; justify-content: center; cursor: pointer; margin-top: 20px;" id="tos-checkbox-container">
-                <input type="checkbox" id="tos-checkbox" style="width: 20px; height: 20px; margin-right: 10px;" onchange="nextTosSentence()">
-                <span>I have heard, read, and understood this statement.</span>
-            </label>
+            <div id="tos-full-text" style="text-align: left; max-height: 400px; overflow-y: auto; padding: 15px; border: 1px solid #333; background: #050505; color: #ccc; font-size: 0.9em; margin-bottom: 20px;"></div>
+            <p id="tos-sentence" style="font-size: 1.2em; margin: 20px 0; color: var(--secondary);"></p>
+            <button id="tos-agree-btn" class="btn" style="display: none; background: #25D366; color: #000; font-weight: bold; width: 100%; font-size: 1.2em;" onclick="finishTosAndRegister()">I AGREE TO ALL TERMS & REGISTER</button>
             <p id="tos-progress" style="font-size: 0.8em; color: #555; margin-top: 20px;"></p>
         </div>
     </div>
@@ -396,7 +394,7 @@
 
         const tosSentences = [
             "Terms of service for Neocryptz AI.",
-            "Age Requirements: You must be 18 years or older to use Neocryptz AI meaning some plan members who are under 18 may not have access.",
+            "Age Requirements: You must be 18 years or older to use Neocryptz AI meaning anyone under 18 may not have access.",
             "Usage Limits: The service defines fair usage.",
             "Free-tier users are generally limited to 10 tasks per day and 3 concurrent tasks.",
             "Higher usage allowances are available for Neocryptz AI Starter and Power subscribers.",
@@ -410,11 +408,12 @@
             "And NEVER use anyone else’s card or stolen cards that can get you banned for life.",
             "We do record your ip addresses as well.",
             "Privacy Policy for Neocryptz AI.",
+            "1. Neocryptz AI (Autonomous AI Coding Agent)",
             "Neocryptz AI is an autonomous coding assistant.",
             "Code Privacy: Neocryptz AI is not private by default.",
             "Your codebase is cloned to an isolated on Supabase Cloud virtual machine and evaluated.",
             "Data Training: Neocryptz AI does use private repository code to train their base AI models.",
-            "Neocryptz AI Life Coaching AI.",
+            "2. Neocryptz AI (Life Coaching AI)",
             "This AI is a personalized life and career coaching tool.",
             "Data Collection & Identification: It collects a minimal amount of personal data full name, age, email, phone number and address to set up your account.",
             "Anonymization: Neocryptz AI never passes your identifying information to the large language model handling your chats, ensuring your conversations remain anonymous.",
@@ -432,28 +431,32 @@
             if (!document.getElementById('reg-user').value || !document.getElementById('reg-pass').value) {
                 return alert("Please fill out username and password before verifying.");
             }
+
+            // Populate the full text background
+            document.getElementById('tos-full-text').innerHTML = tosSentences.join(" ");
+
             currentTosIndex = 0;
+            document.getElementById('tos-agree-btn').style.display = 'none';
             openModal('tos-modal');
             playCurrentTos();
         }
 
         function playCurrentTos() {
             if (currentTosIndex >= tosSentences.length) {
-                closeModal('tos-modal');
-                document.getElementById('reg-final-btn').style.display = 'inline-block';
-                alert("Verification complete. You may now create your account.");
+                document.getElementById('tos-sentence').innerText = "Verification complete! Please click I AGREE below to finish your registration.";
+                document.getElementById('tos-progress').innerText = `Step ${currentTosIndex} of ${tosSentences.length}`;
+                document.getElementById('tos-agree-btn').style.display = 'block';
                 return;
             }
 
             const sentence = tosSentences[currentTosIndex];
-            document.getElementById('tos-sentence').innerText = sentence;
-            document.getElementById('tos-checkbox-container').style.display = 'none';
-            document.getElementById('tos-checkbox').checked = false;
+            document.getElementById('tos-sentence').innerText = "Reading: " + sentence;
             document.getElementById('tos-progress').innerText = `Step ${currentTosIndex + 1} of ${tosSentences.length}`;
 
             const utterance = new SpeechSynthesisUtterance(sentence);
             utterance.onend = () => {
-                document.getElementById('tos-checkbox-container').style.display = 'flex';
+                currentTosIndex++;
+                playCurrentTos(); // Automatically trigger the next sentence
             };
 
             // Speak
@@ -461,11 +464,9 @@
             window.speechSynthesis.speak(utterance);
         }
 
-        function nextTosSentence() {
-            if (document.getElementById('tos-checkbox').checked) {
-                currentTosIndex++;
-                playCurrentTos();
-            }
+        function finishTosAndRegister() {
+            closeModal('tos-modal');
+            handleAuth('register');
         }
 
         async function handleAuth(type) {

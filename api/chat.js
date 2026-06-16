@@ -27,6 +27,7 @@ export default async function handler(req, res) {
                 },
                 body: JSON.stringify({
                     model: 'gpt-4o-mini',
+                    max_tokens: 150, // Hard limit
                     messages: [
                         { role: 'system', content: systemPrompt },
                         { role: 'user', content: prompt }
@@ -85,6 +86,7 @@ export default async function handler(req, res) {
                 },
                 body: JSON.stringify({
                     model: 'llama-3.1-8b-instant',
+                    max_tokens: 150, // Hard limit to physically prevent massive token burns (e.g. 2000 token stories)
                     messages: [
                         { role: 'system', content: systemPrompt },
                         { role: 'user', content: prompt }
