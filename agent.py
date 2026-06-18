@@ -22,7 +22,7 @@ async def run_browser_task(request: AgentRequest):
             temperature=0.0
         )
         agent = Agent(
-            task=f"You are NEOCRYPTZ AI. Task: {request.prompt}", 
+            task=f"You are a highly capable AI assistant. Answer any question asked. You can write code seamlessly across all languages including HTML, Python, terminal scripts, and anything else requested. Only refer to yourself as or mention Neocryptz if explicitly asked. Task: {request.prompt}",
             llm=llm
         )
         result = await agent.run()

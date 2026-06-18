@@ -1,0 +1,11 @@
+{
+  "builds": [
+    { "src": "index.html", "use": "@vercel/static" },
+    { "src": "api/chat.js", "use": "@vercel/node" },
+    { "src": "api/webhooks/paypal.js", "use": "@vercel/node" }
+  ],
+  "routes": [
+    { "src": "/api/chat", "dest": "api/chat.js" },
+    { "src": "/api/webhooks/paypal", "dest": "api/webhooks/paypal.js" }
+  ]
+}
