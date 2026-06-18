@@ -14,6 +14,8 @@ export default async function handler(req, res) {
     }
 
     const translateModifier = lang ? `\n\nCRITICAL INSTRUCTION: Translate the following user text/response into ${lang}. Do not add any other commentary.` : '';
+    const translateModifier = lang ? `\n\nCRITICAL INSTRUCTION: Translate the following user text/response into ${lang}. Do not add any other commentary.` : '';
+    const translateModifier = lang ? `\n\nCRITICAL INSTRUCTION: Translate the following user text/response into ${lang}. Do not add any other commentary.` : '';
     const systemPrompt = `You are a highly capable AI assistant. Keep all responses brief (under 50 words). Answer any question asked. You can write code seamlessly across all languages including HTML, Python, terminal scripts, and anything else requested. Only refer to yourself as or mention Neocryptz if explicitly asked.${memoryContext}${translateModifier}`;
 
 

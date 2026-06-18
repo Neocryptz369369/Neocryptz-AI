@@ -64,6 +64,82 @@
                 }
             }, 1000);
 
+
+            // Cooldown logic with TikTok Injection
+            const overlay = document.getElementById('cooldown-overlay');
+            const timerEl = document.getElementById('cooldown-timer');
+            const sponsorEl = document.getElementById('sponsor-content');
+
+            if (overlay) {
+                overlay.style.display = 'flex';
+                let timeLeft = 60;
+                timerEl.innerText = timeLeft;
+
+                sponsorEl.innerHTML = '<p style="color:#aaa;">Loading Partner Offer...</p>';
+                fetch('/api/recommendations/active')
+                    .then(r => r.ok ? r.json() : null)
+                    .then(data => {
+                        if (data && data.id) {
+                            sponsorEl.innerHTML = `
+                                <span style="background:#ff0050; color:#fff; padding:2px 5px; font-size:0.7em; font-weight:bold; border-radius:3px;">${data.visual_badge_text || 'Trending'}</span>
+                                <h3 style="margin:10px 0 5px 0; color:#fff;">${data.product_name || 'TikTok Shop'}</h3>
+                                <p style="color:#0f0; margin-bottom:15px;">${data.display_headline || 'Check this out!'}</p>
+                                <a href="/api/recommendations/go?id=${data.id}" target="_blank" rel="noopener noreferrer" class="btn" style="background:#00f2fe; color:#000; font-weight:bold; text-decoration:none; display:inline-block; padding:10px 20px;">VIEW ON TIKTOK</a>
+                            `;
+                        } else {
+                            sponsorEl.innerHTML = '<p style="color:#777;">No active promotions right now.</p>';
+                        }
+                    })
+                    .catch(() => sponsorEl.innerHTML = '<p style="color:#777;">Failed to load promotion.</p>');
+
+                const timerInt = setInterval(() => {
+                    timeLeft--;
+                    timerEl.innerText = timeLeft;
+                    if (timeLeft <= 0) {
+                        clearInterval(timerInt);
+                        overlay.style.display = 'none';
+                    }
+                }, 1000);
+            }
+
+
+            // Cooldown logic with TikTok Injection
+            const overlay = document.getElementById('cooldown-overlay');
+            const timerEl = document.getElementById('cooldown-timer');
+            const sponsorEl = document.getElementById('sponsor-content');
+
+            if (overlay) {
+                overlay.style.display = 'flex';
+                let timeLeft = 60;
+                timerEl.innerText = timeLeft;
+
+                sponsorEl.innerHTML = '<p style="color:#aaa;">Loading Partner Offer...</p>';
+                fetch('/api/recommendations/active')
+                    .then(r => r.ok ? r.json() : null)
+                    .then(data => {
+                        if (data && data.id) {
+                            sponsorEl.innerHTML = `
+                                <span style="background:#ff0050; color:#fff; padding:2px 5px; font-size:0.7em; font-weight:bold; border-radius:3px;">${data.visual_badge_text || 'Trending'}</span>
+                                <h3 style="margin:10px 0 5px 0; color:#fff;">${data.product_name || 'TikTok Shop'}</h3>
+                                <p style="color:#0f0; margin-bottom:15px;">${data.display_headline || 'Check this out!'}</p>
+                                <a href="/api/recommendations/go?id=${data.id}" target="_blank" rel="noopener noreferrer" class="btn" style="background:#00f2fe; color:#000; font-weight:bold; text-decoration:none; display:inline-block; padding:10px 20px;">VIEW ON TIKTOK</a>
+                            `;
+                        } else {
+                            sponsorEl.innerHTML = '<p style="color:#777;">No active promotions right now.</p>';
+                        }
+                    })
+                    .catch(() => sponsorEl.innerHTML = '<p style="color:#777;">Failed to load promotion.</p>');
+
+                const timerInt = setInterval(() => {
+                    timeLeft--;
+                    timerEl.innerText = timeLeft;
+                    if (timeLeft <= 0) {
+                        clearInterval(timerInt);
+                        overlay.style.display = 'none';
+                    }
+                }, 1000);
+            }
+
             const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentToken}` },
@@ -220,6 +296,137 @@
             }, 2000);
         }
 
+
+        function generateEmbedCode() {
+            if (!currentUser) return;
+            const code = `<iframe src="https://${window.location.host}/?embed=${currentUser.username}" width="350" height="500" style="border:1px solid #ff00ff; border-radius:10px; box-shadow:0 0 10px #00ffff;"></iframe>`;
+            document.getElementById('embed-code').value = code;
+        }
+
+        function copyEmbedCode() {
+            const copyText = document.getElementById('embed-code');
+            copyText.select();
+            document.execCommand('copy');
+            alert('Embed Snippet Copied!');
+        }
+
+        function generateReferral() {
+            if(!currentUser) return;
+            const refLink = window.location.origin + "?ref=" + currentUser.username;
+            document.getElementById('referral-link').value = refLink;
+        }
+
+        function buyGiftSubscription() {
+            const confirmed = confirm("You are about to purchase a gift voucher for $240. Proceed to PayPal?");
+            if (confirmed) {
+                const code = "NEO-" + Math.random().toString(36).substring(2, 10).toUpperCase();
+                const out = document.getElementById('gift-code-output');
+                out.innerText = "Simulated Payment Success! Gift Code: " + code;
+                out.style.display = 'block';
+            }
+        }
+
+        function unlockQuestions() {
+            alert('Loading Sponsored Partner Link... (Simulating Ad View)');
+            setTimeout(() => {
+                let stats = JSON.parse(localStorage.getItem('dailyUsage') || '{"count": 0}');
+                stats.count -= 5;
+                if(stats.count < 0) stats.count = 0;
+                localStorage.setItem('dailyUsage', JSON.stringify(stats));
+                alert('Success! 5 Questions Unlocked. Thank you to our sponsors!');
+                window.location.reload();
+            }, 2000);
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('embed')) {
+            const sb = document.getElementById('sidebar');
+            if (sb) sb.style.display = 'none';
+            const tc = document.getElementById('ticker-container');
+            if (tc) tc.style.display = 'none';
+            document.body.style.display = 'block';
+            const mc = document.getElementById('main-content');
+            if (mc) {
+                mc.style.width = '100vw';
+                mc.style.height = '100vh';
+            }
+        }
+
+
+        function generateEmbedCode() {
+            if (!currentUser) return;
+            const code = `<iframe src="https://${window.location.host}/?embed=${currentUser.username}" width="350" height="500" style="border:1px solid #ff00ff; border-radius:10px; box-shadow:0 0 10px #00ffff;"></iframe>`;
+            document.getElementById('embed-code').value = code;
+        }
+
+        function copyEmbedCode() {
+            const copyText = document.getElementById('embed-code');
+            copyText.select();
+            document.execCommand('copy');
+            alert('Embed Snippet Copied!');
+        }
+
+        function generateReferral() {
+            if(!currentUser) return;
+            const refLink = window.location.origin + "?ref=" + currentUser.username;
+            document.getElementById('referral-link').value = refLink;
+        }
+
+        function buyGiftSubscription() {
+            const confirmed = confirm("You are about to purchase a gift voucher for $240. Proceed to PayPal?");
+            if (confirmed) {
+                const code = "NEO-" + Math.random().toString(36).substring(2, 10).toUpperCase();
+                const out = document.getElementById('gift-code-output');
+                out.innerText = "Simulated Payment Success! Gift Code: " + code;
+                out.style.display = 'block';
+            }
+        }
+
+        function unlockQuestions() {
+            alert('Loading Sponsored Partner Link... (Simulating Ad View)');
+            setTimeout(() => {
+                let stats = JSON.parse(localStorage.getItem('dailyUsage') || '{"count": 0}');
+                stats.count -= 5;
+                if(stats.count < 0) stats.count = 0;
+                localStorage.setItem('dailyUsage', JSON.stringify(stats));
+                alert('Success! 5 Questions Unlocked. Thank you to our sponsors!');
+                window.location.reload();
+            }, 2000);
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('embed')) {
+            const sb = document.getElementById('sidebar');
+            if (sb) sb.style.display = 'none';
+            const tc = document.getElementById('ticker-container');
+            if (tc) tc.style.display = 'none';
+            document.body.style.display = 'block';
+            const mc = document.getElementById('main-content');
+            if (mc) {
+                mc.style.width = '100vw';
+                mc.style.height = '100vh';
+            }
+        }
+
+
+function toggleUserMenuTab(tabId) {
+    document.getElementById('user-tools').style.display = 'none';
+    if (document.getElementById(tabId)) {
+        document.getElementById(tabId).style.display = 'block';
+    }
+}
+
+
+        function showUserTab(tabId) {
+            // Because there was no generic showUserTab defined for the modal, we define it here
+            const tools = document.getElementById('user-tools');
+            const embed = document.getElementById('user-embed');
+            if (tools) tools.style.display = 'none';
+            if (embed) embed.style.display = 'none';
+            const target = document.getElementById(tabId);
+            if(target) target.style.display = 'block';
+        }
+
 </script>
     <style>
         :root {
@@ -293,6 +500,26 @@
         <h2 style="color:var(--primary); text-shadow:0 0 10px var(--primary);">SYSTEM COOLDOWN</h2>
         <div id="cooldown-timer" style="font-size:3em; color:#fff; margin-bottom:20px;">60</div>
 
+        <div id="sponsor-content" style="border:2px dashed var(--primary); background:#111; padding:20px; text-align:center; max-width:400px; box-shadow:0 0 15px var(--primary); border-radius:10px;">
+            <p style="color:#aaa;">Loading Partner Offer...</p>
+        </div>
+    </div>
+
+
+    <div id="cooldown-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:500; align-items:center; justify-content:center; flex-direction:column;">
+        <h2 style="color:var(--primary); text-shadow:0 0 10px var(--primary);">SYSTEM COOLDOWN</h2>
+        <div id="cooldown-timer" style="font-size:3em; color:#fff; margin-bottom:20px;">60</div>
+
+        <div id="sponsor-content" style="border:2px dashed var(--primary); background:#111; padding:20px; text-align:center; max-width:400px; box-shadow:0 0 15px var(--primary); border-radius:10px;">
+            <p style="color:#aaa;">Loading Partner Offer...</p>
+        </div>
+    </div>
+
+
+    <div id="cooldown-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:500; align-items:center; justify-content:center; flex-direction:column;">
+        <h2 style="color:var(--primary); text-shadow:0 0 10px var(--primary);">SYSTEM COOLDOWN</h2>
+        <div id="cooldown-timer" style="font-size:3em; color:#fff; margin-bottom:20px;">60</div>
+
         <div id="sponsor-content" style="border:2px dashed var(--primary); background:#111; padding:20px; text-align:center; max-width:400px; box-shadow:0 0 15px var(--primary); border-radius:10px;"></div>
     </div>
 
@@ -333,9 +560,7 @@
     </div>
 
     <div id="sidebar" class="neon-border">
-            <div style="text-align: center; margin-bottom: 20px;">
-                <img src="crypt.png" alt="Logo" style="max-width: 80%; height: auto; border-radius: 50%; box-shadow: 0 0 15px var(--primary);">
-            </div>
+
 
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 10px;">
             <h2 style="color: var(--primary); font-size: 1.2em; margin: 0;">NEOCRYPTZ AI</h2>
@@ -350,9 +575,15 @@
 
         </div>
         <div id="user-info" style="font-size: 0.9em;"></div>
+
         <div style="flex:1;"></div>
 
+        <div style="text-align: center; margin-bottom: 20px;">
+            <img src="crypt.png" alt="Logo" style="max-width: 80%; height: auto; border-radius: 50%; box-shadow: 0 0 15px var(--primary); display: block; margin: 0 auto;">
+        </div>
+
         <div style="border-top: 1px solid #333; padding-top: 10px; font-size: 0.8em; color: #555;">
+
             <div style="display: flex; gap: 10px; margin-bottom: 10px;">
                 <button class="btn" style="flex: 1; font-size: 0.8em; padding: 5px;" onclick="viewLegal('tos')">Terms of Service</button>
                 <button class="btn" style="flex: 1; font-size: 0.8em; padding: 5px;" onclick="viewLegal('privacy')">Privacy Policy</button>
@@ -397,10 +628,54 @@
     <div id="user-menu-modal" class="modal">
         <div class="modal-content" style="max-width: 400px; text-align: center;">
             <h2 style="color: var(--primary);">USER MENU</h2>
+<div id="user-tools" style="display:none; text-align:left;"> <h3 style="color: var(--secondary);">GROWTH & REFERRALS</h3> <div style="background:#111; padding:10px; border:1px solid var(--primary); margin-bottom:10px;"> <h4 style="margin:0; color:var(--primary);">Referral Program</h4> <p style="font-size:0.8em; color:#aaa;">Get 1 month free for every friend that signs up for the $240/yr plan using your link!</p> <input type="text" id="referral-link" readonly style="width:100%; padding:5px; background:#222; color:#fff; border:1px solid #555;"> </div> <div style="background:#111; padding:10px; border:1px solid var(--secondary); margin-bottom:10px;"> <h4 style="margin:0; color:var(--secondary);">Support the Creator</h4> <p style="font-size:0.8em; color:#aaa;">100% private tip jar. Thank you for supporting solo privacy-first development.</p> <button class="btn" style="background:var(--secondary); color:#000;" onclick="window.open('https://paypal.me/bestcabautogroup', '_blank')">BUY ME A COFFEE ☕</button> </div> <div style="background:#111; padding:10px; border:1px solid #0f0; margin-bottom:10px;"> <h4 style="margin:0; color:#0f0;">Gift a Subscription</h4> <p style="font-size:0.8em; color:#aaa;">Buy a $240/yr digital voucher to give to a colleague or friend. 100% anonymous.</p> <button class="btn" style="border-color:#0f0; color:#0f0;" onclick="buyGiftSubscription()">BUY GIFT CODE ($240)</button> <div id="gift-code-output" style="margin-top:10px; font-weight:bold; color:var(--primary); display:none;"></div> </div> </div>
+
+            <div id="user-tools" style="display:none; text-align:left;">
+                <h3 style="color: var(--secondary);">GROWTH & REFERRALS</h3>
+                <div style="background:#111; padding:10px; border:1px solid var(--primary); margin-bottom:10px;">
+                    <h4 style="margin:0; color:var(--primary);">Referral Program</h4>
+                    <p style="font-size:0.8em; color:#aaa;">Get 1 month free for every friend that signs up for the $240/yr plan using your link!</p>
+                    <input type="text" id="referral-link" readonly style="width:100%; padding:5px; background:#222; color:#fff; border:1px solid #555;">
+                </div>
+                <div style="background:#111; padding:10px; border:1px solid var(--secondary); margin-bottom:10px;">
+                    <h4 style="margin:0; color:var(--secondary);">Support the Creator</h4>
+                    <p style="font-size:0.8em; color:#aaa;">100% private tip jar. Thank you for supporting solo privacy-first development.</p>
+                    <button class="btn" style="background:var(--secondary); color:#000;" onclick="window.open('https://paypal.me/bestcabautogroup', '_blank')">BUY ME A COFFEE ☕</button>
+                </div>
+                <div style="background:#111; padding:10px; border:1px solid #0f0; margin-bottom:10px;">
+                    <h4 style="margin:0; color:#0f0;">Gift a Subscription</h4>
+                    <p style="font-size:0.8em; color:#aaa;">Buy a $240/yr digital voucher to give to a colleague or friend. 100% anonymous.</p>
+                    <button class="btn" style="border-color:#0f0; color:#0f0;" onclick="buyGiftSubscription()">BUY GIFT CODE ($240)</button>
+                    <div id="gift-code-output" style="margin-top:10px; font-weight:bold; color:var(--primary); display:none;"></div>
+                </div>
+            </div>
+
+
+            <div id="user-tools" style="display:none; text-align:left;">
+                <h3 style="color: var(--secondary);">GROWTH & REFERRALS</h3>
+                <div style="background:#111; padding:10px; border:1px solid var(--primary); margin-bottom:10px;">
+                    <h4 style="margin:0; color:var(--primary);">Referral Program</h4>
+                    <p style="font-size:0.8em; color:#aaa;">Get 1 month free for every friend that signs up for the $240/yr plan using your link!</p>
+                    <input type="text" id="referral-link" readonly style="width:100%; padding:5px; background:#222; color:#fff; border:1px solid #555;">
+                </div>
+                <div style="background:#111; padding:10px; border:1px solid var(--secondary); margin-bottom:10px;">
+                    <h4 style="margin:0; color:var(--secondary);">Support the Creator</h4>
+                    <p style="font-size:0.8em; color:#aaa;">100% private tip jar. Thank you for supporting solo privacy-first development.</p>
+                    <button class="btn" style="background:var(--secondary); color:#000;" onclick="window.open('https://paypal.me/bestcabautogroup', '_blank')">BUY ME A COFFEE ☕</button>
+                </div>
+                <div style="background:#111; padding:10px; border:1px solid #0f0; margin-bottom:10px;">
+                    <h4 style="margin:0; color:#0f0;">Gift a Subscription</h4>
+                    <p style="font-size:0.8em; color:#aaa;">Buy a $240/yr digital voucher to give to a colleague or friend. 100% anonymous.</p>
+                    <button class="btn" style="border-color:#0f0; color:#0f0;" onclick="buyGiftSubscription()">BUY GIFT CODE ($240)</button>
+                    <div id="gift-code-output" style="margin-top:10px; font-weight:bold; color:var(--primary); display:none;"></div>
+                </div>
+            </div>
+
             <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
                 <button class="btn" onclick="closeModal('user-menu-modal'); openModal('share-modal')">SHARE NEOCRYPTZ</button>
                 <button class="btn" onclick="closeModal('user-menu-modal'); openModal('settings-modal')">SETTINGS / OAUTH</button>
                 <button class="btn" onclick="closeModal('user-menu-modal'); openModal('history-modal')">CHAT HISTORY</button>
+            <button class="btn" onclick="toggleUserMenuTab('user-tools'); generateReferral()">TOOLS</button>
                 <button class="btn" onclick="closeModal('user-menu-modal'); openModal('pricing-modal')">UPGRADE / ADS</button>
                 <button class="btn" onclick="closeModal('user-menu-modal'); openModal('feedback-modal')">PROVIDE FEEDBACK</button>
                 <button class="btn" style="border-color: #f00; color: #f00; margin-top: 20px;" onclick="logout()">LOGOUT</button>
