@@ -1,15 +1,15 @@
 {
   "name": "neocryptz-ai",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "NEOCRYPTZ AI - Local Free Engine",
+  "main": "agent.js",
   "scripts": {
+    "start": "node agent.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
     "browser-use-sdk": "^3.8.1",
     "dotenv": "^17.4.2",

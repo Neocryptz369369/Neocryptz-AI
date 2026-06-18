@@ -24,7 +24,22 @@
 </head>
 <body>
     <h1>NEOCRYPTZ AI // LOCAL_BROWSER_OS_V1.0</h1>
-    <div id="chat-window"></div>
+    <div id="login-container" style="text-align: right; margin-bottom: 10px;">
+        <button id="login-btn" onclick="login()" style="background: #58a6ff; color: #0d1117; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer;">Login via OAuth</button>
+        <span id="user-info" style="display: none; color: #58a6ff; font-weight: bold;"></span>
+    </div>
+    <div style="display: flex; flex: 1; gap: 20px; overflow: hidden;">
+        <div id="chat-window" style="flex: 3;"></div>
+        <div id="ad-sidebar" style="flex: 1; background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 20px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #8b949e;">
+            <p><strong>Advertisement</strong></p>
+            <div style="width: 100%; height: 250px; background: #0d1117; border: 1px dashed #30363d; display: flex; align-items: center; justify-content: center; margin-top: 20px;">
+                Ad Banner Space 1
+            </div>
+            <div style="width: 100%; height: 250px; background: #0d1117; border: 1px dashed #30363d; display: flex; align-items: center; justify-content: center; margin-top: 20px;">
+                Ad Banner Space 2
+            </div>
+        </div>
+    </div>
     <div id="input-container">
         <input type="text" id="input-box" placeholder="Ask for code templates, type commands, or automate browser tasks..." onkeypress="handleKeyPress(event)">
         <button class="send-btn" onclick="sendMessage()">EXECUTE</button>
@@ -33,6 +48,19 @@
     <script>
         const chatWindow = document.getElementById('chat-window');
         const inputBox = document.getElementById('input-box');
+        let isLoggedIn = false;
+
+        function login() {
+            // Mock OAuth Login
+            isLoggedIn = true;
+            document.getElementById('login-btn').style.display = 'none';
+            const userInfo = document.getElementById('user-info');
+            userInfo.style.display = 'inline';
+            userInfo.innerText = 'Logged in as Admin';
+
+            chatWindow.innerHTML += `<div class="message ai"><b>SYSTEM:</b><br><span style="color:#58a6ff">OAuth Login successful. Full system access granted.</span></div>`;
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
 
         function handleKeyPress(e) {
             if (e.key === 'Enter') sendMessage();
@@ -41,6 +69,11 @@
         async function sendMessage() {
             const prompt = inputBox.value.trim();
             if (!prompt) return;
+
+            if (!isLoggedIn) {
+                alert("Please login via OAuth before executing commands.");
+                return;
+            }
 
             chatWindow.innerHTML += `<div class="message user"><b>YOU:</b><br>${escapeHtml(prompt)}</div>`;
             inputBox.value = '';
@@ -56,15 +89,17 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ prompt: prompt })
                 });
+
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+
                 const data = await response.json();
                 formatAiResponse(aiMessageId, data.result || 'Task completed successfully.');
             } catch (error) {
-                // Perfect offline playground setup for building your apps!
-                const mockOutput = prompt.toLowerCase().includes('code') || prompt.toLowerCase().includes('html')
-                    ? `Sure! Here is the clean HTML code layout you requested:\n\n\`\`\`html\n<!DOCTYPE html>\n<html lang="en">\n<head>\n    <meta charset="UTF-8">\n    <title>NEOCRYPTZ Project Workspace</title>\n</head>\n<body>\n    <h1>NEOCRYPTZ Custom App Core</h1>\n</body>\n</html>\n\`\`\``
-                    : `System initialized natively. Local playground mode verified successfully. No servers billed!`;
-                
-                formatAiResponse(aiMessageId, mockOutput);
+                console.error('Fetch error:', error);
+                const errorMsg = `[CONNECTION ERROR]\n\n${error.message}\n\nMake sure the backend is running:\nnpm start`;
+                formatAiResponse(aiMessageId, errorMsg);
             }
         }
 

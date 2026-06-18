@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+requests
+pydantic
+langchain-ollama
+browser-use
+langchain-groq
+duckduckgo-search
+python-dotenv
