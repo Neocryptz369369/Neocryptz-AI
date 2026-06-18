@@ -4,7 +4,223 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NEOCRYPTZ AI // CLOUD OS V4.1.2</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+        function setProviderOrder(order) {
+            document.getElementById('provider-order').value = order;
+            localStorage.setItem('providerOrder', order);
+            alert('Provider priority updated. The system will automatically cycle through remaining defaults if these fail.');
+        }
+
+        async function testDoomsdayFallback() {
+            const resEl = document.getElementById('doomsday-test-result');
+            resEl.style.display = 'block';
+            resEl.innerText = "Simulating total AI failure... routing to Doomsday Fallback...";
+
+            let scrapes = JSON.parse(localStorage.getItem('localScrapes') || '[]');
+
+            try {
+
+            if (userMessage.startsWith('/imagine')) {
+                const imgHtml = await processImageGeneration(userMessage);
+                appendMessage('assistant', imgHtml);
+                saveChat(userMessage, imgHtml);
+                return;
+            }
+
+
+            // Cooldown logic with TikTok Injection
+            const overlay = document.getElementById('cooldown-overlay');
+            const timerEl = document.getElementById('cooldown-timer');
+            const sponsorEl = document.getElementById('sponsor-content');
+
+            overlay.style.display = 'flex';
+            let timeLeft = 60;
+            timerEl.innerText = timeLeft;
+
+            // Fetch TikTok active recommendation securely
+            sponsorEl.innerHTML = '<p style="color:#aaa;">Loading Partner Offer...</p>';
+            fetch('/api/recommendations/active')
+                .then(r => r.ok ? r.json() : null)
+                .then(data => {
+                    if (data && data.id) {
+                        sponsorEl.innerHTML = `
+                            <span style="background:#ff0050; color:#fff; padding:2px 5px; font-size:0.7em; font-weight:bold; border-radius:3px;">${data.visual_badge_text}</span>
+                            <h3 style="margin:10px 0 5px 0; color:#fff;">${data.product_name}</h3>
+                            <p style="color:#0f0; margin-bottom:15px;">${data.display_headline}</p>
+                            <a href="/api/recommendations/go?id=${data.id}" target="_blank" rel="noopener noreferrer" class="btn" style="background:#00f2fe; color:#000; font-weight:bold; text-decoration:none; display:inline-block; padding:10px 20px;">VIEW ON TIKTOK</a>
+                        `;
+                    } else {
+                        sponsorEl.innerHTML = '<p style="color:#777;">No active promotions right now.</p>';
+                    }
+                })
+                .catch(() => sponsorEl.innerHTML = '<p style="color:#777;">Failed to load promotion.</p>');
+
+            const timerInt = setInterval(() => {
+                timeLeft--;
+                timerEl.innerText = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(timerInt);
+                    overlay.style.display = 'none';
+                }
+            }, 1000);
+
+            const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentToken}` },
+                    body: JSON.stringify({
+                        prompt: "System test.",
+                        keys: { PROVIDER_ORDER: 'force_fail', LOCAL_SCRAPES: scrapes },
+                        history: []
+                    })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    resEl.innerText = "SUCCESS! Fallback activated.\n\nResponse:\n" + data.result;
+                } else {
+                    resEl.innerText = "FAILED.\n\n" + data.error;
+                }
+            } catch(e) {
+                resEl.innerText = "Network Error:\n" + e.message;
+            }
+        }
+
+
+        let adminPollInterval = null;
+        async function startAdminMonitor() {
+            if (currentUser?.role !== 'admin') return;
+
+            // Poll for recent active users (who have sent logs or logged in)
+            adminPollInterval = setInterval(async () => {
+                const { data, error } = await supabaseClient
+                    .from('users')
+                    .select('username, plan, status, updated_at')
+                    .order('updated_at', { ascending: false })
+                    .limit(5);
+
+                if (data && data.length > 0) {
+                    const recentUser = data[0];
+                    const lastSeen = new Date(recentUser.updated_at).getTime();
+                    const now = new Date().getTime();
+                    // If updated in the last 15 seconds, assume login or active
+                    if (now - lastSeen < 15000) {
+                        const notif = document.getElementById('admin-notif');
+                        notif.innerText = `🚨 LIVE ACTIVITY: User [${recentUser.username}] is active / logged in.`;
+                        notif.style.display = 'block';
+                        setTimeout(() => notif.style.display = 'none', 5000);
+                    }
+                }
+            }, 10000); // Check every 10 seconds
+        }
+
+        async function fetchLiveUserStats() {
+            const { data: users, error } = await supabaseClient.from('users').select('*');
+            if (users) {
+                let html = '<h4>LIVE USER STATISTICS</h4><table style="width:100%; border-collapse: collapse;">';
+                html += '<tr style="border-bottom:1px solid #ff00ff; color: #00ffff;"><th>Username</th><th>Status</th><th>Plan</th><th>Credits / Questions</th><th>Last Active</th></tr>';
+                users.forEach(u => {
+                    const isOnline = (new Date().getTime() - new Date(u.updated_at).getTime()) < 60000 ? '<span style="color:#0f0;">ONLINE</span>' : 'OFFLINE';
+                    const questions = u.plan === 'Starter' ? '40/Day' : (u.plan === 'Unlimited Text' ? 'Unlimited' : 'Power Mode');
+                    html += `<tr>
+                        <td>${escapeHtml(u.username)}</td>
+                        <td>${isOnline}</td>
+                        <td>${u.plan}</td>
+                        <td>${questions}</td>
+                        <td>${new Date(u.updated_at).toLocaleTimeString()}</td>
+                    </tr>`;
+                });
+                html += '</table>';
+                document.getElementById('live-monitor-content').innerHTML = html;
+            }
+        }
+
+
+        function generateEmbedCode() {
+            if (!currentUser) return;
+            const code = `<iframe src="https://${window.location.host}/?embed=${currentUser.username}" width="350" height="500" style="border:1px solid #ff00ff; border-radius:10px; box-shadow:0 0 10px #00ffff;"></iframe>`;
+            document.getElementById('embed-code').value = code;
+        }
+
+        function copyEmbedCode() {
+            const copyText = document.getElementById('embed-code');
+            copyText.select();
+            document.execCommand('copy');
+            alert('Embed Snippet Copied!');
+        }
+
+        // Logic to handle being inside an iframe widget
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('embed')) {
+            // Hide everything except the main chat interface
+            document.getElementById('sidebar').style.display = 'none';
+            document.getElementById('ticker-container').style.display = 'none';
+            document.body.style.display = 'block';
+            document.getElementById('main-content').style.width = '100vw';
+            document.getElementById('main-content').style.height = '100vh';
+            // Auto login logic for embed could be here, or we force them to login
+        }
+
+
+        async function processImageGeneration(userMessage) {
+            const prompt = userMessage.replace('/imagine', '').trim();
+            if (!prompt) return "Error: Please provide a prompt. Example: /imagine a futuristic city";
+
+            // Check limits (5 per day)
+            const today = new Date().toDateString();
+            const stored = JSON.parse(localStorage.getItem('imageGenStats') || '{}');
+            if (stored.date !== today) { stored.date = today; stored.count = 0; }
+            if (stored.count >= 5) {
+                return "Daily Limit Reached: You have generated 5/5 pictures today.";
+            }
+
+            stored.count += 1;
+            localStorage.setItem('imageGenStats', JSON.stringify(stored));
+
+            // Generate image URL
+            const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}`;
+
+            // Limit to 500 pictures globally (simulated locally or via basic memory array)
+            let globalImages = JSON.parse(localStorage.getItem('globalImageCache') || '[]');
+            globalImages.push(url);
+            if (globalImages.length > 500) globalImages.shift(); // Remove oldest
+            localStorage.setItem('globalImageCache', JSON.stringify(globalImages));
+
+            return `<img src="${url}" alt="Generated Image" style="max-width:100%; border:1px solid var(--secondary); box-shadow:0 0 10px var(--secondary); margin-top:10px;">`;
+        }
+
+
+        function generateReferral() {
+            if(!currentUser) return;
+            const refLink = window.location.origin + "?ref=" + currentUser.username;
+            document.getElementById('referral-link').value = refLink;
+        }
+
+        function buyGiftSubscription() {
+            const confirmed = confirm("You are about to purchase a gift voucher for $240. Proceed to PayPal?");
+            if (confirmed) {
+                // Simulate checkout return -> generating a code
+                const code = "NEO-" + Math.random().toString(36).substring(2, 10).toUpperCase();
+                const out = document.getElementById('gift-code-output');
+                out.innerText = "Simulated Payment Success! Gift Code: " + code;
+                out.style.display = 'block';
+                // Note: In reality this opens PayPal and Webhook returns the code
+            }
+        }
+
+
+        function unlockQuestions() {
+            alert('Loading Sponsored Partner Link... (Simulating Ad View)');
+            setTimeout(() => {
+                let stats = JSON.parse(localStorage.getItem('dailyUsage') || '{"count": 0}');
+                stats.count -= 5;
+                if(stats.count < 0) stats.count = 0;
+                localStorage.setItem('dailyUsage', JSON.stringify(stats));
+                alert('Success! 5 Questions Unlocked. Thank you to our sponsors!');
+                window.location.reload();
+            }, 2000);
+        }
+
+</script>
     <style>
         :root {
             --primary: #ff00ff; /* Neon Pink */
@@ -53,9 +269,34 @@
         #ad-sidebar { width: 200px; border-left: 1px solid var(--primary); padding: 10px; display: flex; flex-direction: column; box-shadow: -2px 0 10px rgba(255, 0, 255, 0.2); }
         .ad-box { width: 180px; height: 180px; border: 1px solid #333; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; padding: 5px; transition: border-color 0.3s ease; }
         .ad-box:hover { border-color: var(--secondary); box-shadow: 0 0 5px rgba(0, 255, 255, 0.3); }
-    </style>
+
+        /* Animated Neon Borders */
+        .neon-border {
+            position: relative;
+            border: 2px solid transparent;
+            background: linear-gradient(#000, #000) padding-box,
+                        linear-gradient(45deg, #00ffff, #ff00ff, #00ffff) border-box;
+            border-radius: 5px;
+            animation: neonGlow 3s linear infinite alternate;
+        }
+
+        @keyframes neonGlow {
+            0% { box-shadow: 0 0 10px #00ffff, inset 0 0 10px #00ffff; }
+            100% { box-shadow: 0 0 20px #ff00ff, inset 0 0 20px #ff00ff; }
+        }
+
+</style>
 </head>
 <body>
+
+    <div id="cooldown-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:500; align-items:center; justify-content:center; flex-direction:column;">
+        <h2 style="color:var(--primary); text-shadow:0 0 10px var(--primary);">SYSTEM COOLDOWN</h2>
+        <div id="cooldown-timer" style="font-size:3em; color:#fff; margin-bottom:20px;">60</div>
+
+        <div id="sponsor-content" style="border:2px dashed var(--primary); background:#111; padding:20px; text-align:center; max-width:400px; box-shadow:0 0 15px var(--primary); border-radius:10px;"></div>
+    </div>
+
+    <div id="admin-notif" style="display:none; position:fixed; top:20px; left:50%; transform:translateX(-50%); background:rgba(255,0,0,0.8); color:#fff; padding:10px 20px; border:1px solid #ff00ff; border-radius:5px; z-index:9999; font-weight:bold; box-shadow:0 0 15px #ff0000;"></div>
     <div id="auth-screen">
         <h1 style="color: var(--primary); text-shadow: 0 0 10px rgba(255, 0, 255, 0.8), 0 0 20px rgba(0, 255, 255, 0.5);">NEOCRYPTZ AI</h1>
         <div id="login-form" class="auth-form">
@@ -91,13 +332,22 @@
         </div>
     </div>
 
-    <div id="sidebar">
+    <div id="sidebar" class="neon-border">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <img src="crypt.png" alt="Logo" style="max-width: 80%; height: auto; border-radius: 50%; box-shadow: 0 0 15px var(--primary);">
+            </div>
+
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 10px;">
             <h2 style="color: var(--primary); font-size: 1.2em; margin: 0;">NEOCRYPTZ AI</h2>
             <div>
                 <span id="admin-icon" style="display:none; cursor: pointer; color: #8a2be2; font-size: 1.2em; margin-right: 5px;" onclick="openModal('admin-modal')" title="Admin Console">🛡️</span>
                 <span id="user-icon" style="display:none; cursor: pointer; font-size: 1.2em;" onclick="openModal('user-menu-modal')" title="Settings & Menu">⚙️</span>
             </div>
+            <div id="admin-brag" style="display:none; text-align: center; margin-top: 10px; border: 1px solid #ff00ff; padding: 5px; background: rgba(255,0,255,0.2); box-shadow: 0 0 10px #ff00ff;">
+                <div style="color: #fff; font-weight: bold; letter-spacing: 2px;">ADMINISTRATOR</div>
+                <a href="#" onclick="openModal('admin-modal'); return false;" style="color: var(--secondary); text-decoration: none; font-weight: bold; font-size: 0.9em; text-shadow: 0 0 5px var(--secondary);">[ Admin Panel ]</a>
+            </div>
+
         </div>
         <div id="user-info" style="font-size: 0.9em;"></div>
         <div style="flex:1;"></div>
@@ -112,7 +362,7 @@
         </div>
     </div>
 
-    <div id="main-content">
+    <div id="main-content" class="neon-border">
         <div id="chat-window">
             <div class="message assistant">NEOCRYPTZ AI // CLOUD OS V4.1.2 ONLINE. How can I assist you today?</div>
         </div>
@@ -228,6 +478,7 @@
             <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--primary); padding-bottom: 10px;">
                 <button class="btn" onclick="showAdminTab('admin-users-logs')">USERS & LOGS</button>
                 <button class="btn" onclick="showAdminTab('admin-scrapes')">SCRAPERS</button>
+                <button class="btn" style="border-color:#0f0; color:#0f0;" onclick="showAdminTab('admin-monitor'); fetchLiveUserStats()">LIVE MONITOR</button>
                 <button class="btn" onclick="showAdminTab('admin-ads')">ADS</button>
                 <button class="btn" onclick="showAdminTab('admin-feedback'); loadAdminData()">FEEDBACK</button>
                 <button class="btn" onclick="showAdminTab('admin-settings')">SETTINGS</button>
@@ -238,11 +489,29 @@
                 <button class="btn" onclick="closeModal('admin-modal'); openModal('pricing-modal')">UPGRADES</button>
                 <button class="btn" style="border-color: #f00; color: #f00;" onclick="logout()">LOGOUT</button>
             </div>
+
+            <div id="admin-monitor" class="admin-tab" style="display:none;">
+                <h3 style="color:#0f0;">LIVE SYSTEM MONITOR</h3>
+                <p style="font-size:0.8em; color:#aaa;">Click refresh to check exact login/logout states and credit/question limits for all users.</p>
+                <button class="btn" onclick="fetchLiveUserStats()">REFRESH DATA</button>
+                <div id="live-monitor-content" style="margin-top: 20px; background: #111; padding: 10px; border: 1px solid #0f0; border-radius: 5px; max-height: 50vh; overflow-y: auto;">
+                    Loading...
+                </div>
+            </div>
+
             <div id="admin-users-logs" class="admin-tab">
                 <div id="admin-logs" style="max-height: 70vh; overflow-y: auto;"></div>
             </div>
             <div id="admin-scrapes" class="admin-tab" style="display:none;">
                 <h3>SYSTEM DATA SCRAPER</h3>
+
+                <div style="margin-top: 20px; padding: 10px; border: 1px solid var(--secondary); background: #111;">
+                    <h4 style="color: var(--secondary); margin-top: 0;">Test Doomsday Fallback</h4>
+                    <p style="font-size: 0.8em; color: #aaa;">Simulate all AI providers failing to test if the fallback system reads your recorded scrapes correctly.</p>
+                    <button class="btn" onclick="testDoomsdayFallback()">Run Doomsday Test</button>
+                    <pre id="doomsday-test-result" style="margin-top: 10px; min-height: 50px; background: #000; border: 1px dashed var(--primary); display: none;"></pre>
+                </div>
+
                 <p style="font-size:0.8em; color:var(--secondary); margin-bottom: 20px;">Use this tool to extract raw text from websites. This text is saved locally and sent to the AI as the ultimate "Doomsday" fallback if all external AI endpoints fail or rate-limit.</p>
 
                 <div style="display: flex; gap: 10px; margin-bottom: 20px;">
@@ -275,6 +544,18 @@
             </div>
             <div id="admin-settings" class="admin-tab" style="display:none;">
                 <h3>SYSTEM CONFIGURATION</h3>
+
+                <div style="margin-bottom: 20px; padding: 10px; border: 1px solid var(--secondary); background: #111;">
+                    <h4 style="color: var(--secondary); margin-top: 0;">AI Provider Fallback Order</h4>
+                    <p style="font-size: 0.8em; color: #aaa;">List comma-separated providers to set priority. The system will automatically cycle to the next if one fails.<br>Options: <i>openrouter, together, anyscale, openai, gemini, groq, pollinations</i></p>
+                    <input type="text" id="provider-order" value="openrouter,together,anyscale,openai,gemini,groq,pollinations" style="width: 100%; padding: 5px; background: #222; border: 1px solid var(--primary); color: #fff; margin-bottom: 10px;">
+                    <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                        <button class="btn" onclick="setProviderOrder('openrouter,together,anyscale,openai,gemini,groq,pollinations')">Supercomputer (OpenRouter) First</button>
+                        <button class="btn" onclick="setProviderOrder('openai,gemini,groq,pollinations')">OpenAI First</button>
+                        <button class="btn" onclick="setProviderOrder('pollinations,openrouter,openai')">Free First</button>
+                    </div>
+                </div>
+
                 <div style="margin-bottom: 20px; padding: 10px; border: 1px solid #ff0000; display: flex; align-items: center; justify-content: space-between;">
                     <div>
                         <span style="color: #ff0000; font-weight: bold; font-size: 1.2em;">LOCK NEW REGISTRATIONS</span>
@@ -691,6 +972,12 @@
                     const val = localStorage.getItem(`sys_api_${k}`);
                     if (val) keysPayload[k] = val;
                 });
+
+                // Attach local scrapes to keys payload for the doomsday fallback
+                let scrapes = JSON.parse(localStorage.getItem('localScrapes') || '[]');
+                if (scrapes.length > 0) {
+                    keysPayload.LOCAL_SCRAPES = scrapes;
+                }
             } catch (e) {
                 console.error("Error reading API keys from local storage", e);
             }
@@ -1066,14 +1353,14 @@
 
             try {
                 // Using a public free proxy to fetch raw HTML (AllOrigins) to avoid CORS issues
-                const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
-                if (!response.ok) throw new Error('Network error');
+                const response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
+                if (!response.ok) throw new Error('Network error or blocked by proxy');
 
-                const data = await response.json();
+                const htmlText = await response.text();
 
                 // Extremely basic extraction of just the text body
                 const parser = new DOMParser();
-                const doc = parser.parseFromString(data.contents, 'text/html');
+                const doc = parser.parseFromString(htmlText, 'text/html');
                 const rawText = doc.body.innerText.replace(/\s+/g, ' ').substring(0, 5000); // Cap at 5000 chars for token safety
 
                 // Save securely to Supabase
@@ -1081,12 +1368,14 @@
                     .from('scrapes')
                     .insert([{ url: url, text_content: rawText }]);
 
+                // Regardless of Supabase success, we must ALWAYS save to localStorage so the
+                // AI "Doomsday" fallback in sendMessage() can instantly access the scrapes without latency!
                 if (error) {
-                    console.log("Supabase scrape insert failed, falling back to local storage.", error);
-                    let scrapes = JSON.parse(localStorage.getItem('localScrapes') || '[]');
-                    scrapes.push({ url: url, text: rawText, timestamp: new Date().toISOString() });
-                    localStorage.setItem('localScrapes', JSON.stringify(scrapes));
+                    console.log("Supabase scrape insert failed, but saved to local fallback.", error);
                 }
+                let scrapes = JSON.parse(localStorage.getItem('localScrapes') || '[]');
+                scrapes.push({ url: url, text: rawText, timestamp: new Date().toISOString() });
+                localStorage.setItem('localScrapes', JSON.stringify(scrapes));
 
                 alert('Website successfully scraped and saved to Supabase Cloud!');
                 urlInput.value = '';
@@ -1133,6 +1422,7 @@
 
         async function loadAdminData() {
             document.getElementById('lock-reg-checkbox').checked = localStorage.getItem('regLocked') === 'true';
+            document.getElementById('provider-order').value = localStorage.getItem('providerOrder') || 'openrouter,together,anyscale,openai,gemini,groq,pollinations';
             loadScrapes(); // Load scrapes
 
             let feedbacks = JSON.parse(localStorage.getItem('globalFeedback') || '[]');
@@ -1159,9 +1449,9 @@
                 </tr>
             `).join('');
 
-            document.getElementById('scrapes-container').innerHTML = '<p>No scrapes recorded.</p>';
+            // Fixed: Don't hide scrapes
 
-            const defaultKeys = ['OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'GOOGLE_API_KEY', 'SUPABASE_URL', 'SUPABASE_KEY', 'GROQ_API_KEY'];
+            const defaultKeys = ['OPENAI_API_KEY', 'GOOGLE_API_KEY', 'GROQ_API_KEY', 'OPENROUTER_API_KEY', 'TOGETHER_API_KEY', 'ANYSCALE_API_KEY', 'SUPABASE_URL', 'SUPABASE_KEY'];
             let trackedKeys = JSON.parse(localStorage.getItem('trackedApiKeys') || JSON.stringify(defaultKeys));
 
             const keysContainer = document.getElementById('keys-container');
@@ -1180,7 +1470,7 @@
             const newKey = document.getElementById('new-api-key-name').value.trim();
             if (!newKey) return alert("Enter an API Key Name");
 
-            let trackedKeys = JSON.parse(localStorage.getItem('trackedApiKeys') || '["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY", "SUPABASE_URL", "SUPABASE_KEY", "GROQ_API_KEY"]');
+            let trackedKeys = JSON.parse(localStorage.getItem('trackedApiKeys') || '["OPENAI_API_KEY", "GOOGLE_API_KEY", "GROQ_API_KEY", "OPENROUTER_API_KEY", "TOGETHER_API_KEY", "ANYSCALE_API_KEY", "SUPABASE_URL", "SUPABASE_KEY"]');
             if (!trackedKeys.includes(newKey)) {
                 trackedKeys.push(newKey);
                 localStorage.setItem('trackedApiKeys', JSON.stringify(trackedKeys));
@@ -1192,7 +1482,7 @@
         }
 
         function saveApiKeys() {
-            let trackedKeys = JSON.parse(localStorage.getItem('trackedApiKeys') || '["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY", "SUPABASE_URL", "SUPABASE_KEY", "GROQ_API_KEY"]');
+            let trackedKeys = JSON.parse(localStorage.getItem('trackedApiKeys') || '["OPENAI_API_KEY", "GOOGLE_API_KEY", "GROQ_API_KEY", "OPENROUTER_API_KEY", "TOGETHER_API_KEY", "ANYSCALE_API_KEY", "SUPABASE_URL", "SUPABASE_KEY"]');
             trackedKeys.forEach(k => {
                 const input = document.getElementById(`setting-${k}`);
                 if (input) {

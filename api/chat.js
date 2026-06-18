@@ -3,7 +3,7 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const { prompt, keys, history } = req.body;
+    const { prompt, keys, history, lang } = req.body;
     if (!prompt) {
         return res.status(400).json({ error: 'Prompt is required' });
     }
@@ -13,145 +13,167 @@ export default async function handler(req, res) {
         memoryContext = "\n\nRecent Chat History:\n" + history.map(h => `User: ${h.user_msg}\nAI: ${h.ai_response}`).join("\n");
     }
 
-    const systemPrompt = `You are a highly capable AI assistant. Keep all responses brief (under 50 words). Answer any question asked. You can write code seamlessly across all languages including HTML, Python, terminal scripts, and anything else requested. Only refer to yourself as or mention Neocryptz if explicitly asked.${memoryContext}`;
+    const translateModifier = lang ? `\n\nCRITICAL INSTRUCTION: Translate the following user text/response into ${lang}. Do not add any other commentary.` : '';
+    const systemPrompt = `You are a highly capable AI assistant. Keep all responses brief (under 50 words). Answer any question asked. You can write code seamlessly across all languages including HTML, Python, terminal scripts, and anything else requested. Only refer to yourself as or mention Neocryptz if explicitly asked.${memoryContext}${translateModifier}`;
 
-    // Provider 1: OpenAI (Requires OPENAI_API_KEY)
-    const openaiKey = keys?.OPENAI_API_KEY || process.env.OPENAI_API_KEY;
-    if (openaiKey) {
+
+    const supabaseUrl = process.env.SUPABASE_URL || keys?.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || keys?.SUPABASE_KEY;
+
+    if (supabaseUrl && supabaseKey) {
+        const { createClient } = require('@supabase/supabase-js');
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        // Check for exact query match in global logs (Semantic Query Caching)
         try {
-            const response1 = await fetch('https://api.openai.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${openaiKey}`
-                },
-                body: JSON.stringify({
-                    model: 'gpt-4o-mini',
-                    max_tokens: 150, // Hard limit
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: prompt }
-                    ]
-                })
-            });
+            const { data, error } = await supabase
+                .from('logs')
+                .select('response')
+                .ilike('message', prompt.trim()) // case insensitive match
+                .order('created_at', { ascending: false })
+                .limit(1);
 
-            if (response1.ok) {
-                const data1 = await response1.json();
-                if (data1.choices && data1.choices[0].message && data1.choices[0].message.content) {
-                    return res.status(200).json({ result: data1.choices[0].message.content });
-                }
-            } else {
-                console.log("OpenAI API error:", await response1.text());
+            if (data && data.length > 0 && data[0].response && !data[0].response.includes('Error')) {
+                console.log("CACHE HIT: Serving from Semantic Query Cache.");
+                return res.status(200).json({ result: "[CACHED RESPONSE] " + data[0].response });
             }
         } catch (e) {
-            console.log("Provider 1 (OpenAI) failed, falling back...", e);
+            console.log("Cache lookup failed, proceeding to live API:", e.message);
         }
     }
 
-    // Provider 2: Google Gemini (Requires GOOGLE_API_KEY from user settings)
-    const geminiKey = keys?.GOOGLE_API_KEY || process.env.GOOGLE_API_KEY;
-    if (geminiKey) {
-        try {
-            const response2 = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: `${systemPrompt}\n\nUser: ${prompt}` }] }]
-                })
-            });
+    const defaultOrder = ['openrouter', 'together', 'anyscale', 'openai', 'gemini', 'groq', 'pollinations'];
+    const providerOrderStr = keys?.PROVIDER_ORDER || '';
+    const customOrder = providerOrderStr ? providerOrderStr.split(',').map(s=>s.trim()).filter(Boolean) : [];
 
-            if (response2.ok) {
-                const data2 = await response2.json();
-                if (data2.candidates && data2.candidates[0].content && data2.candidates[0].content.parts[0].text) {
-                    return res.status(200).json({ result: data2.candidates[0].content.parts[0].text });
+    // Build the final fallback list: User's chosen order first, then append any remaining defaults to ensure automatic cycling
+    const providerOrder = [...new Set([...customOrder, ...defaultOrder])];
+
+    let finalResult = null;
+    let lastError = "All AI Providers Failed.";
+
+    for (const provider of providerOrder) {
+        if (finalResult) break;
+
+        try {
+            if (provider === 'openrouter') {
+                const key = keys?.OPENROUTER_API_KEY || process.env.OPENROUTER_API_KEY;
+                if (key) {
+                    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+                        body: JSON.stringify({ model: 'openrouter/auto', messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }] })
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.choices?.[0]?.message?.content) finalResult = data.choices[0].message.content;
+                    } else lastError = "OpenRouter Error: " + await response.text();
                 }
-            } else {
-                console.log("Gemini API error:", await response2.text());
+            }
+            else if (provider === 'together') {
+                const key = keys?.TOGETHER_API_KEY || process.env.TOGETHER_API_KEY;
+                if (key) {
+                    const response = await fetch('https://api.together.xyz/v1/chat/completions', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+                        body: JSON.stringify({ model: 'meta-llama/Llama-3-8b-chat-hf', messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }] })
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.choices?.[0]?.message?.content) finalResult = data.choices[0].message.content;
+                    } else lastError = "Together Error: " + await response.text();
+                }
+            }
+            else if (provider === 'anyscale') {
+                const key = keys?.ANYSCALE_API_KEY || process.env.ANYSCALE_API_KEY;
+                if (key) {
+                    const response = await fetch('https://api.endpoints.anyscale.com/v1/chat/completions', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+                        body: JSON.stringify({ model: 'meta-llama/Llama-2-7b-chat-hf', messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }] })
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.choices?.[0]?.message?.content) finalResult = data.choices[0].message.content;
+                    } else lastError = "Anyscale Error: " + await response.text();
+                }
+            }
+            else if (provider === 'openai') {
+                const key = keys?.OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+                if (key) {
+                    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+                        body: JSON.stringify({ model: 'gpt-4o-mini', max_tokens: 150, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }] })
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.choices?.[0]?.message?.content) finalResult = data.choices[0].message.content;
+                    } else lastError = "OpenAI Error: " + await response.text();
+                }
+            }
+            else if (provider === 'gemini') {
+                const key = keys?.GOOGLE_API_KEY || process.env.GOOGLE_API_KEY;
+                if (key) {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: [{ parts: [{ text: `${systemPrompt}\n\nUser: ${prompt}` }] }] })
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.candidates?.[0]?.content?.parts?.[0]?.text) finalResult = data.candidates[0].content.parts[0].text;
+                    } else lastError = "Gemini Error: " + await response.text();
+                }
+            }
+            else if (provider === 'groq') {
+                const key = keys?.GROQ_API_KEY || process.env.GROQ_API_KEY;
+                if (key) {
+                    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+                        body: JSON.stringify({ model: 'llama-3.1-8b-instant', max_tokens: 150, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }] })
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.choices?.[0]?.message?.content) finalResult = data.choices[0].message.content;
+                    } else lastError = "Groq Error: " + await response.text();
+                }
+            }
+            else if (provider === 'pollinations') {
+                const response = await fetch('https://text.pollinations.ai/', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }], model: 'openai', jsonMode: false })
+                });
+                if (response.ok) {
+                    const data = await response.text();
+                    if (data && !data.includes('error')) finalResult = data.trim();
+                } else lastError = "Pollinations Error: " + await response.text();
             }
         } catch (e) {
-            console.log("Provider 2 (Gemini) failed, falling back...", e);
+            lastError = `${provider} Exception: ${e.message}`;
         }
     }
 
-    // Provider 3: Groq (Requires GROQ_API_KEY from user settings)
-    let lastError = "";
-    const groqKey = keys?.GROQ_API_KEY || process.env.GROQ_API_KEY;
-    if (groqKey) {
-        try {
-            const response3 = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${groqKey}`
-                },
-                body: JSON.stringify({
-                    model: 'llama-3.1-8b-instant',
-                    max_tokens: 150, // Hard limit to physically prevent massive token burns (e.g. 2000 token stories)
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: prompt }
-                    ]
-                })
-            });
-
-            if (response3.ok) {
-                const data3 = await response3.json();
-                if (data3.choices && data3.choices[0].message && data3.choices[0].message.content) {
-                    return res.status(200).json({ result: data3.choices[0].message.content });
-                }
-            } else {
-                const errorText = await response3.text();
-                console.log("Groq API error:", errorText);
-                try {
-                    const parsed = JSON.parse(errorText);
-                    lastError = `Groq Error: ${parsed.error?.message || 'Invalid API Key or Rate Limit'}`;
-                } catch(e) {
-                    lastError = "Groq Error: Invalid API Key or Rate Limit";
-                }
-            }
-        } catch (e) {
-            console.log("Provider 3 (Groq) failed, falling back...", e);
-            lastError = "Groq Request Failed completely.";
-        }
+    // Force fail for testing
+    if (keys?.PROVIDER_ORDER === 'force_fail') {
+        finalResult = null;
     }
 
-    // Provider 4: Free open Pollinations API (No Key Required)
-    // Absolute fallback when keys fail or token limits hit
-    try {
-        const response4 = await fetch('https://text.pollinations.ai/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                messages: [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: prompt }
-                ],
-                model: 'openai',
-                jsonMode: false
-            })
-        });
 
-        if (response4.ok) {
-            const data4 = await response4.text();
-            if (data4 && !data4.includes('error')) {
-                return res.status(200).json({ result: data4.trim() });
-            }
-        }
-    } catch (e) {
-        console.log("Provider 4 (Pollinations) free fallback failed.", e);
+    if (finalResult) {
+        // Affiliate Link Injection
+        let affiliateLink = "";
+        const pLower = prompt.toLowerCase();
+        if (pLower.includes('host') || pLower.includes('server') || pLower.includes('website')) affiliateLink = "\n\n[Sponsored: Build your next project with Bluehost! (Affiliate Link)]";
+        else if (pLower.includes('code') || pLower.includes('learn') || pLower.includes('book')) affiliateLink = "\n\n[Sponsored: Learn to code on Coursera! (Affiliate Link)]";
+        else if (pLower.includes('market') || pLower.includes('seo') || pLower.includes('ads')) affiliateLink = "\n\n[Sponsored: Boost sales with SEMRush! (Affiliate Link)]";
+
+        return res.status(200).json({ result: finalResult + affiliateLink });
     }
+
 
     // Ultimate Doomsday Fallback: Return locally scraped data if all AI fails
     const scrapes = keys?.LOCAL_SCRAPES;
     if (scrapes && scrapes.length > 0) {
-        const fallbackText = "All Live AI Systems Offline. Displaying cached system scrape context:\n\n" + scrapes.slice(-2).map(s => `[${s.url}]: ${s.text.substring(0, 100)}...`).join("\n");
+        const fallbackText = "[Doomsday Fallback Active] All Live AI Systems Offline. Displaying cached system scrape context:\n\n" + scrapes.slice(-2).map(s => `[${s.url}]: ${s.text.substring(0, 100)}...`).join("\n");
         return res.status(200).json({ result: fallbackText });
     }
 
-    // Fallback: If no keys are provided, free endpoints fail, and no scrapes exist
-    let errorDetail = "Offline fallback mode: Please provide a valid OpenAI, Google Gemini, or Groq API key in the admin settings to restore full AI functionality.";
-    if (openaiKey || geminiKey || groqKey) {
-        errorDetail = lastError ? lastError : "API Connection Failed: The provided API key(s) were invalid, expired, or rate-limited, and the free fallback servers are currently busy. Please check your admin settings or try again shortly.";
-    }
-    res.status(500).json({ error: errorDetail });
+    res.status(500).json({ error: lastError });
+
 }
