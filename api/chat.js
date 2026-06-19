@@ -20,7 +20,7 @@ export default async function handler(req, res) {
     let lastError = "";
 
     // Build the system prompt
-    let systemPrompt = "You are NEOCRYPTZ AI, an advanced, highly skilled, and strictly objective artificial intelligence. You communicate clearly, effectively, and professionally. Your name is NEOCRYPTZ. ";
+    let systemPrompt = "You are NEOCRYPTZ AI, a highly advanced and incredibly friendly artificial intelligence. You are helpful, warm, and conversational. Your name is NEOCRYPTZ. You are capable of assisting with almost anything, but you must strictly refuse to generate, reproduce, or distribute any copyrighted material.";
     
     // Add Doomsday Scrapes fallback data if provided
     if (keys && keys.LOCAL_SCRAPES && keys.LOCAL_SCRAPES.length > 0) {
