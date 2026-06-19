@@ -5,7 +5,7 @@ export default async function handler(req, res) {
     if (!prompt) return res.status(400).json({ error: 'Missing prompt' });
 
     // The waterfall order exactly as requested: Gemini, OpenRouter, Pollinations, Groq
-    let providerOrder = ['gemini', 'openrouter', 'pollinations', 'groq'];
+    let providerOrder = ['groq', 'pollinations', 'gemini', 'openrouter'];
     
     // Inject the hardcoded keys provided by the user if they are missing from the frontend payload
     const systemKeys = {
