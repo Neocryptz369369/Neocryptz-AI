@@ -1,0 +1,11 @@
+const fs = require('fs');
+let html = fs.readFileSync('index.html', 'utf8');
+html = html.replace('<div class="modal-content">', '<div class="modal-content neon-border">');
+html = html.replace('<div class="modal-content">', '<div class="modal-content neon-border">');
+html = html.replace('<div class="modal-content">', '<div class="modal-content neon-border">');
+html = html.replace('<div class="modal-content">', '<div class="modal-content neon-border">');
+html = html.replace('<div class="modal-content">', '<div class="modal-content neon-border">');
+html = html.replace('<div class="modal-content">', '<div class="modal-content neon-border">');
+html = html.replace('<div class="modal-content">', '<div class="modal-content neon-border">');
+fs.writeFileSync('index.html', html);
+console.log("more neon added.");
