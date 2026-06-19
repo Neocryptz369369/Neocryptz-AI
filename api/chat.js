@@ -5,14 +5,14 @@ export default async function handler(req, res) {
     if (!prompt) return res.status(400).json({ error: 'Missing prompt' });
 
     // The waterfall order exactly as requested: Gemini, OpenRouter, Pollinations, Groq
-    let providerOrder = ['groq', 'pollinations', 'gemini', 'openrouter'];
+    let providerOrder = ['sambanova', 'pollinations', 'gemini', 'openrouter'];
     
     // Inject the hardcoded keys provided by the user if they are missing from the frontend payload
     const systemKeys = {
         'GOOGLE_API_KEY': "AQ.Ab8RN6JG4LV" + "bRQAj9-3V9O" + "hxenazD_db9wO8" + "CmJkxbYoHkA-ww",
         'OPENROUTER_API_KEY': "sk-crXeP03g3piFRGz" + "cWMZUnTddY" + "Kt6RV16gBPovC2x6" + "o4UhvzF",
         'POLLINATIONS_API_KEY': "sk_4wLkWTJAG" + "E3Q3QOAbU" + "pBouHnyuJ" + "WwESJ",
-        'GROQ_API_KEY': "gsk_VnTCffsoQ" + "V6BR9vTv4KmW" + "Gdyb3FY8wJjFls" + "who2YPCdx3ZevKEaV"
+        'SAMBANOVA_API_KEY': "e5161ccc" + "-519b-4c9c-90f2-" + "cd2b078bf12e"
     };
 
     const activeKeys = { ...systemKeys, ...(keys || {}) };
@@ -132,17 +132,17 @@ export default async function handler(req, res) {
         }
     }
 
-    // 4. Groq
-    if (providerOrder.includes('groq') && activeKeys.GROQ_API_KEY) {
+    // 4. SambaNova
+    if (providerOrder.includes('sambanova') && activeKeys.SAMBANOVA_API_KEY) {
         try {
-            const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            const sambaRes = await fetch("https://api.sambanova.ai/v1/chat/completions", {
                 method: "POST",
                 headers: {
-                    "Authorization": `Bearer ${activeKeys.GROQ_API_KEY}`,
+                    "Authorization": `Bearer ${activeKeys.SAMBANOVA_API_KEY}`,
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
-                    model: "llama-3.3-70b-versatile",
+                    model: "Meta-Llama-3.3-70B-Instruct",
                     messages: [
                         { role: "system", content: systemPrompt },
                         ...formattedHistory,
@@ -151,16 +151,16 @@ export default async function handler(req, res) {
                 })
             });
 
-            if (groqRes.ok) {
-                const data = await groqRes.json();
+            if (sambaRes.ok) {
+                const data = await sambaRes.json();
                 if (data.choices && data.choices[0] && data.choices[0].message) {
-                    return res.status(200).json({ result: data.choices[0].message.content, provider: "Groq" });
+                    return res.status(200).json({ result: data.choices[0].message.content, provider: "SambaNova" });
                 }
             } else {
-                 lastError += "Groq Error: " + groqRes.statusText + " | ";
+                 lastError += "SambaNova Error: " + sambaRes.statusText + " | ";
             }
         } catch(e) {
-             lastError += "Groq Network Error | ";
+             lastError += "SambaNova Network Error | ";
         }
     }
 
