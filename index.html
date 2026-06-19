@@ -575,9 +575,6 @@ function toggleUserMenuTab(tabId) {
 
         </div>
         <div id="user-info" style="font-size: 0.9em;"></div>
-        <div style="text-align: center; margin-bottom: 20px; margin-top: 10px;">
-            <img src="crypt.png" alt="Logo" style="max-width: 80%; height: auto; border-radius: 50%; box-shadow: 0 0 15px var(--primary); display: block; margin: 0 auto;">
-        </div>
 
         <div style="flex:1;"></div>
 
@@ -592,16 +589,23 @@ function toggleUserMenuTab(tabId) {
             <a href="mailto:neocryptz@yahoo.com" style="color: var(--secondary); text-decoration: none; display: block; margin-bottom: 5px;">Contact us</a>
             &copy; Copyright 2026 Neocryptz L.L.C.
         </div>
+
+        <div style="text-align: center; margin-top: 30px; margin-bottom: 20px;">
+            <img src="crypt.png" alt="Logo" style="max-width: 70%; height: auto; border-radius: 50%; box-shadow: 0 0 15px var(--primary); display: block; margin: 0 auto;">
+        </div>
     </div>
 
     <div id="main-content" class="neon-border">
         <div id="chat-window">
             <div class="message assistant">NEOCRYPTZ AI // CLOUD OS V4.1.2 ONLINE. How can I assist you today?</div>
         </div>
-        <div id="input-area" class="neon-border">
-            <input type="text" id="message-input" placeholder="Enter command or question (50 words max)..." onkeypress="if(event.key==='Enter') sendMessage()">
-            <button id="mic-btn" onclick="toggleVoiceInput()" style="background: none; border: none; font-size: 1.5em; cursor: pointer; color: var(--primary);">🎤</button>
-            <button id="send-btn" onclick="sendMessage()">EXECUTE</button>
+        <div id="input-area" class="neon-border" style="flex-direction: column; align-items: stretch;">
+            <div style="display: flex; width: 100%; justify-content: center; align-items: center;">
+                <input type="text" id="message-input" placeholder="Enter command or question (50 words max)..." onkeypress="if(event.key==='Enter') sendMessage()">
+                <button id="mic-btn" onclick="toggleVoiceInput()" style="background: none; border: none; font-size: 1.5em; cursor: pointer; color: var(--primary); margin-left: 5px;">🎤</button>
+                <button id="send-btn" onclick="sendMessage()">EXECUTE</button>
+                <button id="paste-cleaner-btn" onclick="openModal('paste-cleaner-modal')" style="background: #222; color: var(--secondary); border: 1px solid var(--secondary); padding: 10px; cursor: pointer; margin-left: 10px; font-weight: bold; font-size: 0.8em;" title="Smart Paste Cleaner">🧹 CLEAN PASTE</button>
+            </div>
         </div>
         <div id="ticker-container">
             <div id="ticker"></div>
@@ -609,13 +613,23 @@ function toggleUserMenuTab(tabId) {
     </div>
 
     <div id="ad-sidebar" class="neon-border">
-        <div class="ad-box neon-border" id="ad-1">Sponsored Content</div>
-        <div class="ad-box neon-border" id="ad-2">Sponsored Content</div>
-        <div class="ad-box neon-border" id="ad-3">Sponsored Content</div>
-        <div class="ad-box neon-border" id="ad-4">Sponsored Content</div>
+        <div class="ad-box neon-border" id="ad-1" style="box-shadow: 0 0 10px #ff00ff; border: 2px solid #ff00ff;">Sponsored Content</div>
+        <div class="ad-box neon-border" id="ad-2" style="box-shadow: 0 0 10px #00ffff; border: 2px solid #00ffff;">Sponsored Content</div>
+        <div class="ad-box neon-border" id="ad-3" style="box-shadow: 0 0 10px #ff00ff; border: 2px solid #ff00ff;">Sponsored Content</div>
+        <div class="ad-box neon-border" id="ad-4" style="box-shadow: 0 0 10px #00ffff; border: 2px solid #00ffff;">Sponsored Content</div>
     </div>
 
     <!-- Modals -->
+    <div id="paste-cleaner-modal" class="modal neon-border">
+        <div class="modal-content" style="max-width: 500px; text-align: center;">
+            <h2 style="color: var(--secondary);">SMART PASTE CLEANER</h2>
+            <p style="font-size: 0.8em; color: #aaa;">Paste messy text (emails, PDFs, code) below. We will strip HTML, invisible junk, and extra spaces so it fits perfectly into your limit.</p>
+            <textarea id="dirty-paste-box" style="width: 100%; height: 100px; background: #111; color: #fff; border: 1px solid var(--primary); padding: 10px; box-sizing: border-box; margin-bottom: 10px;"></textarea>
+            <button class="btn" onclick="cleanPastedText()" style="background: var(--secondary); color: #000; width: 100%; margin-bottom: 10px;">CLEAN & INSERT 🧹</button>
+            <button class="btn" onclick="closeModal('paste-cleaner-modal')" style="background: #333; color: #fff;">CANCEL</button>
+        </div>
+    </div>
+
     <div id="history-modal" class="modal">
         <div class="modal-content" style="max-width: 600px;">
             <h2 style="color: var(--primary);">PERSONAL CHAT HISTORY</h2>
@@ -1562,6 +1576,27 @@ function toggleUserMenuTab(tabId) {
             logsContainer.innerHTML = html;
         }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+        function cleanPastedText() {
+            let text = document.getElementById('dirty-paste-box').value;
+            if (!text) return;
+            // Strip HTML tags
+            text = text.replace(/<[^>]*>?/gm, '');
+            // Strip invisible zero-width characters and junk
+            text = text.replace(/[\u200B-\u200D\uFEFF]/g, '');
+            // Normalize multiple spaces and newlines to single space
+            text = text.replace(/\s+/g, ' ').trim();
+
+            document.getElementById('message-input').value = text;
+            closeModal('paste-cleaner-modal');
+            document.getElementById('dirty-paste-box').value = ''; // clear for next time
+
+            // Check word count to warn user immediately if still over
+            const words = text.split(' ').filter(w => w.length > 0).length;
+            if (words > 50) {
+                alert("Notice: Even after cleaning, your text is " + words + " words. You must shorten it to 50 words before sending.");
+            }
+        }
 
         // Admin
         function showAdminTab(id) {
