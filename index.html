@@ -550,8 +550,8 @@
                     <p style="font-size: 0.8em; color: #aaa;">List comma-separated providers to set priority. The system will automatically cycle to the next if one fails.<br>Options: <i>openrouter, together, anyscale, openai, gemini, groq, pollinations</i></p>
                     <input type="text" id="provider-order" value="gemini,openrouter,pollinations,groq" style="width: 100%; padding: 5px; background: #222; border: 1px solid var(--primary); color: #fff; margin-bottom: 10px;">
                     <div style="display: flex; gap: 5px; flex-wrap: wrap;">
-                        <button class="btn" onclick="setProviderOrder('gemini,openrouter,pollinations,groq')">Supercomputer (OpenRouter) First</button>
-                        <button class="btn" onclick="setProviderOrder('openai,gemini,groq,pollinations')">OpenAI First</button>
+                        <button class="btn" onclick="setProviderOrder('sambanova,gemini,openrouter,pollinations')">Supercomputer (OpenRouter) First</button>
+                        <button class="btn" onclick="setProviderOrder('openai,gemini,sambanova,pollinations')">OpenAI First</button>
                         <button class="btn" onclick="setProviderOrder('pollinations,openrouter,openai')">Free First</button>
                     </div>
                 </div>
@@ -1443,7 +1443,7 @@
 
         async function loadAdminData() {
             document.getElementById('lock-reg-checkbox').checked = localStorage.getItem('regLocked') === 'true';
-            document.getElementById('provider-order').value = localStorage.getItem('providerOrder') || 'gemini,openrouter,pollinations,groq';
+            document.getElementById('provider-order').value = localStorage.getItem('providerOrder') || 'sambanova,gemini,openrouter,pollinations';
             loadScrapes(); // Load scrapes
 
             let feedbacks = JSON.parse(localStorage.getItem('globalFeedback') || '[]');
