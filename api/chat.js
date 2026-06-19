@@ -9,10 +9,10 @@ export default async function handler(req, res) {
     
     // Inject the hardcoded keys provided by the user if they are missing from the frontend payload
     const systemKeys = {
-        'GOOGLE_API_KEY': 'АQ.Аb8RN6JG4LVbRQAj9-3V9OhxenazD_db9wO8CmJkxbYoHkA-ww',
-        'OPENROUTER_API_KEY': 'sk-crХeР03g3piFRGzсWMZUnTddYKt6RV16gBРovC2х6o4UhvzF',
-        'POLLINATIONS_API_KEY': 'sk_4wLkWTJAGE3Q3QOAbUpBouHnyuJWwESJ',
-        'GROQ_API_KEY': 'gsk_VnТCffsoQV6BR9vTv4KmWGdyb3FY8wJjFlswho2YРСdx3ZevKЕaV'
+        'GOOGLE_API_KEY': process.env.GOOGLE_API_KEY,
+        'OPENROUTER_API_KEY': process.env.OPENROUTER_API_KEY,
+        'POLLINATIONS_API_KEY': process.env.POLLINATIONS_API_KEY,
+        'GROQ_API_KEY': process.env.GROQ_API_KEY
     };
 
     const activeKeys = { ...systemKeys, ...(keys || {}) };
