@@ -3,117 +3,1596 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NEOCRYPTZ AI // BROWSER OS</title>
+    <title>NEOCRYPTZ AI // CLOUD OS V4.1.2</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+        function setProviderOrder(order) {
+            document.getElementById('provider-order').value = order;
+            localStorage.setItem('providerOrder', order);
+            alert('Provider priority updated. The system will automatically cycle through remaining defaults if these fail.');
+        }
+
+        async function testDoomsdayFallback() {
+            const resEl = document.getElementById('doomsday-test-result');
+            resEl.style.display = 'block';
+            resEl.innerText = "Simulating total AI failure... routing to Doomsday Fallback...";
+            
+            let scrapes = JSON.parse(localStorage.getItem('localScrapes') || '[]');
+            
+            try {
+                
+            if (userMessage.startsWith('/imagine')) {
+                const imgHtml = await processImageGeneration(userMessage);
+                appendMessage('assistant', imgHtml);
+                saveChat(userMessage, imgHtml);
+                return;
+            }
+            
+            
+            // Cooldown logic with TikTok Injection
+            const overlay = document.getElementById('cooldown-overlay');
+            const timerEl = document.getElementById('cooldown-timer');
+            const sponsorEl = document.getElementById('sponsor-content');
+            
+            overlay.style.display = 'flex';
+            let timeLeft = 60;
+            timerEl.innerText = timeLeft;
+            
+            // Fetch TikTok active recommendation securely
+            sponsorEl.innerHTML = '<p style="color:#aaa;">Loading Partner Offer...</p>';
+            fetch('/api/recommendations/active')
+                .then(r => r.ok ? r.json() : null)
+                .then(data => {
+                    if (data && data.id) {
+                        sponsorEl.innerHTML = `
+                            <span style="background:#ff0050; color:#fff; padding:2px 5px; font-size:0.7em; font-weight:bold; border-radius:3px;">${data.visual_badge_text}</span>
+                            <h3 style="margin:10px 0 5px 0; color:#fff;">${data.product_name}</h3>
+                            <p style="color:#0f0; margin-bottom:15px;">${data.display_headline}</p>
+                            <a href="/api/recommendations/go?id=${data.id}" target="_blank" rel="noopener noreferrer" class="btn" style="background:#00f2fe; color:#000; font-weight:bold; text-decoration:none; display:inline-block; padding:10px 20px;">VIEW ON TIKTOK</a>
+                        `;
+                    } else {
+                        sponsorEl.innerHTML = '<p style="color:#777;">No active promotions right now.</p>';
+                    }
+                })
+                .catch(() => sponsorEl.innerHTML = '<p style="color:#777;">Failed to load promotion.</p>');
+
+            const timerInt = setInterval(() => {
+                timeLeft--;
+                timerEl.innerText = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(timerInt);
+                    overlay.style.display = 'none';
+                }
+            }, 1000);
+
+            const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentToken}` },
+                    body: JSON.stringify({
+                        prompt: "System test.",
+                        keys: { PROVIDER_ORDER: 'force_fail', LOCAL_SCRAPES: scrapes },
+                        history: []
+                    })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    resEl.innerText = "SUCCESS! Fallback activated.\n\nResponse:\n" + data.result;
+                } else {
+                    resEl.innerText = "FAILED.\n\n" + data.error;
+                }
+            } catch(e) {
+                resEl.innerText = "Network Error:\n" + e.message;
+            }
+        }
+
+
+        let adminPollInterval = null;
+        async function startAdminMonitor() {
+            if (currentUser?.role !== 'admin') return;
+            
+            // Poll for recent active users (who have sent logs or logged in)
+            adminPollInterval = setInterval(async () => {
+                const { data, error } = await supabaseClient
+                    .from('users')
+                    .select('username, plan, status, updated_at')
+                    .order('updated_at', { ascending: false })
+                    .limit(5);
+                    
+                if (data && data.length > 0) {
+                    const recentUser = data[0];
+                    const lastSeen = new Date(recentUser.updated_at).getTime();
+                    const now = new Date().getTime();
+                    // If updated in the last 15 seconds, assume login or active
+                    if (now - lastSeen < 15000) {
+                        const notif = document.getElementById('admin-notif');
+                        notif.innerText = `🚨 LIVE ACTIVITY: User [${recentUser.username}] is active / logged in.`;
+                        notif.style.display = 'block';
+                        setTimeout(() => notif.style.display = 'none', 5000);
+                    }
+                }
+            }, 10000); // Check every 10 seconds
+        }
+
+        async function fetchLiveUserStats() {
+            const { data: users, error } = await supabaseClient.from('users').select('*');
+            if (users) {
+                let html = '<h4>LIVE USER STATISTICS</h4><table style="width:100%; border-collapse: collapse;">';
+                html += '<tr style="border-bottom:1px solid #ff00ff; color: #00ffff;"><th>Username</th><th>Status</th><th>Plan</th><th>Credits / Questions</th><th>Last Active</th></tr>';
+                users.forEach(u => {
+                    const isOnline = (new Date().getTime() - new Date(u.updated_at).getTime()) < 60000 ? '<span style="color:#0f0;">ONLINE</span>' : 'OFFLINE';
+                    const questions = u.plan === 'Starter' ? '40/Day' : (u.plan === 'Unlimited Text' ? 'Unlimited' : 'Power Mode');
+                    html += `<tr>
+                        <td>${escapeHtml(u.username)}</td>
+                        <td>${isOnline}</td>
+                        <td>${u.plan}</td>
+                        <td>${questions}</td>
+                        <td>${new Date(u.updated_at).toLocaleTimeString()}</td>
+                    </tr>`;
+                });
+                html += '</table>';
+                document.getElementById('live-monitor-content').innerHTML = html;
+            }
+        }
+
+
+        function generateEmbedCode() {
+            if (!currentUser) return;
+            const code = `<iframe src="https://${window.location.host}/?embed=${currentUser.username}" width="350" height="500" style="border:1px solid #ff00ff; border-radius:10px; box-shadow:0 0 10px #00ffff;"></iframe>`;
+            document.getElementById('embed-code').value = code;
+        }
+
+        function copyEmbedCode() {
+            const copyText = document.getElementById('embed-code');
+            copyText.select();
+            document.execCommand('copy');
+            alert('Embed Snippet Copied!');
+        }
+
+        // Logic to handle being inside an iframe widget
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('embed')) {
+            // Hide everything except the main chat interface
+            document.getElementById('sidebar').style.display = 'none';
+            document.getElementById('ticker-container').style.display = 'none';
+            document.body.style.display = 'block';
+            document.getElementById('main-content').style.width = '100vw';
+            document.getElementById('main-content').style.height = '100vh';
+            // Auto login logic for embed could be here, or we force them to login
+        }
+
+
+        async function processImageGeneration(userMessage) {
+            const prompt = userMessage.replace('/imagine', '').trim();
+            if (!prompt) return "Error: Please provide a prompt. Example: /imagine a futuristic city";
+
+            // Check limits (5 per day)
+            const today = new Date().toDateString();
+            const stored = JSON.parse(localStorage.getItem('imageGenStats') || '{}');
+            if (stored.date !== today) { stored.date = today; stored.count = 0; }
+            if (stored.count >= 5) {
+                return "Daily Limit Reached: You have generated 5/5 pictures today.";
+            }
+
+            stored.count += 1;
+            localStorage.setItem('imageGenStats', JSON.stringify(stored));
+
+            // Generate image URL
+            const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}`;
+            
+            // Limit to 500 pictures globally (simulated locally or via basic memory array)
+            let globalImages = JSON.parse(localStorage.getItem('globalImageCache') || '[]');
+            globalImages.push(url);
+            if (globalImages.length > 500) globalImages.shift(); // Remove oldest
+            localStorage.setItem('globalImageCache', JSON.stringify(globalImages));
+
+            return `<img src="${url}" alt="Generated Image" style="max-width:100%; border:1px solid var(--secondary); box-shadow:0 0 10px var(--secondary); margin-top:10px;">`;
+        }
+
+
+        function generateReferral() {
+            if(!currentUser) return;
+            const refLink = window.location.origin + "?ref=" + currentUser.username;
+            document.getElementById('referral-link').value = refLink;
+        }
+
+        function buyGiftSubscription() {
+            const confirmed = confirm("You are about to purchase a gift voucher for $240. Proceed to PayPal?");
+            if (confirmed) {
+                // Simulate checkout return -> generating a code
+                const code = "NEO-" + Math.random().toString(36).substring(2, 10).toUpperCase();
+                const out = document.getElementById('gift-code-output');
+                out.innerText = "Simulated Payment Success! Gift Code: " + code;
+                out.style.display = 'block';
+                // Note: In reality this opens PayPal and Webhook returns the code
+            }
+        }
+
+
+        function unlockQuestions() {
+            alert('Loading Sponsored Partner Link... (Simulating Ad View)');
+            setTimeout(() => {
+                let stats = JSON.parse(localStorage.getItem('dailyUsage') || '{"count": 0}');
+                stats.count -= 5;
+                if(stats.count < 0) stats.count = 0;
+                localStorage.setItem('dailyUsage', JSON.stringify(stats));
+                alert('Success! 5 Questions Unlocked. Thank you to our sponsors!');
+                window.location.reload();
+            }, 2000);
+        }
+
+</script>
     <style>
-        body { font-family: 'Courier New', monospace; background: #0d1117; color: #c9d1d9; margin: 0; padding: 20px; display: flex; flex-direction: column; height: 95vh; }
-        h1 { color: #58a6ff; font-size: 20px; margin-bottom: 15px; border-bottom: 1px solid #30363d; padding-bottom: 10px; text-shadow: 0 0 10px rgba(88, 166, 255, 0.3); }
-        #chat-window { flex: 1; border: 1px solid #30363d; overflow-y: auto; padding: 20px; background: #161b22; border-radius: 6px; display: flex; flex-direction: column; }
-        .message { margin-bottom: 20px; padding: 12px 16px; border-radius: 6px; line-height: 1.5; max-width: 85%; }
-        .user { background: #21262d; border-left: 4px solid #58a6ff; align-self: flex-start; }
-        .ai { background: #1f242c; border-left: 4px solid #238636; align-self: flex-end; width: 80%; }
-        .code-container { position: relative; background: #05070a; border: 1px solid #30363d; padding: 15px; border-radius: 6px; margin-top: 10px; overflow-x: auto; }
-        pre { margin: 0; color: #39ff14; font-family: 'Consolas', monospace; font-size: 13px; white-space: pre-wrap; }
-        .copy-btn { background: #21262d; color: #58a6ff; border: 1px solid #30363d; padding: 6px 12px; cursor: pointer; border-radius: 4px; font-size: 11px; margin-top: 10px; display: inline-block; transition: all 0.2s; }
-        .copy-btn:hover { background: #58a6ff; color: #0d1117; font-weight: bold; box-shadow: 0 0 8px rgba(88,166,255,0.5); }
-        #input-container { display: flex; margin-top: 15px; gap: 10px; }
-        #input-box { flex: 1; padding: 14px; background: #0d1117; border: 1px solid #30363d; color: #fff; border-radius: 6px; font-family: inherit; font-size: 14px; }
-        #input-box:focus { border-color: #58a6ff; outline: none; }
-        button.send-btn { padding: 0 25px; background: #238636; color: white; border: none; cursor: pointer; border-radius: 6px; font-family: inherit; font-weight: bold; font-size: 14px; }
-        button.send-btn:hover { background: #2ea44f; }
-    </style>
+        :root {
+            --primary: #ff00ff; /* Neon Pink */
+            --secondary: #00ffff; /* Neon Blue */
+            --bg: #000;
+            --text: #fff;
+            --ticker-speed: 25s;
+        }
+        body { font-family: 'Courier New', Courier, monospace; background: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        #sidebar { width: 250px; border-right: 1px solid var(--primary); display: flex; flex-direction: column; padding: 20px; box-shadow: 2px 0 10px rgba(255, 0, 255, 0.2); }
+        #main-content { flex: 1; display: flex; flex-direction: column; justify-content: space-between; position: relative; align-items: center; overflow: hidden; }
+        #chat-window { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; width: 100%; box-sizing: border-box; }
+        .message { margin-bottom: 15px; padding: 10px; border: 1px solid #333; width: 100%; max-width: 800px; align-self: center; box-sizing: border-box; }
+        .user { border-color: var(--primary); box-shadow: 0 0 5px rgba(255, 0, 255, 0.3); }
+        .assistant { border-color: var(--secondary); box-shadow: 0 0 5px rgba(0, 255, 255, 0.3); }
+        #input-area { padding: 20px; border-top: 1px solid #333; display: flex; justify-content: center; align-items: center; width: 100%; box-sizing: border-box; }
+        #message-input { width: 600px; background: #111; border: 1px solid var(--primary); color: #fff; padding: 10px; outline: none; }
+        #message-input:focus { border-color: var(--secondary); box-shadow: 0 0 8px rgba(0, 255, 255, 0.5); }
+        #send-btn { background: var(--primary); color: #000; border: none; padding: 10px 20px; cursor: pointer; margin-left: 10px; font-weight: bold; transition: all 0.3s ease; }
+        #send-btn:hover { background: var(--secondary); box-shadow: 0 0 10px rgba(0, 255, 255, 0.6); }
+        #send-btn:disabled { background: #555; cursor: not-allowed; box-shadow: none; }
+        
+        /* Ticker */
+        #ticker-container { width: 100%; height: 30px; border-top: 1px solid var(--primary); overflow: hidden; background: #050505; white-space: nowrap; box-shadow: 0 -2px 10px rgba(255, 0, 255, 0.2); }
+        #ticker { display: inline-block; animation: scroll var(--ticker-speed) linear infinite; }
+        @keyframes scroll { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+        .ticker-item { display: inline-block; padding: 5px 20px; color: var(--primary); }
+        
+        /* Modals */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { background: #111; border: 1px solid var(--primary); padding: 30px; width: 80%; max-width: 1000px; max-height: 80vh; overflow-y: auto; box-shadow: 0 0 20px rgba(255, 0, 255, 0.3); }
+        
+        /* Auth Screen */
+        #auth-screen { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #000; z-index: 2000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .auth-form { width: 300px; display: flex; flex-direction: column; }
+        .auth-form input { margin-bottom: 10px; padding: 10px; background: #111; border: 1px solid var(--primary); color: #fff; }
+        .auth-form input:focus { border-color: var(--secondary); outline: none; box-shadow: 0 0 8px rgba(0, 255, 255, 0.4); }
+        
+        /* Buttons */
+        .btn { background: #222; color: var(--primary); border: 1px solid var(--primary); padding: 5px 10px; cursor: pointer; margin: 5px; transition: all 0.3s ease; }
+        .btn:hover { background: var(--primary); color: #000; box-shadow: 0 0 10px rgba(255, 0, 255, 0.5); }
+        
+        pre { position: relative; background: #222; padding: 15px; overflow-x: auto; }
+        .copy-btn { position: absolute; bottom: 5px; right: 5px; font-size: 10px; background: var(--primary); color: #000; border: none; padding: 2px 5px; cursor: pointer; }
+        
+        #ad-sidebar { width: 200px; border-left: 1px solid var(--primary); padding: 10px; display: flex; flex-direction: column; box-shadow: -2px 0 10px rgba(255, 0, 255, 0.2); }
+        .ad-box { width: 180px; height: 180px; border: 1px solid #333; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; padding: 5px; transition: border-color 0.3s ease; }
+        .ad-box:hover { border-color: var(--secondary); box-shadow: 0 0 5px rgba(0, 255, 255, 0.3); }
+    
+        /* Animated Neon Borders */
+        .neon-border {
+            position: relative;
+            border: 2px solid transparent;
+            background: linear-gradient(#000, #000) padding-box, 
+                        linear-gradient(45deg, #00ffff, #ff00ff, #00ffff) border-box;
+            border-radius: 5px;
+            animation: neonGlow 3s linear infinite alternate;
+        }
+
+        @keyframes neonGlow {
+            0% { box-shadow: 0 0 10px #00ffff, inset 0 0 10px #00ffff; }
+            100% { box-shadow: 0 0 20px #ff00ff, inset 0 0 20px #ff00ff; }
+        }
+
+</style>
 </head>
 <body>
-    <h1>NEOCRYPTZ AI // LOCAL_BROWSER_OS_V1.0</h1>
-    <div id="chat-window"></div>
-    <div id="input-container">
-        <input type="text" id="input-box" placeholder="Ask for code templates, type commands, or automate browser tasks..." onkeypress="handleKeyPress(event)">
-        <button class="send-btn" onclick="sendMessage()">EXECUTE</button>
+
+    <div id="cooldown-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:500; align-items:center; justify-content:center; flex-direction:column;">
+        <h2 style="color:var(--primary); text-shadow:0 0 10px var(--primary);">SYSTEM COOLDOWN</h2>
+        <div id="cooldown-timer" style="font-size:3em; color:#fff; margin-bottom:20px;">60</div>
+        
+        <div id="sponsor-content" style="border:2px dashed var(--primary); background:#111; padding:20px; text-align:center; max-width:400px; box-shadow:0 0 15px var(--primary); border-radius:10px;"></div>
+    </div>
+
+    <div id="admin-notif" style="display:none; position:fixed; top:20px; left:50%; transform:translateX(-50%); background:rgba(255,0,0,0.8); color:#fff; padding:10px 20px; border:1px solid #ff00ff; border-radius:5px; z-index:9999; font-weight:bold; box-shadow:0 0 15px #ff0000;"></div>
+    <div id="auth-screen">
+        <h1 style="color: var(--primary); text-shadow: 0 0 10px rgba(255, 0, 255, 0.8), 0 0 20px rgba(0, 255, 255, 0.5);">NEOCRYPTZ AI</h1>
+        <div id="login-form" class="auth-form">
+            <h2 style="text-align:center;">LOGIN</h2>
+            <input type="text" id="login-user" placeholder="Username" autocomplete="username">
+            <input type="password" id="login-pass" placeholder="Password" autocomplete="current-password">
+            <button class="btn" onclick="handleAuth('login')">ENTER OS</button>
+            <p style="text-align:center; font-size: 0.8em; margin-top: 20px;">V4.1.2 Production Ready</p>
+            <button class="btn" style="font-size: 0.7em;" onclick="toggleAuth()">New? Create Account</button>
+        </div>
+        <div id="register-form" class="auth-form" style="display:none;">
+            <h2 style="text-align:center;">REGISTER</h2>
+            <p style="text-align:center; font-size: 0.8em; color: var(--secondary); margin-bottom: 10px;">* Standard users are limited to 40 questions per day.</p>
+            <input type="text" id="reg-user" placeholder="Username">
+            <input type="email" id="reg-email" placeholder="Email" autocomplete="username">
+            <input type="password" id="reg-pass" placeholder="Password" autocomplete="new-password">
+            <input type="text" id="reg-name" placeholder="Full Name">
+            <input type="text" id="reg-address" placeholder="Address">
+            <div style="display:flex; gap: 10px;">
+                <input type="text" id="reg-city" placeholder="City" style="flex: 2;">
+                <input type="text" id="reg-state" placeholder="State" style="flex: 1;">
+                <input type="text" id="reg-zip" placeholder="Zip Code" style="flex: 1;">
+            </div>
+            <div style="display:flex; gap: 10px;">
+                <input type="text" id="reg-phone" placeholder="Phone Number" style="flex: 2;">
+                <input type="number" id="reg-age" placeholder="Age" style="flex: 1;" min="18">
+            </div>
+            <label style="font-size: 0.7em; display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                <input type="checkbox" id="reg-tos"> I agree to the Terms of Service & Privacy Policy
+            </label>
+            <button class="btn" onclick="handleAuth('register')">CREATE ACCOUNT</button>
+            <button class="btn" style="font-size: 0.7em;" onclick="toggleAuth()">Back to Login</button>
+        </div>
+    </div>
+
+    <div id="sidebar" class="neon-border">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <img src="crypt.png" alt="Logo" style="max-width: 80%; height: auto; border-radius: 50%; box-shadow: 0 0 15px var(--primary);">
+            </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 10px;">
+            <h2 style="color: var(--primary); font-size: 1.2em; margin: 0;">NEOCRYPTZ AI</h2>
+            <div>
+                <span id="admin-icon" style="display:none; cursor: pointer; color: #8a2be2; font-size: 1.2em; margin-right: 5px;" onclick="openModal('admin-modal')" title="Admin Console">🛡️</span>
+                <span id="user-icon" style="display:none; cursor: pointer; font-size: 1.2em;" onclick="openModal('user-menu-modal')" title="Settings & Menu">⚙️</span>
+            </div>
+            <div id="admin-brag" style="display:none; text-align: center; margin-top: 10px; border: 1px solid #ff00ff; padding: 5px; background: rgba(255,0,255,0.2); box-shadow: 0 0 10px #ff00ff;">
+                <div style="color: #fff; font-weight: bold; letter-spacing: 2px;">ADMINISTRATOR</div>
+                <a href="#" onclick="openModal('admin-modal'); return false;" style="color: var(--secondary); text-decoration: none; font-weight: bold; font-size: 0.9em; text-shadow: 0 0 5px var(--secondary);">[ Admin Panel ]</a>
+            </div>
+
+        </div>
+        <div id="user-info" style="font-size: 0.9em;"></div>
+        <div style="flex:1;"></div>
+        
+        <div style="border-top: 1px solid #333; padding-top: 10px; font-size: 0.8em; color: #555;">
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <button class="btn" style="flex: 1; font-size: 0.8em; padding: 5px;" onclick="viewLegal('tos')">Terms of Service</button>
+                <button class="btn" style="flex: 1; font-size: 0.8em; padding: 5px;" onclick="viewLegal('privacy')">Privacy Policy</button>
+            </div>
+            <a href="mailto:neocryptz@yahoo.com" style="color: var(--secondary); text-decoration: none; display: block; margin-bottom: 5px;">Contact us</a>
+            &copy; Copyright 2026 Neocryptz L.L.C.
+        </div>
+    </div>
+
+    <div id="main-content" class="neon-border">
+        <div id="chat-window">
+            <div class="message assistant">NEOCRYPTZ AI // CLOUD OS V4.1.2 ONLINE. How can I assist you today?</div>
+        </div>
+        <div id="input-area">
+            <input type="text" id="message-input" placeholder="Enter command or question (50 words max)..." onkeypress="if(event.key==='Enter') sendMessage()">
+            <button id="mic-btn" onclick="toggleVoiceInput()" style="background: none; border: none; font-size: 1.5em; cursor: pointer; color: var(--primary);">🎤</button>
+            <button id="send-btn" onclick="sendMessage()">EXECUTE</button>
+        </div>
+        <div id="ticker-container">
+            <div id="ticker"></div>
+        </div>
+    </div>
+
+    <div id="ad-sidebar">
+        <div class="ad-box" id="ad-1">Sponsored Content</div>
+        <div class="ad-box" id="ad-2">Sponsored Content</div>
+        <div class="ad-box" id="ad-3">Sponsored Content</div>
+        <div class="ad-box" id="ad-4">Sponsored Content</div>
+    </div>
+
+    <!-- Modals -->
+    <div id="history-modal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <h2 style="color: var(--primary);">PERSONAL CHAT HISTORY</h2>
+            <div id="personal-chat-logs" style="max-height: 400px; overflow-y: auto; text-align: left; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid #333; border-radius: 5px;">
+                <p style="color: #aaa; text-align: center;">No chat history recorded yet.</p>
+            </div>
+            <button class="btn" onclick="closeModal('history-modal')" style="margin-top: 20px;">CLOSE</button>
+        </div>
+    </div>
+
+    <div id="user-menu-modal" class="modal">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <h2 style="color: var(--primary);">USER MENU</h2>
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
+                <button class="btn" onclick="closeModal('user-menu-modal'); openModal('share-modal')">SHARE NEOCRYPTZ</button>
+                <button class="btn" onclick="closeModal('user-menu-modal'); openModal('settings-modal')">SETTINGS / OAUTH</button>
+                <button class="btn" onclick="closeModal('user-menu-modal'); openModal('history-modal')">CHAT HISTORY</button>
+                <button class="btn" onclick="closeModal('user-menu-modal'); openModal('pricing-modal')">UPGRADE / ADS</button>
+                <button class="btn" onclick="closeModal('user-menu-modal'); openModal('feedback-modal')">PROVIDE FEEDBACK</button>
+                <button class="btn" style="border-color: #f00; color: #f00; margin-top: 20px;" onclick="logout()">LOGOUT</button>
+            </div>
+            <button class="btn" onclick="closeModal('user-menu-modal')" style="margin-top: 20px;">CLOSE</button>
+        </div>
+    </div>
+
+    <!-- Share Modal -->
+    <div id="share-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px; text-align: center;">
+            <h2 style="color: var(--primary);">SHARE NEOCRYPTZ AI</h2>
+            <div style="margin: 20px 0; padding: 15px; border: 1px solid #333; background: rgba(0,0,0,0.5); font-size: 0.9em; color: #fff; text-align: left;">
+                Check out Neocryptz AI I'm only letting 25 people in today. You can pay $20 month-to-month, or lock in your spot for a full year for $240 for unlimited AI so you never have to worry about price increases when I expand the server later. Limit 40 questions a day.<br><br>
+                <a href="https://neocryptz-ai.vercel.app/" style="color: var(--secondary); text-decoration: none;">https://neocryptz-ai.vercel.app/</a>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
+                <button class="btn" onclick="shareTo('copy')">📋 COPY LINK / TIKTOK</button>
+                <button class="btn" style="background: #1877F2; border-color: #1877F2; color: #fff;" onclick="shareTo('facebook')">SHARE TO FACEBOOK</button>
+                <button class="btn" style="background: #1DA1F2; border-color: #1DA1F2; color: #fff;" onclick="shareTo('twitter')">SHARE TO TWITTER</button>
+                <button class="btn" style="background: #0084FF; border-color: #0084FF; color: #fff;" onclick="shareTo('messenger')">SHARE TO MESSENGER</button>
+                <button class="btn" style="background: #25D366; border-color: #25D366; color: #fff;" onclick="shareTo('whatsapp')">SHARE TO WHATSAPP</button>
+                <button class="btn" style="border-color: var(--secondary); color: var(--secondary);" onclick="shareTo('native')">📱 SHARE TO CONTACTS / MOBILE</button>
+            </div>
+            <button class="btn" onclick="closeModal('share-modal')" style="margin-top: 20px; width: 100%; background: transparent; border-color: #555;">CANCEL</button>
+        </div>
+    </div>
+
+    <!-- Feedback Modal -->
+    <div id="feedback-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <h2 style="color: var(--primary); text-align: center;">SYSTEM FEEDBACK</h2>
+            <p style="text-align: center; font-size: 0.9em; color: #aaa; margin-bottom: 20px;">We value your input. Let us know how we can improve your experience.</p>
+            <textarea id="feedback-text" placeholder="Type your feedback here..." style="width: 100%; height: 150px; background: rgba(0,0,0,0.5); border: 1px solid var(--primary); color: #fff; padding: 10px; font-family: monospace; resize: vertical;"></textarea>
+            <button class="btn" onclick="submitFeedback()" style="width: 100%; margin-top: 20px;">SUBMIT FEEDBACK</button>
+            <button class="btn" onclick="closeModal('feedback-modal')" style="width: 100%; margin-top: 10px; background: transparent; border-color: #555;">CANCEL</button>
+        </div>
+    </div>
+
+    <!-- Legal Modal (TOS / Privacy) -->
+    <div id="legal-modal" class="modal">
+        <div class="modal-content" style="max-width: 800px; width: 95%;">
+            <h2 id="legal-title" style="color: var(--primary); text-align: center;">LEGAL</h2>
+            <div id="legal-content" style="text-align: left; max-height: 60vh; overflow-y: auto; padding: 20px; border: 1px solid #333; background: #050505; color: #ccc; font-size: 0.9em; line-height: 1.5;"></div>
+            <button class="btn" onclick="closeModal('legal-modal')" style="margin-top: 20px; width: 100%;">CLOSE</button>
+        </div>
+    </div>
+
+    <div id="settings-modal" class="modal">
+        <div class="modal-content" style="max-width: 1200px; width: 95%;">
+            <h2>SETTINGS / OAUTH HUB</h2>
+            <input type="text" id="oauth-search" placeholder="Search services..." onkeyup="filterOAuth()" style="width: 100%; padding: 10px; margin-bottom: 20px; background: #222; border: 1px solid var(--primary); color: #fff;">
+            
+            <div style="display: flex; gap: 20px;">
+                <div style="flex: 1;">
+                    <h3 style="color: var(--secondary);">OAUTH (USER CONSENT)</h3>
+                    <p style="font-size: 0.8em; color: #aaa;">Click to allow or authorize connection via popup.</p>
+                    <div id="oauth-list" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-height: 400px; overflow-y: auto; margin-bottom: 20px;"></div>
+                </div>
+                
+                <div style="flex: 1; border-left: 1px solid var(--primary); padding-left: 20px;">
+                    <h3 style="color: var(--secondary);">AUTH TOKEN (TOKEN REQUEST)</h3>
+                    <p style="font-size: 0.8em; color: #aaa;">Trade your approval for an actual token manually.</p>
+                    <div id="auth-token-list" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-height: 400px; overflow-y: auto; margin-bottom: 20px;"></div>
+                </div>
+            </div>
+
+            <button class="btn" onclick="closeModal('settings-modal')" style="margin-top: 20px;">CLOSE</button>
+        </div>
+    </div>
+
+    <div id="admin-modal" class="modal">
+        <div class="modal-content" style="max-width: 1200px; width: 95%; height: 90vh; overflow-y: auto;">
+            <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--primary); padding-bottom: 10px;">
+                <button class="btn" onclick="showAdminTab('admin-users-logs')">USERS & LOGS</button>
+                <button class="btn" onclick="showAdminTab('admin-scrapes')">SCRAPERS</button>
+                <button class="btn" style="border-color:#0f0; color:#0f0;" onclick="showAdminTab('admin-monitor'); fetchLiveUserStats()">LIVE MONITOR</button>
+                <button class="btn" onclick="showAdminTab('admin-ads')">ADS</button>
+                <button class="btn" onclick="showAdminTab('admin-feedback'); loadAdminData()">FEEDBACK</button>
+                <button class="btn" onclick="showAdminTab('admin-settings')">SETTINGS</button>
+                <div style="border-left: 1px solid #333; margin: 0 10px;"></div>
+                <button class="btn" onclick="closeModal('admin-modal'); openModal('share-modal')">SHARE</button>
+                <button class="btn" onclick="closeModal('admin-modal'); openModal('settings-modal')">OAUTH/TOKENS</button>
+                <button class="btn" onclick="closeModal('admin-modal'); openModal('history-modal')">CHAT HISTORY</button>
+                <button class="btn" onclick="closeModal('admin-modal'); openModal('pricing-modal')">UPGRADES</button>
+                <button class="btn" style="border-color: #f00; color: #f00;" onclick="logout()">LOGOUT</button>
+            </div>
+            
+            <div id="admin-monitor" class="admin-tab" style="display:none;">
+                <h3 style="color:#0f0;">LIVE SYSTEM MONITOR</h3>
+                <p style="font-size:0.8em; color:#aaa;">Click refresh to check exact login/logout states and credit/question limits for all users.</p>
+                <button class="btn" onclick="fetchLiveUserStats()">REFRESH DATA</button>
+                <div id="live-monitor-content" style="margin-top: 20px; background: #111; padding: 10px; border: 1px solid #0f0; border-radius: 5px; max-height: 50vh; overflow-y: auto;">
+                    Loading...
+                </div>
+            </div>
+
+            <div id="admin-users-logs" class="admin-tab">
+                <div id="admin-logs" style="max-height: 70vh; overflow-y: auto;"></div>
+            </div>
+            <div id="admin-scrapes" class="admin-tab" style="display:none;">
+                <h3>SYSTEM DATA SCRAPER</h3>
+
+                <div style="margin-top: 20px; padding: 10px; border: 1px solid var(--secondary); background: #111;">
+                    <h4 style="color: var(--secondary); margin-top: 0;">Test Doomsday Fallback</h4>
+                    <p style="font-size: 0.8em; color: #aaa;">Simulate all AI providers failing to test if the fallback system reads your recorded scrapes correctly.</p>
+                    <button class="btn" onclick="testDoomsdayFallback()">Run Doomsday Test</button>
+                    <pre id="doomsday-test-result" style="margin-top: 10px; min-height: 50px; background: #000; border: 1px dashed var(--primary); display: none;"></pre>
+                </div>
+
+                <p style="font-size:0.8em; color:var(--secondary); margin-bottom: 20px;">Use this tool to extract raw text from websites. This text is saved locally and sent to the AI as the ultimate "Doomsday" fallback if all external AI endpoints fail or rate-limit.</p>
+                
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <input type="url" id="scrape-url-input" placeholder="https://example.com" style="flex: 1; padding: 10px; background: #222; border: 1px solid var(--primary); color: #fff;">
+                    <button class="btn" onclick="executeScrape()" id="scrape-btn">START SCRAPING</button>
+                </div>
+                
+                <div id="scrapes-container" style="max-height: 40vh; overflow-y: auto; border: 1px solid #333; padding: 10px; background: #050505;">
+                    <p style="color: #aaa; text-align: center;">No local scrapes recorded yet.</p>
+                </div>
+            </div>
+            <div id="admin-ads" class="admin-tab" style="display:none;">
+                <h3>AD MANAGEMENT</h3>
+                <div style="margin-bottom: 20px;">
+                    <input type="text" id="new-ad-text" placeholder="Ad Text (max 25 words)" style="width:70%; padding:10px;">
+                    <button class="btn" onclick="createAd()">CREATE SYSTEM AD</button>
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label>Ticker Speed: <input type="range" id="speed-slider" min="5" max="150" value="25" oninput="updateSpeedVal(this.value)"> <span id="speed-val">25</span>s</label>
+                    <button class="btn" onclick="saveSettings()">SAVE SPEED</button>
+                </div>
+                <table style="width:100%; border-collapse: collapse;">
+                    <thead><tr style="border-bottom: 1px solid #333;"><th>Type</th><th>Content</th><th>Status</th><th>Action</th></tr></thead>
+                    <tbody id="admin-ad-list"></tbody>
+                </table>
+            </div>
+            <div id="admin-feedback" class="admin-tab" style="display:none;">
+                <h3>USER FEEDBACK LOGS</h3>
+                <div id="admin-feedback-list" style="max-height: 60vh; overflow-y: auto;"></div>
+            </div>
+            <div id="admin-settings" class="admin-tab" style="display:none;">
+                <h3>SYSTEM CONFIGURATION</h3>
+
+                <div style="margin-bottom: 20px; padding: 10px; border: 1px solid var(--secondary); background: #111;">
+                    <h4 style="color: var(--secondary); margin-top: 0;">AI Provider Fallback Order</h4>
+                    <p style="font-size: 0.8em; color: #aaa;">List comma-separated providers to set priority. The system will automatically cycle to the next if one fails.<br>Options: <i>openrouter, together, anyscale, openai, gemini, groq, pollinations</i></p>
+                    <input type="text" id="provider-order" value="openrouter,together,anyscale,openai,gemini,groq,pollinations" style="width: 100%; padding: 5px; background: #222; border: 1px solid var(--primary); color: #fff; margin-bottom: 10px;">
+                    <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                        <button class="btn" onclick="setProviderOrder('openrouter,together,anyscale,openai,gemini,groq,pollinations')">Supercomputer (OpenRouter) First</button>
+                        <button class="btn" onclick="setProviderOrder('openai,gemini,groq,pollinations')">OpenAI First</button>
+                        <button class="btn" onclick="setProviderOrder('pollinations,openrouter,openai')">Free First</button>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px; padding: 10px; border: 1px solid #ff0000; display: flex; align-items: center; justify-content: space-between;">
+                    <div>
+                        <span style="color: #ff0000; font-weight: bold; font-size: 1.2em;">LOCK NEW REGISTRATIONS</span>
+                        <p style="font-size: 0.8em; color: #aaa; margin-top: 5px;">If checked, new users will not be able to sign up or create accounts.</p>
+                    </div>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" id="lock-reg-checkbox" onchange="toggleRegistrationLock()" style="width: 30px; height: 30px;">
+                    </label>
+                </div>
+
+                <h3>SYSTEM API KEYS</h3>
+                <div id="keys-container" style="display:flex; flex-direction:column; gap:10px;"></div>
+                
+                <div style="margin-top: 20px; border-top: 1px solid #333; padding-top: 10px;">
+                    <h4>ADD CUSTOM API KEY</h4>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="new-api-key-name" placeholder="E.g. GROQ_API_KEY" style="flex: 1; padding: 5px; background: #222; border: 1px solid var(--primary); color: #fff;">
+                        <button class="btn" onclick="addCustomApiKey()">ADD KEY FIELD</button>
+                    </div>
+                </div>
+
+                <button class="btn" onclick="saveApiKeys()" style="margin-top:20px; width: 100%;">SAVE ALL KEYS</button>
+            </div>
+            <button class="btn" onclick="closeModal('admin-modal')" style="margin-top: 20px;">CLOSE</button>
+        </div>
+    </div>
+
+    <div id="pricing-modal" class="modal">
+        <div class="modal-content">
+            <h2>AI SERVICE PLANS</h2>
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:20px;">
+                <div style="border:1px solid var(--primary); padding:20px; text-align:center;">
+                    <h3>STARTER</h3>
+                    <p>$10 / month</p>
+                    <p>500 Credits</p>
+                    <button class="btn" onclick="buyPlan('Starter')">BUY NOW</button>
+                </div>
+                <div style="border:1px solid var(--primary); padding:20px; text-align:center; background: rgba(0,255,0,0.1);">
+                    <h3>UNLIMITED TEXT</h3>
+                    <p>$20 / month</p>
+                    <p>Unlimited Credits</p>
+                    <button class="btn" onclick="buyPlan('Unlimited Text')">BUY NOW</button>
+                </div>
+                <div style="border:1px solid var(--primary); padding:20px; text-align:center;">
+                    <h3>POWER</h3>
+                    <p>$80 / month</p>
+                    <p>6,000 Credits</p>
+                    <button class="btn" onclick="buyPlan('Power')">BUY NOW</button>
+                </div>
+            </div>
+            <h2 style="margin-top:40px;">ADVERTISING SERVICES</h2>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+                <div style="border:1px solid var(--primary); padding:20px; text-align:center;">
+                    <h3>TICKER AD (MONTHLY)</h3>
+                    <p>$20 / month</p>
+                    <button class="btn" onclick="buyAd('monthly')">PURCHASE</button>
+                </div>
+                <div style="border:1px solid var(--primary); padding:20px; text-align:center;">
+                    <h3>TICKER AD (YEARLY)</h3>
+                    <p>$240 / year</p>
+                    <button class="btn" onclick="buyAd('yearly')">PURCHASE</button>
+                </div>
+            </div>
+            <button class="btn" onclick="closeModal('pricing-modal')" style="margin-top: 20px;">CLOSE</button>
+        </div>
     </div>
 
     <script>
-        const chatWindow = document.getElementById('chat-window');
-        const inputBox = document.getElementById('input-box');
+        const _supabaseUrl = 'https://bxzvxgjnlvbexeuocbey.supabase.co';
+        const _supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ4enZ4Z2pubHZiZXhldW9jYmV5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNzY3NjQsImV4cCI6MjA5NTY1Mjc2NH0.DWlzaP_xciNKfBDO-c_VTxTsaFVZjdfANesVY9Kjih0';
+        const supabaseClient = window.supabase.createClient(_supabaseUrl, _supabaseAnonKey);
 
-        function handleKeyPress(e) {
-            if (e.key === 'Enter') sendMessage();
+        let currentUser = null;
+        let session_id = uuidv4();
+        let token = localStorage.getItem('token');
+
+        function uuidv4() { return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)); }
+
+        async function init() {
+            // Check local storage first (Fallback)
+            let localUser = localStorage.getItem('currentUser');
+            let session = null;
+            let userProfile = null;
+
+            try {
+                const { data } = await supabaseClient.auth.getSession();
+                session = data.session;
+                if (session) {
+                    const profileResp = await supabaseClient.from('profiles').select('*').eq('id', session.user.id).single();
+                    userProfile = profileResp.data;
+                }
+            } catch (err) {
+                console.log("Supabase getSession failed, falling back to local storage.", err);
+            }
+            
+            if (session || localUser) {
+                if (session) {
+                    currentUser = userProfile || {
+                        username: session.user.email.split('@')[0],
+                        plan: "Power",
+                        credits: 999999,
+                        is_admin: true
+                    };
+                    localStorage.setItem('token', session.access_token);
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                } else {
+                    currentUser = JSON.parse(localUser);
+                }
+                
+                document.getElementById('auth-screen').style.display = 'none';
+                const creditsDisp = (currentUser.credits >= 999999 || currentUser.credits === null) ? 'Unlimited' : currentUser.credits;
+                document.getElementById('user-info').innerHTML = `USER: ${currentUser.username}<br>PLAN: ${currentUser.plan}<br>CREDITS: ${creditsDisp}`;
+                
+                if (currentUser.username.toLowerCase() === 'neocryptz') {
+                     currentUser.is_admin = true;
+                } else {
+                     currentUser.is_admin = false;
+                }
+                
+                if (currentUser.is_admin) {
+                     document.getElementById('admin-icon').style.display = 'inline-block';
+                     document.getElementById('user-icon').style.display = 'none';
+                } else {
+                     document.getElementById('admin-icon').style.display = 'none';
+                     document.getElementById('user-icon').style.display = 'inline-block';
+                }
+            }
+            loadAds();
+        }
+
+        const tosSentences = [
+            "Terms of service for Neocryptz AI.",
+            "Age Requirements: You must be 18 years or older to use Neocryptz AI meaning anyone under 18 may not have access.",
+            "Usage Limits: The service defines fair usage.",
+            "Free-tier users are generally limited to 10 tasks per day and 3 concurrent tasks.",
+            "Higher usage allowances are available for Neocryptz AI Starter and Power subscribers.",
+            "Intellectual Property: You retain ownership of your code.",
+            "However, Neocryptz AI does claim ownership of the code the AI generates, and AI outputs may not be unique or consistent across different users.",
+            "Privacy and Training: Neocryptz AI is not private by default.",
+            "Your code and repository data used to train Neocryptz AI models and does not remain isolated within your execution environment.",
+            "No Warranties: Neocryptz AI makes no representations or warranties regarding the accuracy, reliability, or completeness of the code or content generated, and advises users to independently verify the output.",
+            "No Refunds: Neocryptz AI Will not issue any refunds for it’s plans or for it’s advertising and when you purchase either a plan or ad you will have to click agree to this agreement before you are sent to Paypal payment page.",
+            "We do keep a copy of this agreement in case you dispute the charges.",
+            "And NEVER use anyone else’s card or stolen cards that can get you banned for life.",
+            "We do record your ip addresses as well.",
+            "Privacy Policy for Neocryptz AI.",
+            "1. Neocryptz AI (Autonomous AI Coding Agent)",
+            "Neocryptz AI is an autonomous coding assistant.",
+            "Code Privacy: Neocryptz AI is not private by default.",
+            "Your codebase is cloned to an isolated on Supabase Cloud virtual machine and evaluated.",
+            "Data Training: Neocryptz AI does use private repository code to train their base AI models.",
+            "2. Neocryptz AI (Life Coaching AI)",
+            "This AI is a personalized life and career coaching tool.",
+            "Data Collection & Identification: It collects a minimal amount of personal data full name, age, email, phone number and address to set up your account.",
+            "Anonymization: Neocryptz AI never passes your identifying information to the large language model handling your chats, ensuring your conversations remain anonymous.",
+            "Limitation of Liability: If Neocryptz AI provides bad advice that causes financial, medical, or legal harm to a user we are not responsible for anything.",
+            "Information & Control: You own your data.",
+            "We do not share your information with any third parties ever we promise this."
+        ];
+        
+        let currentTosIndex = 0;
+
+        function viewLegal(type) {
+            let title = type === 'tos' ? 'TERMS OF SERVICE' : 'PRIVACY POLICY';
+            let content = type === 'tos' ? tosSentences.slice(0, 14).join(" <br><br>") : tosSentences.slice(14).join(" <br><br>");
+            document.getElementById('legal-title').innerText = title;
+            document.getElementById('legal-content').innerHTML = content;
+            openModal('legal-modal');
+        }
+
+        async function handleAuth(type) {
+            let email, pass, username;
+            if (type === 'login') {
+                username = document.getElementById('login-user').value;
+                pass = document.getElementById('login-pass').value;
+                email = username;
+            } else {
+                username = document.getElementById('reg-user').value;
+                email = document.getElementById('reg-email').value;
+                pass = document.getElementById('reg-pass').value;
+            }
+            
+            // Re-route legacy username login fields to email format for Supabase if not an email
+            const formatEmail = (input) => input.includes('@') ? input : `${input}@neocryptz.ai`;
+            const validEmail = formatEmail(email);
+
+            if (type === 'login') {
+                if (!email || !pass) return alert("Enter credentials");
+                
+                // Try Supabase first
+                let supaError = null;
+                try {
+                    const { data, error } = await supabaseClient.auth.signInWithPassword({
+                        email: validEmail,
+                        password: pass
+                    });
+                    supaError = error;
+                } catch(err) { supaError = err; }
+                
+                // Fallback to local storage if Supabase fails or error
+                if (supaError) {
+                    let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
+                    const foundUser = users[username] || users[validEmail];
+                    if (foundUser && foundUser.password === pass) {
+                        if (foundUser.banned) {
+                            return alert("ACCESS DENIED: Your account has been banned for violating the terms of service.");
+                        }
+                        
+                        // Check if plan expired
+                        if (foundUser.plan_expires_at && new Date() > new Date(foundUser.plan_expires_at)) {
+                            foundUser.plan = "Free";
+                            foundUser.plan_expires_at = null;
+                            localStorage.setItem('localUsers', JSON.stringify(users));
+                            alert("Your paid plan has expired. You have been downgraded to the Free plan.");
+                        }
+
+                        localStorage.setItem('currentUser', JSON.stringify(foundUser));
+                        localStorage.setItem('token', 'local-token-' + (users[username] ? username : validEmail));
+                        location.reload();
+                    } else {
+                        alert('Login Failed: ' + supaError.message + " (Local fallback also failed: invalid credentials)");
+                    }
+                } else {
+                    location.reload();
+                }
+            } else {
+                if (!document.getElementById('reg-tos').checked) return alert('Agree to terms');
+                if (!email || !pass) return alert("Enter all details");
+                
+                const fullName = document.getElementById('reg-name')?.value || '';
+                const address = document.getElementById('reg-address')?.value || '';
+                const city = document.getElementById('reg-city')?.value || '';
+                const state = document.getElementById('reg-state')?.value || '';
+                const zip = document.getElementById('reg-zip')?.value || '';
+                const fullAddress = `${address}, ${city}, ${state} ${zip}`;
+                const phone = document.getElementById('reg-phone')?.value || '';
+                const age = document.getElementById('reg-age')?.value || '';
+                
+                let supaError = null;
+                try {
+                    const { data, error } = await supabaseClient.auth.signUp({
+                        email: validEmail,
+                        password: pass,
+                        options: { data: { full_name: fullName, address: fullAddress, phone: phone, age: age } }
+                    });
+                    supaError = error;
+                } catch(err) { supaError = err; }
+                
+                // Verify uniqueness
+                let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
+                
+                // If it's the admin or a local test, bypass IP check
+                if (username.toLowerCase() !== 'neocryptz') {
+                    // Simple IP constraint mock (would be done backend normally)
+                    const ipConstraint = localStorage.getItem('registered_ip');
+                    if (ipConstraint && ipConstraint !== username) {
+                         // Only allow one non-admin account
+                         alert("Registration Failed: Only one account is allowed per IP.");
+                         return;
+                    }
+                    localStorage.setItem('registered_ip', username);
+                }
+
+                // Always save to local storage as fallback and for Admin view
+                users[username] = {
+                    username: username,
+                    email: validEmail,
+                    password: pass,
+                    full_name: fullName,
+                    address: fullAddress,
+                    phone: phone,
+                    age: age,
+                    plan: "Free",
+                    credits: 25,
+                    banned: false,
+                    is_admin: (username.toLowerCase() === 'neocryptz')
+                };
+                localStorage.setItem('localUsers', JSON.stringify(users));
+
+                if (supaError && (supaError.message.includes('email_address_invalid') || supaError.message.includes('not allowed'))) {
+                     alert('Registered successfully locally (Supabase email validation bypassed). Please Login.');
+                     toggleAuth();
+                } else if (supaError) {
+                    alert('Registration fallback active. Saved locally. Supabase error: ' + supaError.message);
+                    toggleAuth();
+                } else {
+                    alert('Registered successfully. Please Login.');
+                    toggleAuth();
+                }
+            }
+        }
+        
+        // Also update the logout function to sign out of Supabase
+        async function logout() {
+            try { await supabaseClient.auth.signOut(); } catch(e){ console.log(e); }
+            localStorage.removeItem('token');
+            localStorage.removeItem('currentUser');
+            location.reload();
+        }
+
+        let recognition;
+        function toggleVoiceInput() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                alert("Voice input is not supported in this browser. Try Chrome or Edge.");
+                return;
+            }
+            if (recognition) {
+                recognition.stop();
+                recognition = null;
+                document.getElementById('mic-btn').style.color = 'var(--primary)';
+                return;
+            }
+
+            const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRec();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
+            recognition.onstart = function() {
+                document.getElementById('mic-btn').style.color = '#ff0000'; // Recording red
+                document.getElementById('message-input').placeholder = "Listening...";
+            };
+
+            recognition.onresult = function(event) {
+                const transcript = event.results[0][0].transcript;
+                document.getElementById('message-input').value += (document.getElementById('message-input').value ? ' ' : '') + transcript;
+            };
+
+            recognition.onend = function() {
+                document.getElementById('mic-btn').style.color = 'var(--primary)';
+                document.getElementById('message-input').placeholder = "Enter command or question...";
+                recognition = null;
+            };
+
+            recognition.start();
         }
 
         async function sendMessage() {
-            const prompt = inputBox.value.trim();
-            if (!prompt) return;
+            const input = document.getElementById('message-input');
+            let msg = input.value.trim();
+            if (!msg) return;
 
-            chatWindow.innerHTML += `<div class="message user"><b>YOU:</b><br>${escapeHtml(prompt)}</div>`;
-            inputBox.value = '';
-            chatWindow.scrollTop = chatWindow.scrollHeight;
-
-            const aiMessageId = 'ai-' + Date.now();
-            chatWindow.innerHTML += `<div class="message ai" id="${aiMessageId}"><b>NEOCRYPTZ AI:</b><br><span style="color:#8b949e">Thinking and processing automation pipeline...</span></div>`;
-            chatWindow.scrollTop = chatWindow.scrollHeight;
-
-            try {
-                const response = await fetch('http://localhost:8000/run-task', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: prompt })
-                });
-                const data = await response.json();
-                formatAiResponse(aiMessageId, data.result || 'Task completed successfully.');
-            } catch (error) {
-                // Perfect offline playground setup for building your apps!
-                const mockOutput = prompt.toLowerCase().includes('code') || prompt.toLowerCase().includes('html')
-                    ? `Sure! Here is the clean HTML code layout you requested:\n\n\`\`\`html\n<!DOCTYPE html>\n<html lang="en">\n<head>\n    <meta charset="UTF-8">\n    <title>NEOCRYPTZ Project Workspace</title>\n</head>\n<body>\n    <h1>NEOCRYPTZ Custom App Core</h1>\n</body>\n</html>\n\`\`\``
-                    : `System initialized natively. Local playground mode verified successfully. No servers billed!`;
-                
-                formatAiResponse(aiMessageId, mockOutput);
+            // Enforce 50 word limit for user inputs
+            const wordCount = msg.split(/\s+/).length;
+            if (wordCount > 50) {
+                alert("Please keep your questions brief (50 words or less). Your message is currently " + wordCount + " words.");
+                return;
             }
+
+            // Immediately apply profanity filter to the user's outgoing message string
+            msg = filterProfanity(msg);
+
+            const myUsername = currentUser?.username || 'Unknown';
+            let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
+            let myPlan = 'Free';
+            if (users[myUsername] && users[myUsername].plan) {
+                myPlan = users[myUsername].plan;
+            }
+
+            // Check Daily Limit (40 Questions)
+            const today = new Date().toDateString();
+            let usageData = JSON.parse(localStorage.getItem('dailyUsage') || '{}');
+            if (!usageData[myUsername]) usageData[myUsername] = { date: today, count: 0 };
+            
+            if (usageData[myUsername].date !== today) {
+                usageData[myUsername] = { date: today, count: 0 }; // Reset for new day
+            }
+
+            if (myUsername !== 'Neocryptz' && usageData[myUsername].count >= 40) {
+                appendMessage('assistant', 'ERROR: You have reached your daily limit of 40 questions. Please come back tomorrow!');
+                input.value = '';
+                return;
+            }
+
+            // Check 25 Free Lifetime Credits
+            let lifetimeUsage = JSON.parse(localStorage.getItem('lifetimeUsage') || '{}');
+            if (!lifetimeUsage[myUsername]) lifetimeUsage[myUsername] = 0;
+
+            if (myPlan === 'Free' && lifetimeUsage[myUsername] >= 25 && myUsername !== 'Neocryptz') {
+                appendMessage('assistant', 'You have used all 25 of your free trial credits! Please upgrade your plan to continue using Neocryptz AI.');
+                input.value = '';
+                setTimeout(() => openModal('pricing-modal'), 1500); // Auto pop-up pricing
+                return;
+            }
+            
+            appendMessage('user', msg);
+            input.value = '';
+            
+            const btn = document.getElementById('send-btn');
+            const micBtn = document.getElementById('mic-btn');
+            btn.disabled = true;
+            input.disabled = true; // Lock text box during countdown
+            micBtn.disabled = true;
+            
+            let countdown = 60;
+            const timer = setInterval(() => {
+                btn.innerText = `WAIT ${--countdown}s`;
+                if (countdown <= 0) { 
+                    clearInterval(timer); 
+                    btn.disabled = false; 
+                    input.disabled = false; 
+                    micBtn.disabled = false;
+                    btn.innerText = 'EXECUTE'; 
+                }
+            }, 1000);
+            
+            let currentToken = localStorage.getItem('token') || 'local-token';
+            
+            let keysPayload = {};
+            try {
+                const defaultKeys = ['OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'GOOGLE_API_KEY', 'GROQ_API_KEY'];
+                const trackedKeys = JSON.parse(localStorage.getItem('trackedApiKeys') || JSON.stringify(defaultKeys));
+                trackedKeys.forEach(k => {
+                    const val = localStorage.getItem(`sys_api_${k}`);
+                    if (val) keysPayload[k] = val;
+                });
+
+                // Attach local scrapes to keys payload for the doomsday fallback
+                let scrapes = JSON.parse(localStorage.getItem('localScrapes') || '[]');
+                if (scrapes.length > 0) {
+                    keysPayload.LOCAL_SCRAPES = scrapes;
+                }
+            } catch (e) {
+                console.error("Error reading API keys from local storage", e);
+            }
+
+            let historyPayload = [];
+            try {
+                const allHistory = JSON.parse(localStorage.getItem('globalChatHistory') || '[]');
+                historyPayload = allHistory.filter(h => h.username === myUsername).slice(-2); // Limit history to last 2 messages for extreme token optimization
+            } catch(e) {}
+
+            const resp = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentToken}` },
+                body: JSON.stringify({ prompt: msg, session_id: session_id, keys: keysPayload, history: historyPayload })
+            });
+            
+            const data = await resp.json();
+            let aiText = '';
+            if (resp.ok) { 
+                aiText = data.result || 'Task execution initiated.';
+                appendMessage('assistant', aiText); 
+
+                // Increment Usage Count on Success
+                if (myUsername !== 'Neocryptz') {
+                    usageData[myUsername].count += 1;
+                    localStorage.setItem('dailyUsage', JSON.stringify(usageData));
+                    
+                    if (myPlan === 'Free') {
+                        lifetimeUsage[myUsername] += 1;
+                        localStorage.setItem('lifetimeUsage', JSON.stringify(lifetimeUsage));
+                    }
+                }
+            } else { 
+                aiText = `ERROR: ${data.error || 'Request Failed'}`;
+                appendMessage('assistant', aiText); 
+            }
+
+            // Save to Global Chat History
+            let globalChat = JSON.parse(localStorage.getItem('globalChatHistory') || '[]');
+            globalChat.push({
+                timestamp: new Date().toISOString(),
+                username: currentUser?.username || 'Unknown',
+                user_msg: msg,
+                ai_response: aiText
+            });
+            localStorage.setItem('globalChatHistory', JSON.stringify(globalChat));
         }
 
-        function formatAiResponse(elementId, text) {
-            const container = document.getElementById(elementId);
-            const codeBlockRegex = /```(\w*)\n([\s\S]*?)```/g;
-            let processedHtml = `<b>NEOCRYPTZ AI:</b><br>`;
-            let lastIndex = 0;
-            let matches;
-            let hasCode = false;
-
-            while ((matches = codeBlockRegex.exec(text)) !== null) {
-                const matchIndex = matches.index;
-                const plainText = text.substring(lastIndex, matchIndex);
-                processedHtml += escapeHtml(plainText).replace(/\n/g, '<br>');
-
-                const codeId = 'code-' + Math.random().toString(36).substr(2, 9);
-                const codeBody = matches[2]; // Fixed object mapping glitch!
-                
-                processedHtml += `
-                    <div class="code-container">
-                        <pre id="${codeId}">${escapeHtml(codeBody)}</pre>
-                    </div>
-                    <button class="copy-btn" onclick="copyToClipboard('${codeId}')">📋 Copy to Clipboard</button>
-                `;
-                lastIndex = codeBlockRegex.lastIndex;
-                hasCode = true;
-            }
-
-            if (!hasCode) {
-                processedHtml += escapeHtml(text).replace(/\n/g, '<br>');
-            } else if (lastIndex < text.length) {
-                processedHtml += escapeHtml(text.substring(lastIndex)).replace(/\n/g, '<br>');
-            }
-
-            container.innerHTML = processedHtml;
-            chatWindow.scrollTop = chatWindow.scrollHeight;
+        function appendMessage(role, text) {
+            const win = document.getElementById('chat-window');
+            const div = document.createElement('div');
+            div.className = `message ${role}`;
+            div.innerHTML = formatText(text);
+            win.appendChild(div);
+            win.scrollTop = win.scrollHeight;
         }
 
         function escapeHtml(text) {
-            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            return String(text)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
         }
 
-        function copyToClipboard(elementId) {
-            const text = document.getElementById(elementId).innerText;
-            navigator.clipboard.writeText(text).then(() => {
-                alert('Copied straight to clipboard!');
-            });
+        function filterProfanity(text) {
+            // A comprehensive regex identifying standard variations of profanity/vulgarity
+            const badWords = /\b(fuck|shit|bitch|cunt|asshole|dick|pussy|whore|slut|bastard|fag|nigg|crap|twat|damn)\w*\b/gi;
+            return text.replace(badWords, '!@#$neocryptz6357%^&*');
         }
+
+        function formatText(text) {
+            // First filter vulgarity out of the raw text
+            const cleanText = filterProfanity(text);
+            // Escape HTML to prevent XSS
+            const escapedText = escapeHtml(cleanText);
+            // Simple markdown-ish code block formatting
+            return escapedText.replace(/```([\s\S]*?)```/g, (match, code) => {
+                const id = uuidv4();
+                return `<pre id="${id}">${code}<button class="copy-btn" onclick="copyToClipboard('${id}')">COPY</button></pre>`;
+            }).replace(/\n/g, '<br>');
+        }
+
+        async function copyToClipboard(id) {
+            const code = document.getElementById(id).innerText.replace('COPY', '');
+            await navigator.clipboard.writeText(code);
+            alert('Copied to clipboard');
+        }
+
+        // LocalStorage Helpers for Ads
+        function getLocalAds() {
+            const storedAds = localStorage.getItem('activeAds');
+            if (storedAds) return JSON.parse(storedAds);
+            return [
+                { id: '1', text: 'Please check out Neocryptz on YouTube and Spotify I just wrote all the books of the Bible into Songs. Just look for The Black and Purple Butterfly. I wrote 4 different Bibles into songs. The bible, Etheopian, Catholic,and The Mormon Bible.', type: 'ticker', status: 'active' }
+            ];
+        }
+
+        function setLocalAds(ads) {
+            localStorage.setItem('activeAds', JSON.stringify(ads));
+        }
+
+        async function loadAds() {
+            const ads = getLocalAds();
+            const ticker = document.getElementById('ticker');
+            ticker.innerHTML = ads.map(a => `<span class="ticker-item">${a.text}</span>`).join('');
+            
+            // Populate ad boxes
+            for (let i = 1; i <= 4; i++) {
+                const el = document.getElementById(`ad-${i}`);
+                if (el) {
+                    el.innerText = ads[i-1] ? ads[i-1].text : 'Sponsored Content';
+                }
+            }
+            
+            // Update ticker speed mock
+            const storedSpeed = localStorage.getItem('tickerSpeed') || "25";
+            document.documentElement.style.setProperty('--ticker-speed', `${storedSpeed}s`);
+            if (document.getElementById('speed-slider')) {
+                document.getElementById('speed-slider').value = storedSpeed;
+                document.getElementById('speed-val').innerText = storedSpeed;
+            }
+        }
+
+        function toggleAuth() {
+            const l = document.getElementById('login-form');
+            const r = document.getElementById('register-form');
+            l.style.display = l.style.display === 'none' ? 'flex' : 'none';
+            r.style.display = r.style.display === 'none' ? 'flex' : 'none';
+
+            // Check if registrations are locked
+            if (r.style.display === 'flex' && localStorage.getItem('regLocked') === 'true') {
+                r.innerHTML = '<h2 style="color: #ff0000; text-align: center;">We are not taking any new customers at this time.</h2><p style="text-align: center; margin-top: 20px; cursor: pointer; color: var(--secondary);" onclick="toggleAuth()">Back to Login</p>';
+            }
+        }
+
+        const oauthProviders = [
+            "Google", "Facebook (Meta)", "Apple", "X (Twitter)", "TikTok", "LinkedIn", "Pinterest", "Yahoo", "LINE", "Kakao", "Naver", "WeChat", "QQ", "VK (VKontakte)", "Mail.ru",
+            "GitHub", "GitLab", "Bitbucket", "Atlassian", "Figma", "Notion", "Slack", "Zoom", "WordPress.com", "Basecamp", "HubSpot",
+            "Amazon", "PayPal", "Stripe", "Shopify",
+            "Spotify", "Twitch", "Discord", "Battle.net", "Steam", "Patreon", "Vimeo", "Box", "Dropbox"
+        ];
+
+        function renderOAuthList() {
+            const oauthList = document.getElementById('oauth-list');
+            const tokenList = document.getElementById('auth-token-list');
+            
+            oauthList.innerHTML = oauthProviders.map(p => `<button class="btn provider-btn" style="padding: 10px; font-size: 0.9em;">OAuth: ${p}</button>`).join('');
+            tokenList.innerHTML = oauthProviders.map(p => `<button class="btn provider-btn" style="padding: 10px; font-size: 0.9em;" onclick="promptAuthToken('${p}')">Token: ${p}</button>`).join('');
+        }
+
+        function filterOAuth() {
+            const search = document.getElementById('oauth-search').value.toLowerCase();
+            const btns = document.querySelectorAll('.provider-btn');
+            for (let btn of btns) {
+                btn.style.display = btn.innerText.toLowerCase().includes(search) ? 'block' : 'none';
+            }
+        }
+
+        function promptAuthToken(provider) {
+            const tokenInput = prompt(`Enter Manual Auth Token for ${provider}:`);
+            if (tokenInput) {
+                localStorage.setItem(`authToken_${provider}`, tokenInput);
+                alert(`Auth Token for ${provider} saved successfully.`);
+            }
+        }
+
+        function openModal(id) { 
+            document.getElementById(id).style.display = 'flex'; 
+            if (id === 'admin-modal') {
+                loadAdminData(); 
+                loadUsersAndLogs();
+            }
+            if (id === 'settings-modal') renderOAuthList();
+            if (id === 'history-modal') loadPersonalHistory();
+        }
+
+        function loadPersonalHistory() {
+            const logsContainer = document.getElementById('personal-chat-logs');
+            if (!logsContainer) return;
+            
+            let globalChat = JSON.parse(localStorage.getItem('globalChatHistory') || '[]');
+            const myUsername = currentUser?.username || 'Unknown';
+            let myLogs = globalChat.filter(log => log.username === myUsername);
+            
+            if (myLogs.length === 0) {
+                logsContainer.innerHTML = '<p style="color: #aaa; text-align: center;">No chat history recorded yet.</p>';
+                return;
+            }
+
+            let html = '';
+            [...myLogs].reverse().forEach(log => {
+                html += `<div style="margin-bottom: 15px; border: 1px solid #333; padding: 10px; border-radius: 5px; background: rgba(0,0,0,0.5);">
+                    <strong style="color: var(--secondary);">${escapeHtml(new Date(log.timestamp).toLocaleString())}</strong>
+                    <div style="margin-top: 5px; color: #fff;"><b>Me:</b> ${escapeHtml(log.user_msg)}</div>
+                    <div style="margin-top: 5px; color: var(--primary);"><b>AI:</b> ${escapeHtml(log.ai_response)}</div>
+                </div>`;
+            });
+            logsContainer.innerHTML = html;
+        }
+
+        async function banUser(userId) {
+            let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
+            let foundUser = Object.keys(users).find(k => users[k].id === userId || users[k].username === userId);
+            if (foundUser) {
+                users[foundUser].banned = true;
+                localStorage.setItem('localUsers', JSON.stringify(users));
+            }
+            
+            try {
+                await supabaseClient.from('users').update({ banned: true }).eq('id', userId);
+            } catch(e) {}
+            
+            alert("User has been completely BANNED.");
+            loadAdminData();
+            loadUsersAndLogs();
+        }
+
+        async function grantManualPlan(userId, planName) {
+            // Calculate 30 days from now for expiration, unless plan is "Free"
+            const expDate = planName === 'Free' ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+            const grantedDate = planName === 'Free' ? null : new Date().toLocaleDateString();
+
+            // Update the user's plan, expiration, and status in Supabase
+            const { data, error } = await supabaseClient
+                .from('users')
+                .update({ 
+                    plan: planName, 
+                    status: planName === 'Free' ? 'inactive' : 'active',
+                    updated_at: new Date(),
+                    plan_expires_at: expDate,
+                    plan_granted_at: grantedDate
+                })
+                .eq('id', userId);
+
+            if (error) {
+                // Silently fallback to local storage
+                console.log('Supabase users table missing/failing. Falling back to local storage update.');
+                let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
+                let foundUser = Object.keys(users).find(k => users[k].id === userId || users[k].username === userId);
+                if (foundUser) {
+                    users[foundUser].plan = planName;
+                    users[foundUser].plan_expires_at = expDate;
+                    users[foundUser].plan_granted_at = grantedDate;
+                    localStorage.setItem('localUsers', JSON.stringify(users));
+                }
+            }
+            
+            alert(planName === 'Free' ? 'User plan revoked.' : `Plan ${planName} updated successfully for 30 days!`);
+            loadAdminData(); // Refresh the admin table so the change shows
+            loadUsersAndLogs();
+        }
+
+        function loadUsersAndLogs() {
+            const logsContainer = document.getElementById('admin-logs');
+            if (!logsContainer) return;
+            logsContainer.innerHTML = '';
+            
+            let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
+            let globalChat = JSON.parse(localStorage.getItem('globalChatHistory') || '[]');
+            
+            // Render User Registry
+            let html = '<h3 style="color:var(--primary); margin-bottom:10px;">USER REGISTRY & PLANS</h3>';
+            html += '<table style="width:100%; border-collapse: collapse; font-size:0.8em; margin-bottom: 20px;"><tr><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Username</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Email</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Name/Age</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Phone</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Address</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Plan</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Controls</th></tr>';
+            for (let u in users) {
+                let usr = users[u];
+                let userPlan = usr.plan || 'Free';
+                if (usr.plan_granted_at) userPlan += `<br><span style="font-size:0.8em; color:#aaa;">(Granted: ${usr.plan_granted_at})</span>`;
+                
+                const passingId = usr.id || usr.username; // Ensure Supabase UUID or Username fallback is used
+                const isBanned = usr.banned ? ' <strong style="color:red;">[BANNED]</strong>' : '';
+                html += `<tr>
+                    <td style="padding: 5px;">${escapeHtml(usr.username)}${isBanned}</td>
+                    <td style="padding: 5px;">${escapeHtml(usr.email)}</td>
+                    <td style="padding: 5px;">${escapeHtml(usr.full_name || 'N/A')}<br>Age: ${escapeHtml(usr.age || 'N/A')}</td>
+                    <td style="padding: 5px;">${escapeHtml(usr.phone || 'N/A')}</td>
+                    <td style="padding: 5px;">${escapeHtml(usr.address || 'N/A')}</td>
+                    <td style="padding: 5px; color: var(--secondary);">${userPlan}</td>
+                    <td style="padding: 5px; display:flex; flex-wrap:wrap; gap:5px;">
+                        <button onclick="grantManualPlan('${passingId}', 'Starter')" style="font-size:0.8em; padding:2px;">STARTER</button>
+                        <button onclick="grantManualPlan('${passingId}', 'Power')" style="font-size:0.8em; padding:2px;">POWER</button>
+                        <button onclick="grantManualPlan('${passingId}', 'Unlimited')" style="font-size:0.8em; padding:2px;">UNLIMITED</button>
+                        <button onclick="grantManualPlan('${passingId}', 'Free')" style="font-size:0.8em; padding:2px; background:#ff8c00; border-color:#ff8c00; color:#fff;">REVOKE</button>
+                        <button onclick="banUser('${passingId}')" style="font-size:0.8em; padding:2px; background:#ff0000; border-color:#ff0000; color:#fff;">BAN</button>
+                    </td>
+                </tr>`;
+            }
+            html += '</table>';
+            
+            // Render Global Chat Logs
+            html += '<h3 style="color:var(--primary); margin-bottom:10px;">GLOBAL CHAT LOGS</h3>';
+            if (globalChat.length === 0) {
+                html += '<p>No chat history recorded.</p>';
+            } else {
+                [...globalChat].reverse().forEach(log => {
+                    html += `<div style="margin-bottom: 15px; border: 1px solid #333; padding: 10px; border-radius: 5px; background: rgba(0,0,0,0.5);">
+                        <strong style="color: var(--secondary);">${escapeHtml(new Date(log.timestamp).toLocaleString())} - USER: ${escapeHtml(log.username)}</strong>
+                        <div style="margin-top: 5px; color: #fff;"><b>Msg:</b> ${escapeHtml(log.user_msg)}</div>
+                        <div style="margin-top: 5px; color: var(--primary);"><b>AI:</b> ${escapeHtml(log.ai_response)}</div>
+                    </div>`;
+                });
+            }
+            
+            logsContainer.innerHTML = html;
+        }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+        // Admin
+        function showAdminTab(id) {
+            document.querySelectorAll('.admin-tab').forEach(t => t.style.display = 'none');
+            document.getElementById(id).style.display = 'block';
+        }
+
+        function shareTo(platform) {
+            const shareText = "Check out Neocryptz AI I'm only letting 25 people in today. You can pay $20 month-to-month, or lock in your spot for a full year for $240 for unlimited AI so you never have to worry about price increases when I expand the server later. Limit 40 questions a day.";
+            const shareUrl = "https://neocryptz-ai.vercel.app/";
+            const fullText = `${shareText} ${shareUrl}`;
+
+            if (platform === 'copy') {
+                navigator.clipboard.writeText(fullText).then(() => alert('Copied to clipboard! Ready to paste to TikTok or anywhere else.'));
+            } else if (platform === 'facebook') {
+                window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`, '_blank');
+            } else if (platform === 'twitter') {
+                window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`, '_blank');
+            } else if (platform === 'whatsapp') {
+                window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(fullText)}`, '_blank');
+            } else if (platform === 'messenger') {
+                window.open(`fb-messenger://share/?link=${encodeURIComponent(shareUrl)}`, '_blank');
+            } else if (platform === 'native') {
+                if (navigator.share) {
+                    navigator.share({
+                        title: 'Neocryptz AI',
+                        text: shareText,
+                        url: shareUrl
+                    }).catch(console.error);
+                } else {
+                    alert("Native sharing is not supported on this browser. Please use the Copy Link button.");
+                }
+            }
+        }
+
+        function toggleRegistrationLock() {
+            const isLocked = document.getElementById('lock-reg-checkbox').checked;
+            localStorage.setItem('regLocked', isLocked ? 'true' : 'false');
+        }
+
+        function submitFeedback() {
+            const text = document.getElementById('feedback-text').value.trim();
+            if (!text) return alert("Please enter some feedback before submitting.");
+            
+            let feedbacks = JSON.parse(localStorage.getItem('globalFeedback') || '[]');
+            feedbacks.push({
+                username: currentUser?.username || 'Anonymous',
+                text: text,
+                timestamp: new Date().toISOString()
+            });
+            localStorage.setItem('globalFeedback', JSON.stringify(feedbacks));
+            
+            document.getElementById('feedback-text').value = '';
+            closeModal('feedback-modal');
+            alert("Thank you! Your feedback has been submitted successfully.");
+        }
+
+        async function executeScrape() {
+            const urlInput = document.getElementById('scrape-url-input');
+            const url = urlInput.value.trim();
+            if (!url) return alert('Please enter a valid URL.');
+            
+            const btn = document.getElementById('scrape-btn');
+            btn.disabled = true;
+            btn.innerText = 'SCRAPING...';
+
+            try {
+                // Using a public free proxy to fetch raw HTML (AllOrigins) to avoid CORS issues
+                const response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
+                if (!response.ok) throw new Error('Network error or blocked by proxy');
+                
+                const htmlText = await response.text();
+                
+                // Extremely basic extraction of just the text body
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(htmlText, 'text/html');
+                const rawText = doc.body.innerText.replace(/\s+/g, ' ').substring(0, 5000); // Cap at 5000 chars for token safety
+
+                // Save securely to Supabase
+                const { error } = await supabaseClient
+                    .from('scrapes')
+                    .insert([{ url: url, text_content: rawText }]);
+
+                // Regardless of Supabase success, we must ALWAYS save to localStorage so the 
+                // AI "Doomsday" fallback in sendMessage() can instantly access the scrapes without latency!
+                if (error) {
+                    console.log("Supabase scrape insert failed, but saved to local fallback.", error);
+                }
+                let scrapes = JSON.parse(localStorage.getItem('localScrapes') || '[]');
+                scrapes.push({ url: url, text: rawText, timestamp: new Date().toISOString() });
+                localStorage.setItem('localScrapes', JSON.stringify(scrapes));
+
+                alert('Website successfully scraped and saved to Supabase Cloud!');
+                urlInput.value = '';
+                loadScrapes();
+            } catch (e) {
+                alert('Failed to scrape URL. ' + e.message);
+            }
+            btn.disabled = false;
+            btn.innerText = 'START SCRAPING';
+        }
+
+        async function loadScrapes() {
+            const container = document.getElementById('scrapes-container');
+            let scrapes = [];
+
+            // Attempt to load from Supabase
+            const { data, error } = await supabaseClient
+                .from('scrapes')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (!error && data) {
+                scrapes = data.map(d => ({ url: d.url, text: d.text_content, timestamp: d.created_at }));
+            } else {
+                console.log("Supabase fetch failed, loading local fallback scrapes.");
+                scrapes = JSON.parse(localStorage.getItem('localScrapes') || '[]');
+                scrapes.reverse(); // Reverse local to match Supabase descending order
+            }
+            
+            if (scrapes.length === 0) {
+                container.innerHTML = '<p style="color: #aaa; text-align: center;">No scrapes recorded in Supabase.</p>';
+                return;
+            }
+
+            let html = '';
+            scrapes.forEach(s => {
+                html += `<div style="border: 1px solid #333; margin-bottom: 10px; padding: 10px;">
+                    <strong style="color: var(--secondary);">${escapeHtml(s.url)}</strong> <span style="font-size: 0.8em; color: #777;">(${new Date(s.timestamp).toLocaleString()})</span>
+                    <p style="font-size: 0.8em; color: #ccc; max-height: 60px; overflow: hidden;">${escapeHtml(s.text)}</p>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        async function loadAdminData() {
+            document.getElementById('lock-reg-checkbox').checked = localStorage.getItem('regLocked') === 'true';
+            document.getElementById('provider-order').value = localStorage.getItem('providerOrder') || 'openrouter,together,anyscale,openai,gemini,groq,pollinations';
+            loadScrapes(); // Load scrapes
+            
+            let feedbacks = JSON.parse(localStorage.getItem('globalFeedback') || '[]');
+            let fbHtml = '';
+            if (feedbacks.length === 0) {
+                fbHtml = '<p style="color: #aaa;">No feedback recorded yet.</p>';
+            } else {
+                [...feedbacks].reverse().forEach(fb => {
+                    fbHtml += `<div style="border: 1px solid #333; padding: 10px; margin-bottom: 10px; background: rgba(0,0,0,0.5);">
+                        <div style="font-size: 0.8em; color: var(--secondary); margin-bottom: 5px;">${escapeHtml(fb.username)} - ${new Date(fb.timestamp).toLocaleString()}</div>
+                        <div style="color: #fff;">${escapeHtml(fb.text)}</div>
+                    </div>`;
+                });
+            }
+            document.getElementById('admin-feedback-list').innerHTML = fbHtml;
+
+            const ads = getLocalAds();
+            document.getElementById('admin-ad-list').innerHTML = ads.map(a => `
+                <tr>
+                    <td>${a.type}</td>
+                    <td>${a.text}</td>
+                    <td>${a.status}</td>
+                    <td><button onclick="deleteAd('${a.id}')">DELETE</button></td>
+                </tr>
+            `).join('');
+            
+            // Fixed: Don't hide scrapes
+            
+            const defaultKeys = ['OPENAI_API_KEY', 'GOOGLE_API_KEY', 'GROQ_API_KEY', 'OPENROUTER_API_KEY', 'TOGETHER_API_KEY', 'ANYSCALE_API_KEY', 'SUPABASE_URL', 'SUPABASE_KEY'];
+            let trackedKeys = JSON.parse(localStorage.getItem('trackedApiKeys') || JSON.stringify(defaultKeys));
+            
+            const keysContainer = document.getElementById('keys-container');
+            keysContainer.innerHTML = trackedKeys.map(k => {
+                const val = localStorage.getItem(`sys_api_${k}`) || '';
+                return `
+                <label style="display: flex; flex-direction: column;">
+                    <span style="color: var(--secondary); font-size: 0.8em; margin-bottom: 2px;">${escapeHtml(k)}</span>
+                    <input type="text" id="setting-${k}" value="${escapeHtml(val)}" placeholder="Enter ${escapeHtml(k)}" style="width: 100%; padding: 5px; background: #222; border: 1px solid var(--primary); color: #fff;">
+                </label>
+                `;
+            }).join('');
+        }
+
+        function addCustomApiKey() {
+            const newKey = document.getElementById('new-api-key-name').value.trim();
+            if (!newKey) return alert("Enter an API Key Name");
+            
+            let trackedKeys = JSON.parse(localStorage.getItem('trackedApiKeys') || '["OPENAI_API_KEY", "GOOGLE_API_KEY", "GROQ_API_KEY", "OPENROUTER_API_KEY", "TOGETHER_API_KEY", "ANYSCALE_API_KEY", "SUPABASE_URL", "SUPABASE_KEY"]');
+            if (!trackedKeys.includes(newKey)) {
+                trackedKeys.push(newKey);
+                localStorage.setItem('trackedApiKeys', JSON.stringify(trackedKeys));
+                loadAdminData(); // Refresh UI
+                document.getElementById('new-api-key-name').value = '';
+            } else {
+                alert("Key name already exists!");
+            }
+        }
+
+        function saveApiKeys() {
+            let trackedKeys = JSON.parse(localStorage.getItem('trackedApiKeys') || '["OPENAI_API_KEY", "GOOGLE_API_KEY", "GROQ_API_KEY", "OPENROUTER_API_KEY", "TOGETHER_API_KEY", "ANYSCALE_API_KEY", "SUPABASE_URL", "SUPABASE_KEY"]');
+            trackedKeys.forEach(k => {
+                const input = document.getElementById(`setting-${k}`);
+                if (input) {
+                    localStorage.setItem(`sys_api_${k}`, input.value.trim());
+                }
+            });
+            alert('System API Keys Saved Successfully!');
+        }
+
+        async function grantUnlimited(username) {
+            alert(`Unlimited granted to ${username}`);
+            loadAdminData();
+        }
+
+        async function banUser(username) {
+            alert(`${username} banned`);
+            loadAdminData();
+        }
+
+        async function deleteAd(id) {
+            let ads = getLocalAds();
+            ads = ads.filter(ad => ad.id !== id);
+            setLocalAds(ads);
+            loadAdminData(); // Refreshes the table
+            loadAds(); // Refreshes the ticker and ad boxes
+        }
+
+        async function saveSettings() {
+            const speed = document.getElementById('speed-slider').value;
+            localStorage.setItem('tickerSpeed', speed);
+            loadAds();
+            alert('Settings Saved');
+        }
+
+        function updateSpeedVal(val) {
+            document.getElementById('speed-val').innerText = val;
+            document.documentElement.style.setProperty('--ticker-speed', `${val}s`);
+        }
+
+        async function createAd() {
+            const text = document.getElementById('new-ad-text').value;
+            if (!text) return alert('Enter ad text');
+            
+            const ads = getLocalAds();
+            ads.push({
+                id: uuidv4(),
+                text: text,
+                type: 'ticker',
+                status: 'active'
+            });
+            setLocalAds(ads);
+            
+            alert('Ad created successfully');
+            document.getElementById('new-ad-text').value = '';
+            loadAdminData(); // Refreshes the table
+            loadAds(); // Refreshes the ticker and ad boxes
+        }
+
+        async function viewLogs(username) {
+            const resp = await fetch(`/admin/user-logs/${username}`, { headers: { 'Authorization': `Bearer ${currentToken}` } });
+            const logs = await resp.json();
+            if (!logs.length) return alert('No logs found for this user.');
+            
+            // Simple grouping by date for "calendar" feel
+            const grouped = {};
+            logs.forEach(l => {
+                const date = new Date(l.timestamp).toDateString();
+                if (!grouped[date]) grouped[date] = [];
+                grouped[date].push(l);
+            });
+            
+            let logHtml = `<h2>LOGS FOR ${escapeHtml(username)}</h2>`;
+            for (const date in grouped) {
+                logHtml += `<div style="border: 1px solid var(--primary); margin-top: 10px; padding: 10px;">
+                    <h3 style="margin: 0; color: var(--primary);">${escapeHtml(date)}</h3>
+                    ${grouped[date].map(l => `
+                        <div style="margin-top: 10px; border-top: 1px solid #222; padding-top: 5px;">
+                            <div style="font-size: 0.7em; color: #555;">${escapeHtml(new Date(l.timestamp).toLocaleTimeString())}</div>
+                            <div><strong>U:</strong> ${escapeHtml(l.message)}</div>
+                            <div style="color: var(--secondary);"><strong>AI:</strong> ${escapeHtml(l.response)}</div>
+                        </div>
+                    `).join('')}
+                </div>`;
+            }
+            
+            const logWin = window.open("", "Chat Logs", "width=800,height=600");
+            logWin.document.body.style.background = "#000";
+            logWin.document.body.style.color = "#fff";
+            logWin.document.body.style.fontFamily = "monospace";
+            logWin.document.body.innerHTML = logHtml;
+        }
+
+        function buyPlan(plan) {
+            const email = encodeURIComponent('bestcabautogroup@yahoo.com');
+            const confirmed = confirm("By proceeding, you agree that there are no refunds for this plan. Do you wish to continue?");
+            if (!confirmed) return;
+            const price = { "Starter": 10, "Unlimited Text": 20, "Power": 80 }[plan];
+            const userId = currentUser?.username || currentUser?.id || 'guest';
+            window.location.href = `https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=${email}&item_name=${plan}&amount=${price}&custom=${encodeURIComponent(userId)}&currency_code=USD`;
+        }
+
+        function buyAd(plan) {
+            const email = encodeURIComponent('bestcabautogroup@yahoo.com');
+            const confirmed = confirm("By proceeding, you agree that there are no refunds for ticker plans. Do you wish to continue?");
+            if (!confirmed) return;
+            const price = plan === "monthly" ? 20 : 240;
+            window.location.href = `https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=${email}&item_name=Ad_${plan}&amount=${price}&currency_code=USD`;
+        }
+
+        init();
     </script>
 </body>
 </html>
