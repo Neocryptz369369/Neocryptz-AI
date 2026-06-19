@@ -11,6 +11,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "acorn": "^8.17.0",
     "browser-use-sdk": "^3.8.1",
     "dotenv": "^17.4.2",
     "express": "^5.2.1"
