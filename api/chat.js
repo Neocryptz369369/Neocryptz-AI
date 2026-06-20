@@ -1,3 +1,5 @@
+import { createClient } from '@supabase/supabase-js';
+
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
@@ -5,6 +7,31 @@ export default async function handler(req, res) {
     if (!prompt) return res.status(400).json({ error: 'Missing prompt' });
 
     // The waterfall order exactly as requested: Gemini, OpenRouter, Pollinations, Groq
+    
+    const supabaseUrl = process.env.SUPABASE_URL || 'https://bxzvxgjnlvbexeuocbey.supabase.co';
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY;
+    let supabase = null;
+
+    if (supabaseKey) {
+        try {
+            supabase = createClient(supabaseUrl, supabaseKey);
+            const { data, error } = await supabase
+                .from('query_cache')
+                .select('response')
+                .eq('prompt', prompt.trim())
+                .single();
+                
+            if (data && data.response) {
+                {
+        if (supabase) {
+            try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: data.response }], { onConflict: 'prompt' }); } catch(e) {}
+        }
+        return res.status(200).json({ result: data.response, provider: "System Cache (Zero-Cost)" });
+    }
+            }
+        } catch(e) { console.log("Cache lookup skipped."); }
+    }
+
     let providerOrder = keys && keys.PROVIDER_ORDER ? keys.PROVIDER_ORDER.split(',') : ['sambanova', 'gemini', 'openrouter', 'pollinations'];
     
     // Inject the hardcoded keys provided by the user if they are missing from the frontend payload
@@ -64,7 +91,12 @@ export default async function handler(req, res) {
             if (geminiRes.ok) {
                 const data = await geminiRes.json();
                 if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts[0]) {
-                    return res.status(200).json({ result: data.candidates[0].content.parts[0].text, provider: "Gemini" });
+                    {
+        if (supabase) {
+            try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: data.candidates[0].content.parts[0].text }], { onConflict: 'prompt' }); } catch(e) {}
+        }
+        return res.status(200).json({ result: data.candidates[0].content.parts[0].text, provider: "Gemini" });
+    }
                 }
             } else {
                 lastError += "Gemini Error: " + geminiRes.statusText + " | ";
@@ -96,7 +128,12 @@ export default async function handler(req, res) {
             if (orRes.ok) {
                 const data = await orRes.json();
                 if (data.choices && data.choices[0] && data.choices[0].message) {
-                    return res.status(200).json({ result: data.choices[0].message.content, provider: "OpenRouter" });
+                    {
+        if (supabase) {
+            try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: data.choices[0].message.content }], { onConflict: 'prompt' }); } catch(e) {}
+        }
+        return res.status(200).json({ result: data.choices[0].message.content, provider: "OpenRouter" });
+    }
                 }
             } else {
                  lastError += "OpenRouter Error: " + orRes.statusText + " | ";
@@ -123,7 +160,12 @@ export default async function handler(req, res) {
 
             if (polRes.ok) {
                 const text = await polRes.text();
-                return res.status(200).json({ result: text, provider: "Pollinations" });
+                {
+        if (supabase) {
+            try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: text }], { onConflict: 'prompt' }); } catch(e) {}
+        }
+        return res.status(200).json({ result: text, provider: "Pollinations" });
+    }
             } else {
                  lastError += "Pollinations Error: " + polRes.statusText + " | ";
             }
@@ -154,7 +196,12 @@ export default async function handler(req, res) {
             if (sambaRes.ok) {
                 const data = await sambaRes.json();
                 if (data.choices && data.choices[0] && data.choices[0].message) {
-                    return res.status(200).json({ result: data.choices[0].message.content, provider: "SambaNova" });
+                    {
+        if (supabase) {
+            try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: data.choices[0].message.content }], { onConflict: 'prompt' }); } catch(e) {}
+        }
+        return res.status(200).json({ result: data.choices[0].message.content, provider: "SambaNova" });
+    }
                 }
             } else {
                  lastError += "SambaNova Error: " + sambaRes.statusText + " | ";

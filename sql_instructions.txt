@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS public.query_cache (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    prompt TEXT UNIQUE NOT NULL,
+    response TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
