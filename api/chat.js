@@ -57,9 +57,11 @@ return res.status(200).json({ result: data.response, provider: "System Cache (Ze
     }
 
     
+    
     if (keys && keys.TARGET_LANGUAGE) {
-        systemPrompt += "\n\nCRITICAL INSTRUCTION: You MUST translate and output your entire response ONLY in " + keys.TARGET_LANGUAGE + ", regardless of what language the user types in.";
+        systemPrompt = "CRITICAL DIRECTIVE: YOU MUST TRANSLATE YOUR ENTIRE RESPONSE INTO " + keys.TARGET_LANGUAGE.toUpperCase() + ". DO NOT USE ENGLISH. " + systemPrompt;
     }
+
 
     if (keys && keys.BASE_GUIDELINES) {
         systemPrompt += "\n\nCOMPANY BRAND GUIDELINES TO FOLLOW STRICTLY:\n" + keys.BASE_GUIDELINES;

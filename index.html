@@ -258,28 +258,16 @@
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.has('embed')) {
             // Embed Widget Logic
-            document.addEventListener('DOMContentLoaded', () => {
-                const sidebar = document.getElementById('sidebar');
-                if(sidebar) sidebar.style.display = 'none';
-                
-                const adSidebar = document.getElementById('ad-sidebar');
-                if(adSidebar) adSidebar.style.display = 'none';
+            
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedLang = localStorage.getItem('globalLanguage');
+            if (savedLang && document.getElementById('global-lang-select')) {
+                document.getElementById('global-lang-select').value = savedLang;
+                // Wait for Google Translate script to load
+                setTimeout(() => setGlobalLanguage(savedLang), 1500);
+            }
+        });
 
-                const ticker = document.getElementById('ticker-container');
-                if(ticker) ticker.style.display = 'none';
-                
-                const main = document.getElementById('main-content');
-                if(main) {
-                    main.style.width = '100vw';
-                    main.style.height = '100vh';
-                }
-                
-                // Allow guest access in embed by mocking currentUser if not logged in
-                if (!localStorage.getItem('currentUser')) {
-                    currentUser = { username: "Guest_" + Math.floor(Math.random()*10000), plan: "Free", credits: 5 };
-                    document.getElementById('auth-screen').style.display = 'none';
-                }
-            });
         }
 
 
@@ -450,21 +438,48 @@
 </head>
 <body>
 
-    <div style="position: absolute; top: 10px; right: 10px; z-index: 9999;">
+    <!-- Google Translate Element -->
+    <div style="position: absolute; top: 10px; right: 10px; z-index: 9999; display: flex; align-items: center; gap: 10px;">
         <select id="global-lang-select" class="neon-border" onchange="setGlobalLanguage(this.value)" style="background: #111; color: var(--secondary); border: 1px solid var(--secondary); padding: 5px; font-size: 0.8em; outline: none; border-radius: 3px;">
-            <option value="English (US)">🇺🇸 English (US)</option>
-            <option value="Spanish">🇲🇽 Español</option>
-            <option value="French">🇫🇷 Français</option>
-            <option value="German">🇩🇪 Deutsch</option>
-            <option value="Chinese (Simplified)">🇨🇳 中文</option>
-            <option value="Japanese">🇯🇵 日本語</option>
-            <option value="Korean">🇰🇷 한국어</option>
-            <option value="Hindi">🇮🇳 हिन्दी</option>
-            <option value="Arabic">🇮🇳 العربية</option>
-            <option value="Portuguese">🇧🇷 Português</option>
-            <option value="Russian">🇷🇺 Русский</option>
+            <option value="English">🇺🇸 English</option>
+            <option value="Spanish">🇪🇸 Spanish</option>
+            <option value="French">🇫🇷 French</option>
+            <option value="German">🇩🇪 German</option>
+            <option value="Chinese">🇨🇳 Chinese</option>
+            <option value="Japanese">🇯🇵 Japanese</option>
+            <option value="Korean">🇰🇷 Korean</option>
+            <option value="Hindi">🇮🇳 Hindi</option>
+            <option value="Arabic">🇸🇦 Arabic</option>
+            <option value="Portuguese">🇵🇹 Portuguese</option>
+            <option value="Russian">🇷🇺 Russian</option>
+            <option value="Italian">🇮🇹 Italian</option>
+            <option value="Dutch">🇳🇱 Dutch</option>
+            <option value="Turkish">🇹🇷 Turkish</option>
+            <option value="Polish">🇵🇱 Polish</option>
+            <option value="Swedish">🇸🇪 Swedish</option>
+            <option value="Indonesian">🇮🇩 Indonesian</option>
+            <option value="Vietnamese">🇻🇳 Vietnamese</option>
+            <option value="Thai">🇹🇭 Thai</option>
+            <option value="Greek">🇬🇷 Greek</option>
+            <option value="Czech">🇨🇿 Czech</option>
+            <option value="Danish">🇩🇰 Danish</option>
+            <option value="Finnish">🇫🇮 Finnish</option>
+            <option value="Hebrew">🇮🇱 Hebrew</option>
+            <option value="Hungarian">🇭🇺 Hungarian</option>
+            <option value="Norwegian">🇳🇴 Norwegian</option>
+            <option value="Romanian">🇷🇴 Romanian</option>
+            <option value="Ukrainian">🇺🇦 Ukrainian</option>
         </select>
+        <div id="google_translate_element" style="display:none;"></div>
     </div>
+    
+    <!-- Google Translate Script -->
+    <script type="text/javascript">
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({pageLanguage: 'en', autoDisplay: false}, 'google_translate_element');
+        }
+    </script>
+    <script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
 
     <div id="cooldown-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:500; align-items:center; justify-content:center; flex-direction:column;">
@@ -1560,8 +1575,29 @@
         }
 
         
+        
         function setGlobalLanguage(lang) {
             localStorage.setItem('globalLanguage', lang);
+            
+            // Map our full names to Google Translate ISO codes
+            const langMap = {
+                'English': 'en', 'Spanish': 'es', 'French': 'fr', 'German': 'de', 'Chinese': 'zh-CN',
+                'Japanese': 'ja', 'Korean': 'ko', 'Hindi': 'hi', 'Arabic': 'ar', 'Portuguese': 'pt',
+                'Russian': 'ru', 'Italian': 'it', 'Dutch': 'nl', 'Turkish': 'tr', 'Polish': 'pl',
+                'Swedish': 'sv', 'Indonesian': 'id', 'Vietnamese': 'vi', 'Thai': 'th', 'Greek': 'el',
+                'Czech': 'cs', 'Danish': 'da', 'Finnish': 'fi', 'Hebrew': 'iw', 'Hungarian': 'hu',
+                'Norwegian': 'no', 'Romanian': 'ro', 'Ukrainian': 'uk'
+            };
+            
+            const code = langMap[lang];
+            if (code) {
+                // Hack to trigger Google Translate dropdown without the user clicking the ugly widget
+                const select = document.querySelector('.goog-te-combo');
+                if (select) {
+                    select.value = code;
+                    select.dispatchEvent(new Event('change'));
+                }
+            }
         }
         document.addEventListener('DOMContentLoaded', () => {
             const savedLang = localStorage.getItem('globalLanguage');
