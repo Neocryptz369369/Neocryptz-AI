@@ -8,34 +8,7 @@ export default async function handler(req, res) {
 
     // The waterfall order exactly as requested: Gemini, OpenRouter, Pollinations, Groq
     
-    const supabaseUrl = process.env.SUPABASE_URL || 'https://bxzvxgjnlvbexeuocbey.supabase.co';
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY;
-    let supabase = null;
 
-    if (supabaseKey) {
-        try {
-            supabase = createClient(supabaseUrl, supabaseKey);
-            const { data, error } = await supabase
-                .from('query_cache')
-                .select('response')
-                .eq('prompt', prompt.trim())
-                .single();
-                
-            if (data && data.response) {
-                {
-        if (supabase) {
-            try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: data.response }], { onConflict: 'prompt' }); } catch(e) {}
-        }
-        {
-        if (supabase) {
-            try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: data.response }], { onConflict: 'prompt' }); } catch(e) {}
-        }
-        return res.status(200).json({ result: data.response, provider: "System Cache (Zero-Cost)" });
-    }
-    }
-            }
-        } catch(e) { console.log("Cache lookup skipped."); }
-    }
 
     
     const supabaseUrl = process.env.SUPABASE_URL || 'https://bxzvxgjnlvbexeuocbey.supabase.co';
