@@ -1466,24 +1466,6 @@
 
         
         
-        let wipeTimer = null;
-        function toggleAutoWipe() {
-            const isEnabled = document.getElementById('autowipe-toggle').checked;
-            localStorage.setItem('autoWipeEnabled', isEnabled ? 'true' : 'false');
-            resetWipeTimer();
-            alert(isEnabled ? "Auto-Wipe Armed." : "Auto-Wipe Disarmed.");
-        }
-        function resetWipeTimer() {
-            if (wipeTimer) clearTimeout(wipeTimer);
-            if (localStorage.getItem('autoWipeEnabled') === 'true') {
-                wipeTimer = setTimeout(() => {
-                    document.getElementById('chat-window').innerHTML = ''; // Wipe screen
-                    logout(); // Force logout
-                }, 300000); // 5 minutes
-            }
-        }
-        document.addEventListener('mousemove', resetWipeTimer);
-        document.addEventListener('keypress', resetWipeTimer);
 
         
         let wipeTimer = null;
