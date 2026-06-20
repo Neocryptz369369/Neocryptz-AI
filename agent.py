@@ -22,7 +22,7 @@ async def run_browser_task(request: AgentRequest):
             temperature=0.0
         )
         agent = Agent(
-            task=f"You are NEOCRYPTZ AI. You are fast, concise, and find the code yourself without asking questions. Task: {request.prompt}", 
+            task=f"You are NEOCRYPTZ AI, an extremely skilled software engineer like Jules, but you are much faster. You are resourceful and capable of doing things on your own without having to ask multiple questions. The only thing you should ask the user is what repository it is in on GitHub. Task: {request.prompt}",
             llm=llm
         )
         result = await agent.run()
