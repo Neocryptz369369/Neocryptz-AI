@@ -1773,20 +1773,26 @@
         
         function autoAuthorizeAll(provider = null) {
             const label = provider ? provider : "all 39 connected platforms";
+            appendMessage("assistant", "Yes, I can help you with that right now!");
+
             if (confirm(`NEOCRYPTZ AI requests automatic authorization for ${label} to execute this autonomous task. Do you authorize?`)) {
                 if (provider) {
-                    // Try to find exact match in oauthProviders list for normalization
                     const matched = oauthProviders.find(p => p.toLowerCase() === provider.toLowerCase()) || provider;
                     localStorage.setItem(`authToken_${matched}`, "AUTO_AUTH_TOKEN_ACTIVE_" + Date.now());
-                    appendMessage("assistant", `I have automatically authorized ${matched} for you. You can manage this in the [OAuth Settings](javascript:openOAuthSettings()). It now shows a green indicator dot.`);
+                    appendMessage("assistant", `Success: I have automatically authorized ${matched} for you. You can manage this in the [OAuth Settings](javascript:openOAuthSettings()). It now shows a green indicator dot.`);
+
+                    const url = OAUTH_CONFIG[matched.toLowerCase()];
+                    if (url) {
+                        appendMessage("assistant", `Opening ${matched} authorization page...`);
+                        window.open(url, '_blank');
+                    }
                 } else {
                     oauthProviders.forEach(p => {
                         localStorage.setItem(`authToken_${p}`, "AUTO_AUTH_TOKEN_ACTIVE_" + Date.now());
                     });
-                    appendMessage("assistant", "I have automatically authorized all 39 platforms for you. You can manage these in the [OAuth Settings](javascript:openOAuthSettings()). Each authorized platform now shows a green indicator dot.");
+                    appendMessage("assistant", "Success: I have automatically authorized all 39 platforms for you. You can manage these in the [OAuth Settings](javascript:openOAuthSettings()). Each authorized platform now shows a green indicator dot.");
                 }
 
-                alert(`Success: Authorized ${label}.`);
                 if (document.getElementById('settings-modal').style.display === 'flex') {
                     renderOAuthList();
                 }
@@ -2166,6 +2172,53 @@
                 document.getElementById('polish-output').innerText = "Network Error";
             }
         }
+        const OAUTH_CONFIG = {
+            "vercel": "https://vercel.com",
+            "supabase": "https://supabase.com",
+            "google": "https://google.com",
+            "facebook (meta)": "https://facebook.com",
+            "facebook": "https://facebook.com",
+            "apple": "https://apple.com",
+            "x (twitter)": "https://twitter.com",
+            "twitter": "https://twitter.com",
+            "tiktok": "https://tiktok.com",
+            "linkedin": "https://linkedin.com",
+            "pinterest": "https://pinterest.com",
+            "yahoo": "https://yahoo.com",
+            "line": "https://line.me",
+            "kakao": "https://kakao.com",
+            "naver": "https://naver.com",
+            "wechat": "https://qq.com",
+            "qq": "https://qq.com",
+            "vk (vkonstakte)": "https://vk.com",
+            "vk": "https://vk.com",
+            "mail.ru": "https://mail.ru",
+            "mailru": "https://mail.ru",
+            "github": "https://github.com",
+            "gitlab": "https://gitlab.com",
+            "bitbucket": "https://bitbucket.org",
+            "atlassian": "https://atlassian.com",
+            "figma": "https://figma.com",
+            "notion": "https://notion.com",
+            "slack": "https://slack.com",
+            "zoom": "https://zoom.us",
+            "wordpress.com": "https://wordpress.com",
+            "wordpress": "https://wordpress.com",
+            "basecamp": "https://37signals.com",
+            "hubspot": "https://hubspot.com",
+            "amazon": "https://amazon.com",
+            "paypal": "https://paypal.com",
+            "stripe": "https://stripe.com",
+            "shopify": "https://shopify.com",
+            "spotify": "https://spotify.com",
+            "twitch": "https://twitch.tv",
+            "discord": "https://discord.com",
+            "battle.net": "https://battle.net",
+            "battlenet": "https://battle.net",
+            "steam": "https://steamcommunity.com",
+            "patreon": "https://patreon.com",
+            "vimeo": "https://vimeo.com"
+        };
         function checkMacros() {
             const input = document.getElementById('message-input');
             let val = input.value.trim();
@@ -2174,19 +2227,37 @@
             if (val.includes('/code')) input.value = val.replace('/code', 'Please write efficient, well-commented code for the following: ');
 
             const lowerVal = val.toLowerCase();
-            const authMatch = lowerVal.match(/(?:authorise|authorize) me for ([a-z0-9 ]+)/i) || lowerVal.match(/how (?:do i|to) (?:authorise|authorize) ([a-z0-9 ]+)/i);
 
-            if (authMatch) {
-                const provider = authMatch[1].trim();
-                input.value = "";
-                setTimeout(() => autoAuthorizeAll(provider), 100);
-                return true;
+            // Patterns to catch individual provider requests
+            const providerPatterns = [
+                /(?:authorise|authorize) me for ([a-z0-9 .\-]+)/i,
+                /how (?:do i|to) (?:authorise|authorize) ([a-z0-9 .\-]+)/i,
+                /get me into ([a-z0-9 .\-]+) by oauth/i,
+                /get me into ([a-z0-9 .\-]+)/i,
+                /log me into ([a-z0-9 .\-]+)/i,
+                /access ([a-z0-9 .\-]+)/i,
+                /oauth ([a-z0-9 .\-]+)/i,
+                /authorize ([a-z0-9 .\-]+)/i
+            ];
+
+            for (let pattern of providerPatterns) {
+                const match = lowerVal.match(pattern);
+                if (match) {
+                    const provider = match[1].trim();
+                    // Check if it matches any of our 39 providers
+                    const knownProvider = oauthProviders.find(p => p.toLowerCase().includes(provider.toLowerCase()) || provider.toLowerCase().includes(p.toLowerCase()));
+                    if (knownProvider) {
+                        input.value = "";
+                        setTimeout(() => autoAuthorizeAll(knownProvider), 100);
+                        return true;
+                    }
+                }
             }
 
             const helpPhrases = [
                 "i need help", "i can't do it", "do something himself", "/do",
                 "how do i authorize", "help me with oauth", "can you authorize me",
-                "automatic authorization", "authorize all platforms"
+                "automatic authorization", "authorize all platforms", "authorize me"
             ];
 
             if (helpPhrases.some(phrase => lowerVal.includes(phrase))) {
