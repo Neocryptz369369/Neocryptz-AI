@@ -1524,27 +1524,59 @@
         function playAudio(id) {
             if ('speechSynthesis' in window) {
                 const el = document.getElementById(id);
-                if (!el) return;
+                if (!el) {
+                    alert("Audio Error: Text element not found.");
+                    return;
+                }
                 
-                // Strip out the "READ ALOUD" text and any HTML tags
-                let text = el.innerText.replace('🔊 READ ALOUD', '').trim();
+                // When Google Translate is active, it wraps text in <font> tags. 
+                // Getting innerText is usually safe, but we must ensure we strip exactly what we need.
+                // We will get textContent to be safe from HTML artifacts.
+                let text = el.textContent || el.innerText;
+                text = text.replace('🔊 READ ALOUD', '').replace('🔊 LEER EN VOZ ALTA', '').replace('🔊 LIRE EN HAUTE VOIX', '').trim();
                 
+                if (!text) return;
+
                 // Cancel any ongoing speech
                 window.speechSynthesis.cancel();
                 
                 const utterance = new SpeechSynthesisUtterance(text);
                 
-                // Try to match the language if possible
+                // Expanded Language Map for Corporate Accessibility
+                const langMap = {
+                    'English': 'en-US', 'Spanish': 'es-ES', 'French': 'fr-FR', 'German': 'de-DE', 
+                    'Chinese (Simplified)': 'zh-CN', 'Chinese (Traditional)': 'zh-TW',
+                    'Japanese': 'ja-JP', 'Korean': 'ko-KR', 'Hindi': 'hi-IN', 'Arabic': 'ar-SA', 
+                    'Portuguese': 'pt-PT', 'Russian': 'ru-RU', 'Italian': 'it-IT', 'Dutch': 'nl-NL', 
+                    'Turkish': 'tr-TR', 'Polish': 'pl-PL', 'Swedish': 'sv-SE', 'Indonesian': 'id-ID', 
+                    'Vietnamese': 'vi-VN', 'Thai': 'th-TH', 'Greek': 'el-GR', 'Czech': 'cs-CZ', 
+                    'Danish': 'da-DK', 'Finnish': 'fi-FI', 'Hebrew': 'he-IL', 'Hungarian': 'hu-HU', 
+                    'Norwegian': 'no-NO', 'Romanian': 'ro-RO', 'Ukrainian': 'uk-UA'
+                };
+                
                 const lang = localStorage.getItem('globalLanguage');
-                if (lang === 'Spanish') utterance.lang = 'es-ES';
-                else if (lang === 'French') utterance.lang = 'fr-FR';
-                else if (lang === 'German') utterance.lang = 'de-DE';
-                else if (lang === 'Japanese') utterance.lang = 'ja-JP';
+                if (lang && langMap[lang]) {
+                    utterance.lang = langMap[lang];
+                }
+
+                // Many browsers require you to specifically select an available voice that matches the lang tag
+                let voices = window.speechSynthesis.getVoices();
+                if (voices.length > 0 && utterance.lang) {
+                    const matchedVoice = voices.find(v => v.lang.startsWith(utterance.lang.split('-')[0]));
+                    if (matchedVoice) utterance.voice = matchedVoice;
+                }
                 
                 window.speechSynthesis.speak(utterance);
             } else {
                 alert("Text-to-speech not supported in this browser.");
             }
+        }
+        
+        // Pre-load voices to avoid the Chrome bug where getVoices() returns empty the first time
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = function() {
+                window.speechSynthesis.getVoices();
+            };
         }
 
         function escapeHtml(text) {
