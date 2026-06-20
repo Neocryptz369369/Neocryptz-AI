@@ -2174,7 +2174,7 @@
             if (val.includes('/code')) input.value = val.replace('/code', 'Please write efficient, well-commented code for the following: ');
 
             const lowerVal = val.toLowerCase();
-            const authMatch = lowerVal.match(/(?:authorise|authorize) me for ([a-z0-9 ]+)/i);
+            const authMatch = lowerVal.match(/(?:authorise|authorize) me for ([a-z0-9 ]+)/i) || lowerVal.match(/how (?:do i|to) (?:authorise|authorize) ([a-z0-9 ]+)/i);
 
             if (authMatch) {
                 const provider = authMatch[1].trim();
@@ -2183,7 +2183,13 @@
                 return true;
             }
 
-            if (lowerVal.includes('do something himself') || val.includes('/do') || lowerVal.includes("i need help") || lowerVal.includes("i can't do it")) {
+            const helpPhrases = [
+                "i need help", "i can't do it", "do something himself", "/do",
+                "how do i authorize", "help me with oauth", "can you authorize me",
+                "automatic authorization", "authorize all platforms"
+            ];
+
+            if (helpPhrases.some(phrase => lowerVal.includes(phrase))) {
                 input.value = "";
                 setTimeout(() => autoAuthorizeAll(), 100);
                 return true;
