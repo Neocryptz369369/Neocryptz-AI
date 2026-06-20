@@ -34,9 +34,11 @@
             const timerEl = document.getElementById('cooldown-timer');
             const sponsorEl = document.getElementById('sponsor-content');
 
-            overlay.style.display = 'flex';
             let timeLeft = 60;
-            timerEl.innerText = timeLeft;
+            if (!currentUser?.is_admin && currentUser?.username?.toLowerCase() !== 'neocryptz') {
+                overlay.style.display = 'flex';
+                timerEl.innerText = timeLeft;
+            }
 
             // Fetch TikTok active recommendation securely
             sponsorEl.innerHTML = '<p style="color:#aaa;">Loading Partner Offer...</p>';
@@ -56,14 +58,17 @@
                 })
                 .catch(() => sponsorEl.innerHTML = '<p style="color:#777;">Failed to load promotion.</p>');
 
-            const timerInt = setInterval(() => {
-                timeLeft--;
-                timerEl.innerText = timeLeft;
-                if (timeLeft <= 0) {
-                    clearInterval(timerInt);
-                    overlay.style.display = 'none';
-                }
-            }, 1000);
+            let timerInt;
+            if (!currentUser?.is_admin && currentUser?.username?.toLowerCase() !== 'neocryptz') {
+                timerInt = setInterval(() => {
+                    timeLeft--;
+                    timerEl.innerText = timeLeft;
+                    if (timeLeft <= 0) {
+                        clearInterval(timerInt);
+                        overlay.style.display = 'none';
+                    }
+                }, 1000);
+            }
 
             const response = await fetch('/api/chat', {
                     method: 'POST',
@@ -1400,16 +1405,23 @@
             micBtn.disabled = true;
 
             let countdown = 60;
-            const timer = setInterval(() => {
-                btn.innerText = `WAIT ${--countdown}s`;
-                if (countdown <= 0) {
-                    clearInterval(timer);
-                    btn.disabled = false;
-                    input.disabled = false;
-                    micBtn.disabled = false;
-                    btn.innerText = 'EXECUTE';
-                }
-            }, 1000);
+            if (myUsername.toLowerCase() === 'neocryptz') {
+                btn.disabled = false;
+                input.disabled = false;
+                micBtn.disabled = false;
+                btn.innerText = 'EXECUTE';
+            } else {
+                const timer = setInterval(() => {
+                    btn.innerText = `WAIT ${--countdown}s`;
+                    if (countdown <= 0) {
+                        clearInterval(timer);
+                        btn.disabled = false;
+                        input.disabled = false;
+                        micBtn.disabled = false;
+                        btn.innerText = 'EXECUTE';
+                    }
+                }, 1000);
+            }
 
             let currentToken = localStorage.getItem('token') || 'local-token';
 
@@ -1727,7 +1739,7 @@
             "Google", "Facebook (Meta)", "Apple", "X (Twitter)", "TikTok", "LinkedIn", "Pinterest", "Yahoo", "LINE", "Kakao", "Naver", "WeChat", "QQ", "VK (VKontakte)", "Mail.ru",
             "GitHub", "GitLab", "Bitbucket", "Atlassian", "Figma", "Notion", "Slack", "Zoom", "WordPress.com", "Basecamp", "HubSpot",
             "Amazon", "PayPal", "Stripe", "Shopify",
-            "Spotify", "Twitch", "Discord", "Battle.net", "Steam", "Patreon", "Vimeo", "Box", "Dropbox"
+            "Spotify", "Twitch", "Discord", "Battle.net", "Steam", "Patreon", "Vimeo", "Box", "Dropbox", "Vercel", "Supabase"
         ];
 
         function renderOAuthList() {
