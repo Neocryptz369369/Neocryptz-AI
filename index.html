@@ -524,6 +524,7 @@
                 <button class="btn" onclick="showAdminTab('admin-scrapes')">SCRAPERS</button>
                 <button class="btn" style="border-color:#0f0; color:#0f0;" onclick="showAdminTab('admin-monitor'); fetchLiveUserStats()">LIVE MONITOR</button>
                 <button class="btn" onclick="showAdminTab('admin-ads')">ADS</button>
+                <button class="btn" style="border-color:#ff0050; color:#ff0050;" onclick="showAdminTab('admin-tiktok'); loadTikTokLinks()">TIKTOK LINKS</button>
                 <button class="btn" onclick="showAdminTab('admin-feedback'); loadAdminData()">FEEDBACK</button>
                 <button class="btn" onclick="showAdminTab('admin-settings')">SETTINGS</button>
                 <div style="border-left: 1px solid #333; margin: 0 10px;"></div>
@@ -567,7 +568,28 @@
                     <p style="color: #aaa; text-align: center;">No local scrapes recorded yet.</p>
                 </div>
             </div>
-            <div id="admin-ads" class="admin-tab" style="display:none;">
+            
+            <div id="admin-tiktok" class="admin-tab" style="display:none;">
+                <h3 style="color:#ff0050;">TIKTOK AFFILIATE LINKS</h3>
+                <p style="font-size:0.8em; color:#aaa;">Manage your viral TikTok product recommendations that appear during the 60-second cooldown screen.</p>
+                
+                <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #ff0050; background: #111; border-radius: 5px;">
+                    <h4 style="margin-top:0;">Add New Affiliate Link</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <input type="text" id="tk-id" placeholder="Unique ID (e.g. desk_mat)" style="padding: 10px; background: #222; border: 1px solid var(--primary); color: #fff;">
+                        <input type="text" id="tk-badge" placeholder="Badge Text (e.g. HOT TRENDING 🔥)" style="padding: 10px; background: #222; border: 1px solid var(--primary); color: #fff;">
+                        <input type="text" id="tk-name" placeholder="Product Name" style="padding: 10px; background: #222; border: 1px solid var(--primary); color: #fff;">
+                        <input type="text" id="tk-headline" placeholder="Headline / Description" style="padding: 10px; background: #222; border: 1px solid var(--primary); color: #fff;">
+                        <input type="url" id="tk-url" placeholder="TikTok Destination URL" style="grid-column: span 2; padding: 10px; background: #222; border: 1px solid var(--primary); color: #fff;">
+                    </div>
+                    <button class="btn" style="background:#ff0050; color:#fff; width: 100%; margin-top: 10px; border:none;" onclick="saveTikTokLink()">ADD & ACTIVATE LINK</button>
+                </div>
+
+                <div id="tiktok-links-container" style="max-height: 40vh; overflow-y: auto;">
+                    <p style="color: #aaa; text-align: center;">Loading links...</p>
+                </div>
+            </div>
+<div id="admin-ads" class="admin-tab" style="display:none;">
                 <h3>AD MANAGEMENT</h3>
                 <div style="margin-bottom: 20px;">
                     <input type="text" id="new-ad-text" placeholder="Ad Text (max 25 words)" style="width:70%; padding:10px;">
@@ -1352,6 +1374,97 @@
         }
 
         // Admin
+        
+        async function loadTikTokLinks() {
+            const container = document.getElementById('tiktok-links-container');
+            container.innerHTML = '<p style="color: #aaa; text-align: center;">Loading links...</p>';
+            
+            try {
+                const { data, error } = await supabaseClient.from('tiktok_recommendations').select('*').order('id');
+                if (error) throw error;
+                
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<p style="color: #aaa; text-align: center;">No TikTok links configured yet.</p>';
+                    return;
+                }
+
+                let html = '<table style="width:100%; border-collapse: collapse; text-align:left;">';
+                html += '<tr style="border-bottom:1px solid #ff0050;"><th>ID</th><th>Product</th><th>Status</th><th>Actions</th></tr>';
+                data.forEach(item => {
+                    const statusColor = item.is_active ? '#0f0' : '#aaa';
+                    const statusText = item.is_active ? 'ACTIVE' : 'INACTIVE';
+                    html += `<tr>
+                        <td style="padding:10px 5px;">${escapeHtml(item.id)}</td>
+                        <td style="padding:10px 5px;">${escapeHtml(item.product_name)}<br><small style="color:#777;">${escapeHtml(item.destination_url)}</small></td>
+                        <td style="padding:10px 5px; color:${statusColor};">${statusText}</td>
+                        <td style="padding:10px 5px;">
+                            <button class="btn" style="padding:2px 5px; font-size:0.8em;" onclick="toggleTikTokLink('${item.id}', ${!item.is_active})">${item.is_active ? 'DISABLE' : 'ACTIVATE'}</button>
+                            <button class="btn" style="padding:2px 5px; font-size:0.8em; border-color:#f00; color:#f00;" onclick="deleteTikTokLink('${item.id}')">DELETE</button>
+                        </td>
+                    </tr>`;
+                });
+                html += '</table>';
+                container.innerHTML = html;
+            } catch(e) {
+                container.innerHTML = `<p style="color: #f00; text-align: center;">Failed to load links: ${e.message}</p>`;
+            }
+        }
+
+        async function saveTikTokLink() {
+            const id = document.getElementById('tk-id').value.trim();
+            const badge = document.getElementById('tk-badge').value.trim();
+            const name = document.getElementById('tk-name').value.trim();
+            const headline = document.getElementById('tk-headline').value.trim();
+            const url = document.getElementById('tk-url').value.trim();
+
+            if (!id || !badge || !name || !headline || !url) return alert("Please fill out all fields.");
+
+            try {
+                // If we set one active, we usually want to deactivate the others so only one shows at a time.
+                await supabaseClient.from('tiktok_recommendations').update({ is_active: false }).neq('id', id);
+                
+                const { error } = await supabaseClient.from('tiktok_recommendations').upsert({
+                    id: id,
+                    visual_badge_text: badge,
+                    product_name: name,
+                    display_headline: headline,
+                    destination_url: url,
+                    is_active: true
+                });
+                if (error) throw error;
+                
+                alert("TikTok link saved and set as ACTIVE!");
+                
+                document.getElementById('tk-id').value = '';
+                document.getElementById('tk-badge').value = '';
+                document.getElementById('tk-name').value = '';
+                document.getElementById('tk-headline').value = '';
+                document.getElementById('tk-url').value = '';
+                
+                loadTikTokLinks();
+            } catch(e) {
+                alert("Failed to save link: " + e.message);
+            }
+        }
+
+        async function toggleTikTokLink(id, makeActive) {
+            try {
+                if (makeActive) {
+                    await supabaseClient.from('tiktok_recommendations').update({ is_active: false }).neq('id', id);
+                }
+                await supabaseClient.from('tiktok_recommendations').update({ is_active: makeActive }).eq('id', id);
+                loadTikTokLinks();
+            } catch(e) { alert("Failed to toggle: " + e.message); }
+        }
+
+        async function deleteTikTokLink(id) {
+            if(!confirm("Delete this TikTok affiliate link?")) return;
+            try {
+                await supabaseClient.from('tiktok_recommendations').delete().eq('id', id);
+                loadTikTokLinks();
+            } catch(e) { alert("Failed to delete: " + e.message); }
+        }
+
         function showAdminTab(id) {
             document.querySelectorAll('.admin-tab').forEach(t => t.style.display = 'none');
             document.getElementById(id).style.display = 'block';
