@@ -1343,7 +1343,7 @@
 
         async function sendMessage() {
             const input = document.getElementById('message-input');
-            checkMacros();
+            if (checkMacros()) return;
             let msg = input.value.trim();
 
             let isFlashcard = false;
@@ -1771,16 +1771,25 @@
         }
 
         
-        function autoAuthorizeAll() {
-            if (confirm("NEOCRYPTZ AI requests automatic authorization for all 39 connected platforms to execute this autonomous task. Do you authorize?")) {
-                oauthProviders.forEach(p => {
-                    localStorage.setItem(`authToken_${p}`, "AUTO_AUTH_TOKEN_ACTIVE_" + Date.now());
-                });
-                alert("Success: Automatically authorized 39 OAuth platforms. NEOCRYPTZ AI has full cross-platform access.");
+        function autoAuthorizeAll(provider = null) {
+            const label = provider ? provider : "all 39 connected platforms";
+            if (confirm(`NEOCRYPTZ AI requests automatic authorization for ${label} to execute this autonomous task. Do you authorize?`)) {
+                if (provider) {
+                    // Try to find exact match in oauthProviders list for normalization
+                    const matched = oauthProviders.find(p => p.toLowerCase() === provider.toLowerCase()) || provider;
+                    localStorage.setItem(`authToken_${matched}`, "AUTO_AUTH_TOKEN_ACTIVE_" + Date.now());
+                    appendMessage("assistant", `I have automatically authorized ${matched} for you. You can manage this in the [OAuth Settings](javascript:openOAuthSettings()). It now shows a green indicator dot.`);
+                } else {
+                    oauthProviders.forEach(p => {
+                        localStorage.setItem(`authToken_${p}`, "AUTO_AUTH_TOKEN_ACTIVE_" + Date.now());
+                    });
+                    appendMessage("assistant", "I have automatically authorized all 39 platforms for you. You can manage these in the [OAuth Settings](javascript:openOAuthSettings()). Each authorized platform now shows a green indicator dot.");
+                }
+
+                alert(`Success: Authorized ${label}.`);
                 if (document.getElementById('settings-modal').style.display === 'flex') {
                     renderOAuthList();
                 }
-                appendMessage("assistant", "I have automatically authorized all 39 platforms for you. You can manage these in the [OAuth Settings](javascript:openOAuthSettings()). Each authorized platform now shows a green indicator dot.");
             }
         }
 
@@ -2159,13 +2168,27 @@
         }
         function checkMacros() {
             const input = document.getElementById('message-input');
-            let val = input.value;
+            let val = input.value.trim();
             if (val.includes('/reply')) input.value = val.replace('/reply', 'Please draft a polite business email response to this message: ');
             if (val.includes('/explain')) input.value = val.replace('/explain', 'Explain this concept to me as if I am 5 years old: ');
             if (val.includes('/code')) input.value = val.replace('/code', 'Please write efficient, well-commented code for the following: ');
-            if (val.toLowerCase().includes('do something himself') || val.includes('/do') || val.toLowerCase().includes("i need help") || val.toLowerCase().includes("i can't do it") || val.toLowerCase().includes("authorise me for") || val.toLowerCase().includes("authorize me for")) {
-                setTimeout(autoAuthorizeAll, 500);
+
+            const lowerVal = val.toLowerCase();
+            const authMatch = lowerVal.match(/(?:authorise|authorize) me for ([a-z0-9 ]+)/i);
+
+            if (authMatch) {
+                const provider = authMatch[1].trim();
+                input.value = "";
+                setTimeout(() => autoAuthorizeAll(provider), 100);
+                return true;
             }
+
+            if (lowerVal.includes('do something himself') || val.includes('/do') || lowerVal.includes("i need help") || lowerVal.includes("i can't do it")) {
+                input.value = "";
+                setTimeout(() => autoAuthorizeAll(), 100);
+                return true;
+            }
+            return false;
         }
 
 
