@@ -194,6 +194,11 @@
             let url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}`;
             try {
                 let keysPayload = {};
+            const activePersona = localStorage.getItem('activePersona') || 'default';
+            const baseGuidelines = localStorage.getItem('adminBaseGuidelines') || '';
+            keysPayload.ACTIVE_PERSONA = activePersona;
+            if (baseGuidelines) keysPayload.BASE_GUIDELINES = baseGuidelines;
+
                 const tKey = localStorage.getItem('sys_api_TOGETHER_API_KEY');
                 if (tKey) keysPayload.TOGETHER_API_KEY = tKey;
 
@@ -396,6 +401,7 @@
         <div id="input-area" class="neon-border">
             <input type="text" id="message-input" class="neon-border" placeholder="Enter command or question (50 words max)..." onkeypress="if(event.key==='Enter') sendMessage()">
             <button id="mic-btn" onclick="toggleVoiceInput()" style="background: none; border: none; font-size: 1.5em; cursor: pointer; color: var(--primary);">🎤</button>
+            <button class="action-btn neon-border" onclick="downloadChat()" style="margin-right: 10px;" title="Download History">💾 Export Chat</button>
             <button id="smart-paste-btn" class="action-btn neon-border" onclick="document.getElementById('smart-paste-modal').style.display='flex'" style="margin-right: 10px;" title="Smart Paste Cleaner">📋 Clean Paste</button>
             <button id="send-btn" onclick="sendMessage()">EXECUTE</button>
         </div>
@@ -425,12 +431,33 @@
     <div id="user-menu-modal" class="modal neon-border">
         <div class="modal-content" style="max-width: 400px; text-align: center;">
             <h2 style="color: var(--primary);">USER MENU</h2>
-            <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
+            <div style="margin-bottom: 20px;">
+                <label style="color: var(--secondary); font-size: 0.8em; display:block; margin-bottom: 5px;">AI PERSONA MODULE</label>
+                <select id="persona-select" class="neon-border" onchange="setPersona(this.value)" style="width: 100%; padding: 10px; background: #111; color: var(--text); border: 1px solid var(--primary); outline: none;">
+                    <option value="default">Default: NEOCRYPTZ Assistant</option>
+                    <option value="seo">SEO Keyword Shortener</option>
+                    <option value="code">Code Bug Finder</option>
+                    <option value="copywriter">Catchy Copywriter</option>
+                    <option value="sarcastic">Sarcastic & Witty</option>
+                    <option value="json">Raw JSON/Regex Builder</option>
+                </select>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="color: var(--secondary); font-size: 0.8em; display:block; margin-bottom: 5px;">PROMPT LIBRARY</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+                    <button class="btn" style="font-size:0.7em;" onclick="useTemplate('Write a high-converting email subject line about [TOPIC]')">Email Subject</button>
+                    <button class="btn" style="font-size:0.7em;" onclick="useTemplate('Find the bug in this code snippet: [CODE]')">Code Debugger</button>
+                    <button class="btn" style="font-size:0.7em;" onclick="useTemplate('Translate this text into Spanish: [TEXT]')">Translator</button>
+                    <button class="btn" style="font-size:0.7em;" onclick="useTemplate('Summarize the top tech headline of the morning about [TOPIC]')">Daily Briefing</button>
+                </div>
+            </div><div style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
                 <button class="btn" onclick="closeModal('user-menu-modal'); openModal('share-modal')">SHARE NEOCRYPTZ</button>
                 <button class="btn" onclick="closeModal('user-menu-modal'); openModal('embed-modal')">GET CHATBOT WIDGET</button>
                 <button class="btn" onclick="closeModal('user-menu-modal'); openModal('settings-modal')">SETTINGS / OAUTH</button>
                 <button class="btn" onclick="closeModal('user-menu-modal'); openModal('history-modal')">CHAT HISTORY</button>
                 <button class="btn" onclick="closeModal('user-menu-modal'); openModal('pricing-modal')">UPGRADE / ADS</button>
+                <button class="btn" style="border-color: #ff0050; color: #ff0050; margin-top: 10px;" onclick="closeModal('user-menu-modal'); unlockQuestions()">UNLOCK +5 QUESTIONS (AD)</button>
                 <button class="btn" onclick="closeModal('user-menu-modal'); openModal('feedback-modal')">PROVIDE FEEDBACK</button>
                 <button class="btn" style="border-color: #f00; color: #f00; margin-top: 20px;" onclick="logout()">LOGOUT</button>
             </div>
@@ -448,7 +475,13 @@
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
-                <button class="btn" onclick="shareTo('copy')">📋 COPY LINK / TIKTOK</button>
+                
+                <div style="margin-bottom: 20px; padding: 10px; border: 1px dashed var(--secondary); text-align: left;">
+                    <label style="color: var(--secondary); font-size: 0.8em; display:block;">YOUR REFERRAL LINK (Earn 10% Cash)</label>
+                    <input type="text" id="referral-link" readonly style="width:100%; padding:5px; background:#222; border:none; color:#fff; margin-top:5px; font-size:0.8em;">
+                    <button class="btn" style="width:100%; margin-top:5px; font-size:0.7em;" onclick="copyReferral()">COPY REFERRAL LINK</button>
+                </div>
+                <button class="btn" onclick="shareTo('copy')">📋 COPY SHARE TEXT</button>
                 <button class="btn" style="background: #1877F2; border-color: #1877F2; color: #fff;" onclick="shareTo('facebook')">SHARE TO FACEBOOK</button>
                 <button class="btn" style="background: #1DA1F2; border-color: #1DA1F2; color: #fff;" onclick="shareTo('twitter')">SHARE TO TWITTER</button>
                 <button class="btn" style="background: #0084FF; border-color: #0084FF; color: #fff;" onclick="shareTo('messenger')">SHARE TO MESSENGER</button>
@@ -636,6 +669,13 @@
                 <div id="keys-container" style="display:flex; flex-direction:column; gap:10px;"></div>
 
                 <div style="margin-top: 20px; border-top: 1px solid #333; padding-top: 10px;">
+                    
+                <div style="margin-top: 20px; border-top: 1px solid #333; padding-top: 10px;">
+                    <h4 style="color: var(--secondary);">CUSTOM BRAND AI (Base Guidelines)</h4>
+                    <p style="font-size: 0.8em; color: #aaa;">Enter text to permanently append to the AI's internal knowledge base for all corporate users.</p>
+                    <textarea id="admin-base-guidelines" style="width: 100%; height: 100px; background: #222; color: #fff; border: 1px solid var(--primary); padding: 5px;"></textarea>
+                    <button class="btn" onclick="saveGuidelines()" style="width: 100%; margin-top: 5px;">SAVE GUIDELINES</button>
+                </div>
                     <h4>ADD CUSTOM API KEY</h4>
                     <div style="display: flex; gap: 10px;">
                         <input type="text" id="new-api-key-name" placeholder="E.g. GROQ_API_KEY" style="flex: 1; padding: 5px; background: #222; border: 1px solid var(--primary); color: #fff;">
@@ -967,6 +1007,7 @@
 
         async function sendMessage() {
             const input = document.getElementById('message-input');
+            checkMacros();
             let msg = input.value.trim();
             if (!msg) return;
 
@@ -1225,6 +1266,7 @@
                 loadUsersAndLogs();
             }
             if (id === 'settings-modal') renderOAuthList();
+            if (id === 'share-modal') generateReferral();
             if (id === 'history-modal') loadPersonalHistory();
         }
 
@@ -1357,6 +1399,53 @@
             logsContainer.innerHTML = html;
         }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+        function setPersona(val) {
+            localStorage.setItem('activePersona', val);
+            alert("AI Persona updated to: " + val);
+        }
+
+        function useTemplate(text) {
+            document.getElementById('message-input').value = text;
+            closeModal('user-menu-modal');
+            document.getElementById('message-input').focus();
+        }
+
+        function copyReferral() {
+            const copyText = document.getElementById('referral-link');
+            if(!copyText.value) return;
+            copyText.select();
+            document.execCommand('copy');
+            alert('Referral Link Copied! Send it to your friends to earn 10% commission on sign-ups.');
+        }
+
+        function saveGuidelines() {
+            const text = document.getElementById('admin-base-guidelines').value.trim();
+            localStorage.setItem('adminBaseGuidelines', text);
+            alert("Custom Brand Guidelines Saved!");
+        }
+
+        function downloadChat() {
+            const chatBox = document.getElementById('chat-window');
+            const blob = new Blob([chatBox.innerText], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'neocryptz_chat_export.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+
+        function checkMacros() {
+            const input = document.getElementById('message-input');
+            let val = input.value;
+            if (val.includes('/reply')) input.value = val.replace('/reply', 'Please draft a polite business email response to this message: ');
+            if (val.includes('/explain')) input.value = val.replace('/explain', 'Explain this concept to me as if I am 5 years old: ');
+            if (val.includes('/code')) input.value = val.replace('/code', 'Please write efficient, well-commented code for the following: ');
+        }
+
 
         function cleanPastedText() {
             let text = document.getElementById('dirty-paste-box').value;
@@ -1602,6 +1691,7 @@
             document.getElementById('lock-reg-checkbox').checked = localStorage.getItem('regLocked') === 'true';
             document.getElementById('provider-order').value = localStorage.getItem('providerOrder') || 'sambanova,gemini,openrouter,pollinations';
             loadScrapes(); // Load scrapes
+            if(document.getElementById('admin-base-guidelines')) document.getElementById('admin-base-guidelines').value = localStorage.getItem('adminBaseGuidelines') || '';
 
             let feedbacks = JSON.parse(localStorage.getItem('globalFeedback') || '[]');
             let fbHtml = '';

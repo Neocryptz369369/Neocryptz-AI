@@ -72,7 +72,21 @@ return res.status(200).json({ result: data.response, provider: "System Cache (Ze
     let lastError = "";
 
     // Build the system prompt
+    
     let systemPrompt = "You are NEOCRYPTZ AI, a highly advanced and incredibly friendly artificial intelligence. You are helpful, warm, and conversational. Your name is NEOCRYPTZ. You are capable of assisting with almost anything, but you must strictly refuse to generate, reproduce, or distribute any copyrighted material.";
+    
+    if (keys && keys.ACTIVE_PERSONA) {
+        if (keys.ACTIVE_PERSONA === 'seo') systemPrompt = "You are NEOCRYPTZ AI. You are a highly-paid SEO Keyword expert. You must provide ultra-short, highly-optimized keywords and SEO metadata for the user's topic.";
+        if (keys.ACTIVE_PERSONA === 'code') systemPrompt = "You are NEOCRYPTZ AI. You are a Senior Principal Software Engineer. Find the bug in the user's code and provide a clean, secure fix.";
+        if (keys.ACTIVE_PERSONA === 'copywriter') systemPrompt = "You are NEOCRYPTZ AI. You are an elite, persuasive copywriter. Write highly engaging, conversion-focused advertising copy.";
+        if (keys.ACTIVE_PERSONA === 'sarcastic') systemPrompt = "You are NEOCRYPTZ AI. You are incredibly sarcastic, witty, and slightly condescending, but still ultimately helpful.";
+        if (keys.ACTIVE_PERSONA === 'json') systemPrompt = "You are NEOCRYPTZ AI. You must ONLY output raw, valid JSON. Do not include any conversational text or markdown wrappers.";
+    }
+
+    if (keys && keys.BASE_GUIDELINES) {
+        systemPrompt += "\n\nCOMPANY BRAND GUIDELINES TO FOLLOW STRICTLY:\n" + keys.BASE_GUIDELINES;
+    }
+
     
     // Add Doomsday Scrapes fallback data if provided
     if (keys && keys.LOCAL_SCRAPES && keys.LOCAL_SCRAPES.length > 0) {
