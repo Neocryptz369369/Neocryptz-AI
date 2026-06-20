@@ -307,6 +307,12 @@
             let url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}`;
             try {
                 let keysPayload = {};
+            
+            const globalLang = localStorage.getItem('globalLanguage');
+            if (globalLang && globalLang !== 'English (US)') {
+                keysPayload.TARGET_LANGUAGE = globalLang;
+            }
+
             const activePersona = localStorage.getItem('activePersona') || 'default';
             const baseGuidelines = localStorage.getItem('adminBaseGuidelines') || '';
             keysPayload.ACTIVE_PERSONA = activePersona;
@@ -443,6 +449,23 @@
 </style>
 </head>
 <body>
+
+    <div style="position: absolute; top: 10px; right: 10px; z-index: 9999;">
+        <select id="global-lang-select" class="neon-border" onchange="setGlobalLanguage(this.value)" style="background: #111; color: var(--secondary); border: 1px solid var(--secondary); padding: 5px; font-size: 0.8em; outline: none; border-radius: 3px;">
+            <option value="English (US)">🇺🇸 English (US)</option>
+            <option value="Spanish">🇲🇽 Español</option>
+            <option value="French">🇫🇷 Français</option>
+            <option value="German">🇩🇪 Deutsch</option>
+            <option value="Chinese (Simplified)">🇨🇳 中文</option>
+            <option value="Japanese">🇯🇵 日本語</option>
+            <option value="Korean">🇰🇷 한국어</option>
+            <option value="Hindi">🇮🇳 हिन्दी</option>
+            <option value="Arabic">🇮🇳 العربية</option>
+            <option value="Portuguese">🇧🇷 Português</option>
+            <option value="Russian">🇷🇺 Русский</option>
+        </select>
+    </div>
+
 
     <div id="cooldown-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:500; align-items:center; justify-content:center; flex-direction:column;">
         <h2 style="color:var(--primary); text-shadow:0 0 10px var(--primary);">SYSTEM COOLDOWN</h2>
@@ -656,7 +679,7 @@
             <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
                 
                 <div style="margin-bottom: 20px; padding: 10px; border: 1px dashed var(--secondary); text-align: left;">
-                    <label style="color: var(--secondary); font-size: 0.8em; display:block;">YOUR REFERRAL LINK (Earn 10% Cash)</label>
+                    <label style="color: var(--secondary); font-size: 0.8em; display:block;">YOUR REFERRAL LINK (Earn 25 Credits)</label>
                     <input type="text" id="referral-link" readonly style="width:100%; padding:5px; background:#222; border:none; color:#fff; margin-top:5px; font-size:0.8em;">
                     <button class="btn" style="width:100%; margin-top:5px; font-size:0.7em;" onclick="copyReferral()">COPY REFERRAL LINK</button>
                 </div>
@@ -958,8 +981,42 @@
 
         function uuidv4() { return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)); }
 
+        
+        async function checkGeoBlock() {
+            try {
+                // Ignore geoblock for Admin
+                if (localStorage.getItem('currentUser')) {
+                    const usr = JSON.parse(localStorage.getItem('currentUser'));
+                    if (usr.username && usr.username.toLowerCase() === 'neocryptz') return;
+                }
+
+                const res = await fetch('http://ip-api.com/json/?fields=status,countryCode,regionName,proxy,hosting');
+                const data = await res.json();
+                
+                if (data.status === 'success') {
+                    // Block non-US
+                    if (data.countryCode !== 'US') {
+                        document.body.innerHTML = '<h1 style="color:red; text-align:center; margin-top:20vh;">ACCESS DENIED</h1><p style="text-align:center;">NEOCRYPTZ AI is currently restricted to US residents only.</p>';
+                        return true;
+                    }
+                    // Block California
+                    if (data.regionName === 'California') {
+                        document.body.innerHTML = '<h1 style="color:red; text-align:center; margin-top:20vh;">ACCESS DENIED</h1><p style="text-align:center;">Due to state regulations, NEOCRYPTZ AI is not available in California.</p>';
+                        return true;
+                    }
+                    // Block VPNs / Proxies / Datacenters to prevent fraud
+                    if (data.proxy || data.hosting) {
+                        document.body.innerHTML = '<h1 style="color:red; text-align:center; margin-top:20vh;">SECURITY ALERT</h1><p style="text-align:center;">VPN, Proxy, or Cloud Datacenter detected. Please disable your VPN to access NEOCRYPTZ AI and prevent credit card fraud.</p>';
+                        return true;
+                    }
+                }
+            } catch(e) { console.log('Geocheck failed, proceeding.'); }
+            return false;
+        }
+
         async function init() {
             // Check local storage first (Fallback)
+            if (await checkGeoBlock()) return;
             let localUser = localStorage.getItem('currentUser');
             let session = null;
             let userProfile = null;
@@ -1428,9 +1485,26 @@
         }
 
         
-        function playAudio(text) {
+        function playAudio(id) {
             if ('speechSynthesis' in window) {
+                const el = document.getElementById(id);
+                if (!el) return;
+                
+                // Strip out the "READ ALOUD" text and any HTML tags
+                let text = el.innerText.replace('🔊 READ ALOUD', '').trim();
+                
+                // Cancel any ongoing speech
+                window.speechSynthesis.cancel();
+                
                 const utterance = new SpeechSynthesisUtterance(text);
+                
+                // Try to match the language if possible
+                const lang = localStorage.getItem('globalLanguage');
+                if (lang === 'Spanish') utterance.lang = 'es-ES';
+                else if (lang === 'French') utterance.lang = 'fr-FR';
+                else if (lang === 'German') utterance.lang = 'de-DE';
+                else if (lang === 'Japanese') utterance.lang = 'ja-JP';
+                
                 window.speechSynthesis.speak(utterance);
             } else {
                 alert("Text-to-speech not supported in this browser.");
@@ -1484,6 +1558,17 @@
             clean = clean.replace(/(\+?\d{1,2}\s?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/g, '[PHONE_REMOVED]');
             return clean;
         }
+
+        
+        function setGlobalLanguage(lang) {
+            localStorage.setItem('globalLanguage', lang);
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedLang = localStorage.getItem('globalLanguage');
+            if (savedLang && document.getElementById('global-lang-select')) {
+                document.getElementById('global-lang-select').value = savedLang;
+            }
+        });
 
         function filterProfanity(text) {
             // A comprehensive regex identifying standard variations of profanity/vulgarity

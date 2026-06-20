@@ -56,6 +56,11 @@ return res.status(200).json({ result: data.response, provider: "System Cache (Ze
         if (keys.ACTIVE_PERSONA === 'json') systemPrompt = "You are NEOCRYPTZ AI. You must ONLY output raw, valid JSON. Do not include any conversational text or markdown wrappers.";
     }
 
+    
+    if (keys && keys.TARGET_LANGUAGE) {
+        systemPrompt += "\n\nCRITICAL INSTRUCTION: You MUST translate and output your entire response ONLY in " + keys.TARGET_LANGUAGE + ", regardless of what language the user types in.";
+    }
+
     if (keys && keys.BASE_GUIDELINES) {
         systemPrompt += "\n\nCOMPANY BRAND GUIDELINES TO FOLLOW STRICTLY:\n" + keys.BASE_GUIDELINES;
     }
