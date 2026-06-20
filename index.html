@@ -943,23 +943,26 @@
         <div class="modal-content">
             <h2>AI SERVICE PLANS</h2>
             <div style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap:20px;">
-                <div style="border:1px solid var(--primary); padding:20px; text-align:center;">
+                <div style="border:1px solid var(--primary); padding:15px; text-align:center;">
                     <h3>STARTER</h3>
-                    <p>$10 / month</p>
-                    <p>500 Credits</p>
-                    <button class="btn" onclick="buyPlan('Starter')">BUY NOW</button>
+                    <p>$10 / month (500 Credits)</p>
+                    <button class="btn" style="width:100%; margin-bottom:5px;" onclick="buyPlan('Starter', 'monthly')">BUY MONTHLY</button>
+                    <p style="margin-top:10px;">$120 / year (6,000 Credits)</p>
+                    <button class="btn" style="width:100%;" onclick="buyPlan('Starter', 'yearly')">BUY YEARLY</button>
                 </div>
-                <div style="border:1px solid var(--primary); padding:20px; text-align:center; background: rgba(0,255,0,0.1);">
+                <div style="border:1px solid var(--primary); padding:15px; text-align:center; background: rgba(0,255,0,0.1);">
                     <h3>UNLIMITED TEXT</h3>
-                    <p>$20 / month</p>
-                    <p>Unlimited Credits</p>
-                    <button class="btn" onclick="buyPlan('Unlimited Text')">BUY NOW</button>
+                    <p>$20 / month (Unlimited)</p>
+                    <button class="btn" style="width:100%; margin-bottom:5px;" onclick="buyPlan('Unlimited Text', 'monthly')">BUY MONTHLY</button>
+                    <p style="margin-top:10px;">$240 / year (Unlimited)</p>
+                    <button class="btn" style="width:100%;" onclick="buyPlan('Unlimited Text', 'yearly')">BUY YEARLY</button>
                 </div>
-                <div style="border:1px solid var(--primary); padding:20px; text-align:center;">
+                <div style="border:1px solid var(--primary); padding:15px; text-align:center;">
                     <h3>POWER</h3>
-                    <p>$80 / month</p>
-                    <p>6,000 Credits</p>
-                    <button class="btn" onclick="buyPlan('Power')">BUY NOW</button>
+                    <p>$80 / month (6,000 Credits)</p>
+                    <button class="btn" style="width:100%; margin-bottom:5px;" onclick="buyPlan('Power', 'monthly')">BUY MONTHLY</button>
+                    <p style="margin-top:10px;">$960 / year (72,000 Credits)</p>
+                    <button class="btn" style="width:100%;" onclick="buyPlan('Power', 'yearly')">BUY YEARLY</button>
                 </div>
                 <div style="border:1px solid var(--primary); padding:20px; text-align:center; background: rgba(255,0,255,0.1);">
                     <h3 style="color: var(--primary);">CORPORATE TEAM PACK</h3>
@@ -1852,14 +1855,18 @@
             loadUsersAndLogs();
         }
 
-        async function grantManualPlan(userId, planName) {
-            // Calculate 30 days from now for expiration, unless plan is "Free"
-            let expDate = planName === 'Free' ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+        async function grantManualPlan(userId, planName, period = 'monthly') {
+            // Calculate duration
+            const days = period === 'yearly' ? 365 : 30;
+            let expDate = planName === 'Free' ? null : new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
             const grantedDate = planName === 'Free' ? null : new Date().toLocaleDateString();
             
             if (userId.toLowerCase() === 'neocryptz') {
                 expDate = null; // Never expire for the main admin account
             }
+
+            // Map UI plan names to internal plan names if necessary
+            if (planName === 'Unlimited') planName = 'Unlimited Text';
 
             // Update the user's plan, expiration, and status in Supabase
             const { data, error } = await supabaseClient
@@ -1874,7 +1881,6 @@
                 .eq('id', userId);
 
             if (error) {
-                // Silently fallback to local storage
                 console.log('Supabase users table missing/failing. Falling back to local storage update.');
                 let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
                 let foundUser = Object.keys(users).find(k => users[k].id === userId || users[k].username === userId);
@@ -1882,15 +1888,17 @@
                     users[foundUser].plan = planName;
                     users[foundUser].plan_expires_at = expDate;
                     users[foundUser].plan_granted_at = grantedDate;
-                    if (planName === 'Starter') users[foundUser].credits = 500;
-                    if (planName === 'Power') users[foundUser].credits = 6000;
+
+                    const multiplier = period === 'yearly' ? 12 : 1;
+                    if (planName === 'Starter') users[foundUser].credits = 500 * multiplier;
+                    if (planName === 'Power') users[foundUser].credits = 6000 * multiplier;
                     if (planName === 'Unlimited Text') users[foundUser].credits = 999999;
                     if (planName === 'Free') users[foundUser].credits = 25;
                     localStorage.setItem('localUsers', JSON.stringify(users));
                 }
             }
 
-            alert(planName === 'Free' ? 'User plan revoked.' : `Plan ${planName} updated successfully for 30 days!`);
+            alert(planName === 'Free' ? 'User plan revoked.' : `Plan ${planName} (${period}) updated successfully!`);
             loadAdminData(); // Refresh the admin table so the change shows
             loadUsersAndLogs();
         }
@@ -1921,9 +1929,12 @@
                     <td style="padding: 5px;">${escapeHtml(usr.address || 'N/A')}</td>
                     <td style="padding: 5px; color: var(--secondary);">${userPlan}</td>
                     <td style="padding: 5px; display:flex; flex-wrap:wrap; gap:5px;">
-                        <button onclick="grantManualPlan('${passingId}', 'Starter')" style="font-size:0.8em; padding:2px;">STARTER</button>
-                        <button onclick="grantManualPlan('${passingId}', 'Power')" style="font-size:0.8em; padding:2px;">POWER</button>
-                        <button onclick="grantManualPlan('${passingId}', 'Unlimited')" style="font-size:0.8em; padding:2px;">UNLIMITED</button>
+                        <button onclick="grantManualPlan('${passingId}', 'Starter', 'monthly')" style="font-size:0.7em; padding:2px;">STARTER (M)</button>
+                        <button onclick="grantManualPlan('${passingId}', 'Starter', 'yearly')" style="font-size:0.7em; padding:2px;">STARTER (Y)</button>
+                        <button onclick="grantManualPlan('${passingId}', 'Power', 'monthly')" style="font-size:0.7em; padding:2px;">POWER (M)</button>
+                        <button onclick="grantManualPlan('${passingId}', 'Power', 'yearly')" style="font-size:0.7em; padding:2px;">POWER (Y)</button>
+                        <button onclick="grantManualPlan('${passingId}', 'Unlimited', 'monthly')" style="font-size:0.7em; padding:2px;">UNL (M)</button>
+                        <button onclick="grantManualPlan('${passingId}', 'Unlimited', 'yearly')" style="font-size:0.7em; padding:2px;">UNL (Y)</button>
                         <button onclick="grantManualPlan('${passingId}', 'Free')" style="font-size:0.8em; padding:2px; background:#ff8c00; border-color:#ff8c00; color:#fff;">REVOKE</button>
                         <button onclick="banUser('${passingId}')" style="font-size:0.8em; padding:2px; background:#ff0000; border-color:#ff0000; color:#fff;">BAN</button>
                     </td>
@@ -2579,13 +2590,23 @@
             logWin.document.body.innerHTML = logHtml;
         }
 
-        function buyPlan(plan) {
+        function buyPlan(plan, period = 'monthly') {
             const email = encodeURIComponent('bestcabautogroup@yahoo.com');
             const confirmed = confirm("By proceeding, you agree that there are no refunds for this plan. Do you wish to continue?");
             if (!confirmed) return;
-            const price = { "Starter": 10, "Unlimited Text": 20, "Power": 80 }[plan];
+
+            let price = 0;
+            if (plan === 'Corporate Team') {
+                price = 999;
+            } else if (period === 'yearly') {
+                price = { "Starter": 120, "Unlimited Text": 240, "Power": 960 }[plan];
+            } else {
+                price = { "Starter": 10, "Unlimited Text": 20, "Power": 80 }[plan];
+            }
+
             const userId = currentUser?.username || currentUser?.id || 'guest';
-            window.location.href = `https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=${email}&item_name=${plan}&amount=${price}&custom=${encodeURIComponent(userId)}&currency_code=USD`;
+            const itemName = (period === 'yearly' && plan !== 'Corporate Team') ? `${plan}_Yearly` : plan;
+            window.location.href = `https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=${email}&item_name=${encodeURIComponent(itemName)}&amount=${price}&custom=${encodeURIComponent(userId)}&currency_code=USD`;
         }
 
         function buyAd(plan) {
