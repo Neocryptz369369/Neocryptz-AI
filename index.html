@@ -177,8 +177,23 @@
             stored.count += 1;
             localStorage.setItem('imageGenStats', JSON.stringify(stored));
 
-            // Generate image URL
-            const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}`;
+            // Generate image URL via Vercel Secure Endpoint
+            let url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}`;
+            try {
+                let keysPayload = {};
+                const tKey = localStorage.getItem('sys_api_TOGETHER_API_KEY');
+                if (tKey) keysPayload.TOGETHER_API_KEY = tKey;
+
+                const res = await fetch('/api/image/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: prompt, keys: keysPayload })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.url) url = data.url;
+                }
+            } catch(e) { console.log(e); }
 
             // Limit to 500 pictures globally (simulated locally or via basic memory array)
             let globalImages = JSON.parse(localStorage.getItem('globalImageCache') || '[]');
