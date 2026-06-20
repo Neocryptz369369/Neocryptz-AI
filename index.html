@@ -432,6 +432,19 @@
             animation: neonGlow 3s linear infinite alternate;
         }
 
+        .provider-btn { position: relative; }
+        .provider-btn.authorized::after {
+            content: "";
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            width: 8px;
+            height: 8px;
+            background-color: #00ff00;
+            border-radius: 50%;
+            box-shadow: 0 0 5px #00ff00;
+        }
+
         @keyframes neonGlow {
             0% { box-shadow: 0 0 10px #00ffff, inset 0 0 10px #00ffff; }
             100% { box-shadow: 0 0 20px #ff00ff, inset 0 0 20px #ff00ff; }
@@ -1745,8 +1758,8 @@
             const oauthList = document.getElementById('oauth-list');
             const tokenList = document.getElementById('auth-token-list');
 
-            oauthList.innerHTML = oauthProviders.map(p => `<button class="btn provider-btn" style="padding: 10px; font-size: 0.9em;">OAuth: ${p}</button>`).join('');
-            tokenList.innerHTML = oauthProviders.map(p => `<button class="btn provider-btn" style="padding: 10px; font-size: 0.9em;" onclick="promptAuthToken('${p}')">Token: ${p}</button>`).join('');
+            oauthList.innerHTML = oauthProviders.map(p => { const auth = localStorage.getItem(`authToken_${p}`); return `<button class="btn provider-btn ${auth ? "authorized" : ""}" style="padding: 10px; font-size: 0.9em;" onclick="autoAuthorizeAll()">OAuth: ${p}</button>`; }).join('');
+            tokenList.innerHTML = oauthProviders.map(p => { const auth = localStorage.getItem(`authToken_${p}`); return `<button class="btn provider-btn ${auth ? "authorized" : ""}" style="padding: 10px; font-size: 0.9em;" onclick="promptAuthToken('${p}')">Token: ${p}</button>`; }).join('');
         }
 
         function filterOAuth() {
@@ -1767,6 +1780,7 @@
                 if (document.getElementById('settings-modal').style.display === 'flex') {
                     renderOAuthList();
                 }
+                appendMessage("assistant", "I have automatically authorized all 39 platforms for you. You can manage these in the [OAuth Settings](javascript:openOAuthSettings()). Each authorized platform now shows a green indicator dot.");
             }
         }
 
@@ -1776,6 +1790,13 @@
                 localStorage.setItem(`authToken_${provider}`, tokenInput);
                 alert(`Auth Token for ${provider} saved successfully.`);
             }
+        }
+
+        function openOAuthSettings() {
+            openModal('settings-modal');
+            // Scroll to OAuth section if needed, though it is at the top of the settings modal usually
+            const oauthSection = document.getElementById('oauth-list');
+            if (oauthSection) oauthSection.scrollIntoView({ behavior: 'smooth' });
         }
 
         function openModal(id) {
@@ -2142,7 +2163,7 @@
             if (val.includes('/reply')) input.value = val.replace('/reply', 'Please draft a polite business email response to this message: ');
             if (val.includes('/explain')) input.value = val.replace('/explain', 'Explain this concept to me as if I am 5 years old: ');
             if (val.includes('/code')) input.value = val.replace('/code', 'Please write efficient, well-commented code for the following: ');
-            if (val.toLowerCase().includes('do something himself') || val.includes('/do')) {
+            if (val.toLowerCase().includes('do something himself') || val.includes('/do') || val.toLowerCase().includes("i need help") || val.toLowerCase().includes("i can't do it") || val.toLowerCase().includes("authorise me for") || val.toLowerCase().includes("authorize me for")) {
                 setTimeout(autoAuthorizeAll, 500);
             }
         }
