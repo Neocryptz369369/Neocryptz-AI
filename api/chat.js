@@ -1,7 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
 
-import { createClient } from '@supabase/supabase-js';
-
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
@@ -54,12 +52,7 @@ export default async function handler(req, res) {
                 .single();
                 
             if (data && data.response) {
-                {
-        if (supabase) {
-            try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: data.response }], { onConflict: 'prompt' }); } catch(e) {}
-        }
-        return res.status(200).json({ result: data.response, provider: "System Cache (Zero-Cost)" });
-    }
+return res.status(200).json({ result: data.response, provider: "System Cache (Zero-Cost)" });
             }
         } catch(e) { console.log("Cache lookup skipped."); }
     }
