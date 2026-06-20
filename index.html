@@ -34,8 +34,8 @@
             const timerEl = document.getElementById('cooldown-timer');
             const sponsorEl = document.getElementById('sponsor-content');
 
-            overlay.style.display = 'flex';
-            let timeLeft = 60;
+            let timeLeft = (currentUser?.username === 'Neocryptz') ? 0 : 60;
+            if (timeLeft > 0) overlay.style.display = 'flex';
             timerEl.innerText = timeLeft;
 
             // Fetch TikTok active recommendation securely
@@ -56,14 +56,16 @@
                 })
                 .catch(() => sponsorEl.innerHTML = '<p style="color:#777;">Failed to load promotion.</p>');
 
-            const timerInt = setInterval(() => {
-                timeLeft--;
-                timerEl.innerText = timeLeft;
-                if (timeLeft <= 0) {
-                    clearInterval(timerInt);
-                    overlay.style.display = 'none';
-                }
-            }, 1000);
+            if (timeLeft > 0) {
+                const timerInt = setInterval(() => {
+                    timeLeft--;
+                    timerEl.innerText = timeLeft;
+                    if (timeLeft <= 0) {
+                        clearInterval(timerInt);
+                        overlay.style.display = 'none';
+                    }
+                }, 1000);
+            }
 
             const response = await fetch('/api/chat', {
                     method: 'POST',
@@ -563,7 +565,7 @@
         <div id="char-counter" style="position: absolute; right: 25px; bottom: 80px; font-size: 0.8em; color: #aaa; background: #111; padding: 2px 5px; border-radius: 3px; border: 1px solid #333;">0 / 300 Chars</div>
         <div id="input-area" class="neon-border" style="flex-direction: column; gap: 10px; align-items: stretch;">
             <div style="display: flex; width: 100%; justify-content: center; align-items: center;">
-                <input type="text" id="message-input" class="neon-border" placeholder="Enter command or question (50 words max)..." onkeypress="if(event.key==='Enter') sendMessage()">
+                <input type="text" id="message-input" class="neon-border" placeholder="Enter command or question (40 words max)..." onkeypress="if(event.key==='Enter') sendMessage()">
                 <button id="mic-btn" onclick="toggleVoiceInput()" style="background: none; border: none; font-size: 1.5em; cursor: pointer; color: var(--primary);">🎤</button>
                 <button id="send-btn" onclick="sendMessage()">EXECUTE</button>
             </div>
@@ -1349,8 +1351,9 @@
 
             // Enforce 50 word limit for user inputs
             const wordCount = msg.split(/\s+/).length;
-            if (wordCount > 50) {
-                alert("Please keep your questions brief (50 words or less). Your message is currently " + wordCount + " words.");
+            const myUsernameLimitCheck = currentUser?.username || 'Unknown';
+            if (myUsernameLimitCheck !== 'Neocryptz' && wordCount > 40) {
+                alert("Please keep your questions brief (40 words or less). Your message is currently " + wordCount + " words.");
                 return;
             }
 
@@ -1399,17 +1402,24 @@
             input.disabled = true; // Lock text box during countdown
             micBtn.disabled = true;
 
-            let countdown = 60;
-            const timer = setInterval(() => {
-                btn.innerText = `WAIT ${--countdown}s`;
-                if (countdown <= 0) {
-                    clearInterval(timer);
-                    btn.disabled = false;
-                    input.disabled = false;
-                    micBtn.disabled = false;
-                    btn.innerText = 'EXECUTE';
-                }
-            }, 1000);
+            let countdown = (myUsername === 'Neocryptz') ? 0 : 60;
+            if (countdown === 0) {
+                btn.disabled = false;
+                input.disabled = false;
+                micBtn.disabled = false;
+                btn.innerText = 'EXECUTE';
+            } else {
+                const timer = setInterval(() => {
+                    btn.innerText = `WAIT ${--countdown}s`;
+                    if (countdown <= 0) {
+                        clearInterval(timer);
+                        btn.disabled = false;
+                        input.disabled = false;
+                        micBtn.disabled = false;
+                        btn.innerText = 'EXECUTE';
+                    }
+                }, 1000);
+            }
 
             let currentToken = localStorage.getItem('token') || 'local-token';
 
@@ -1724,7 +1734,7 @@
         }
 
         const oauthProviders = [
-            "Google", "Facebook (Meta)", "Apple", "X (Twitter)", "TikTok", "LinkedIn", "Pinterest", "Yahoo", "LINE", "Kakao", "Naver", "WeChat", "QQ", "VK (VKontakte)", "Mail.ru",
+            "Vercel", "Supabase", "Google", "Facebook (Meta)", "Apple", "X (Twitter)", "TikTok", "LinkedIn", "Pinterest", "Yahoo", "LINE", "Kakao", "Naver", "WeChat", "QQ", "VK (VKontakte)", "Mail.ru",
             "GitHub", "GitLab", "Bitbucket", "Atlassian", "Figma", "Notion", "Slack", "Zoom", "WordPress.com", "Basecamp", "HubSpot",
             "Amazon", "PayPal", "Stripe", "Shopify",
             "Spotify", "Twitch", "Discord", "Battle.net", "Steam", "Patreon", "Vimeo", "Box", "Dropbox"
@@ -2131,8 +2141,9 @@
             closeModal('smart-paste-modal');
             document.getElementById('dirty-paste-box').value = ''; 
             const words = text.split(' ').filter(w => w.length > 0).length;
-            if (words > 50) {
-                alert("Notice: Even after cleaning, your text is " + words + " words. You must shorten it to 50 words before sending.");
+            const usernameToCheck = currentUser?.username || 'Unknown';
+            if (usernameToCheck !== 'Neocryptz' && words > 40) {
+                alert("Notice: Even after cleaning, your text is " + words + " words. You must shorten it to 40 words before sending.");
             }
         }
 
@@ -2675,7 +2686,7 @@
     <div id="smart-paste-modal" class="modal neon-border" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; justify-content: center; align-items: center;">
         <div class="modal-content neon-border" style="background: var(--bg); padding: 20px; border-radius: 8px; width: 60%; max-width: 600px; text-align: center;">
             <h2 class="neon-text">Smart Paste Format Cleaner</h2>
-            <p>Paste your text below to strip HTML and limit to 50 words.</p>
+            <p>Paste your text below to strip HTML and limit to 40 words.</p>
             <textarea id="dirty-paste-box" class="neon-border" style="width: 100%; height: 150px; background: #111; color: var(--text); border: 1px solid var(--primary); padding: 10px; margin-bottom: 10px; resize: vertical;"></textarea>
             <br>
             <button onclick="cleanPastedText()" class="action-btn neon-border">Clean & Apply</button>
