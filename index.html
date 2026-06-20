@@ -624,19 +624,6 @@
                     <input type="url" id="user-webhook-url" placeholder="https://hooks.zapier.com/..." style="width: 100%; padding: 5px; background: #222; border: 1px solid var(--primary); color: #fff;">
                     <button class="btn" onclick="saveWebhook()" style="width: 100%; margin-top: 5px;">SAVE WEBHOOK</button>
                 </div>
-                <div style="margin-top: 20px; border-top: 1px solid #333; padding-top: 10px;">
-                    <h3 style="color: var(--secondary);">CSV BATCH PROCESSOR</h3>
-                    <p style="font-size: 0.8em; color: #aaa;">Upload a CSV of items (1 column). The AI will process them iteratively.</p>
-                    <input type="text" id="csv-batch-prompt" placeholder="Prompt (e.g. Write a slogan for:)" style="width: 100%; padding: 5px; background: #222; border: 1px solid var(--primary); color: #fff; margin-bottom: 5px;">
-                    <input type="file" id="csv-upload" accept=".csv" style="color: #fff; width: 100%; margin-bottom: 5px;">
-                    <button class="btn" onclick="processCSV()" style="width: 100%;">RUN BATCH (Uses Daily Tokens)</button>
-                </div>
-                <div style="margin-top: 20px; border-top: 1px solid #333; padding-top: 10px;">
-                    <h3 style="color: var(--secondary);">ZAPIER / MAKE WEBHOOK</h3>
-                    <p style="font-size: 0.8em; color: #aaa;">Enter a webhook URL to automatically push all AI responses to your external automations.</p>
-                    <input type="url" id="user-webhook-url" placeholder="https://hooks.zapier.com/..." style="width: 100%; padding: 5px; background: #222; border: 1px solid var(--primary); color: #fff;">
-                    <button class="btn" onclick="saveWebhook()" style="width: 100%; margin-top: 5px;">SAVE WEBHOOK</button>
-                </div>
             </div>
             
             <div style="margin-bottom: 20px;">
