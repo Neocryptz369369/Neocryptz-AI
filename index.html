@@ -260,6 +260,7 @@
             // Embed Widget Logic
             
         document.addEventListener('DOMContentLoaded', () => {
+            if (!localStorage.getItem('activeBetaCode')) localStorage.setItem('activeBetaCode', 'NEO-BETA-2027');
             const savedLang = localStorage.getItem('globalLanguage');
             if (savedLang && document.getElementById('global-lang-select')) {
                 document.getElementById('global-lang-select').value = savedLang;
@@ -445,7 +446,8 @@
             <option value="Spanish">🇪🇸 Spanish</option>
             <option value="French">🇫🇷 French</option>
             <option value="German">🇩🇪 German</option>
-            <option value="Chinese">🇨🇳 Chinese</option>
+            <option value="Chinese (Simplified)">🇨🇳 Chinese (Simplified)</option>
+            <option value="Chinese (Traditional)">🇹🇼 Chinese (Traditional)</option>
             <option value="Japanese">🇯🇵 Japanese</option>
             <option value="Korean">🇰🇷 Korean</option>
             <option value="Hindi">🇮🇳 Hindi</option>
@@ -517,6 +519,7 @@
                 <input type="text" id="reg-phone" placeholder="Phone Number" style="flex: 2;">
                 <input type="number" id="reg-age" placeholder="Age" style="flex: 1;" min="18">
             </div>
+            <input type="text" id="reg-beta-code" placeholder="Beta Invite Code (Optional)" style="margin-bottom: 10px; padding: 10px; background: #111; border: 1px solid var(--secondary); color: #0f0;">
             <label style="font-size: 0.7em; display:flex; align-items:center; gap:10px; margin-bottom:10px;">
                 <input type="checkbox" id="reg-tos"> I agree to the Terms of Service & Privacy Policy
             </label>
@@ -919,6 +922,15 @@
                     <textarea id="admin-base-guidelines" style="width: 100%; height: 100px; background: #222; color: #fff; border: 1px solid var(--primary); padding: 5px;"></textarea>
                     <button class="btn" onclick="saveGuidelines()" style="width: 100%; margin-top: 5px;">SAVE GUIDELINES</button>
                 </div>
+                    
+                <div style="margin-top: 20px; border-top: 1px solid #333; padding-top: 10px;">
+                    <h4 style="color: var(--secondary);">BETA TESTER SYSTEM</h4>
+                    <p style="font-size: 0.8em; color: #aaa;">Users who enter this code during registration will automatically receive 100 credits.</p>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="admin-beta-code" style="flex: 1; padding: 5px; background: #222; border: 1px solid var(--primary); color: #0f0; font-weight: bold;">
+                        <button class="btn" onclick="saveBetaCode()">UPDATE CODE</button>
+                    </div>
+                </div>
                     <h4>ADD CUSTOM API KEY</h4>
                     <div style="display: flex; gap: 10px;">
                         <input type="text" id="new-api-key-name" placeholder="E.g. GROQ_API_KEY" style="flex: 1; padding: 5px; background: #222; border: 1px solid var(--primary); color: #fff;">
@@ -1235,6 +1247,15 @@
                 }
 
                 // Always save to local storage as fallback and for Admin view
+                
+                const betaInput = document.getElementById('reg-beta-code') ? document.getElementById('reg-beta-code').value.trim() : '';
+                const activeBeta = localStorage.getItem('activeBetaCode') || 'NEO-BETA-2027';
+                let startingCredits = 25;
+                if (betaInput && betaInput === activeBeta) {
+                    startingCredits = 100;
+                    alert("Beta Code Accepted! 100 Credits Applied to Account.");
+                }
+
                 users[username] = {
                     username: username,
                     email: validEmail,
@@ -1244,7 +1265,7 @@
                     phone: phone,
                     age: age,
                     plan: "Free",
-                    credits: 25,
+                    credits: startingCredits,
                     banned: false,
                     is_admin: (username.toLowerCase() === 'neocryptz')
                 };
@@ -1581,7 +1602,7 @@
             
             // Map our full names to Google Translate ISO codes
             const langMap = {
-                'English': 'en', 'Spanish': 'es', 'French': 'fr', 'German': 'de', 'Chinese': 'zh-CN',
+                'English': 'en', 'Spanish': 'es', 'French': 'fr', 'German': 'de', 'Chinese (Simplified)': 'zh-CN', 'Chinese (Traditional)': 'zh-TW',
                 'Japanese': 'ja', 'Korean': 'ko', 'Hindi': 'hi', 'Arabic': 'ar', 'Portuguese': 'pt',
                 'Russian': 'ru', 'Italian': 'it', 'Dutch': 'nl', 'Turkish': 'tr', 'Polish': 'pl',
                 'Swedish': 'sv', 'Indonesian': 'id', 'Vietnamese': 'vi', 'Thai': 'th', 'Greek': 'el',
@@ -1877,6 +1898,12 @@
             alert('Referral Link Copied! Send it to your friends to earn 10% commission on sign-ups.');
         }
 
+        
+        function saveBetaCode() {
+            const code = document.getElementById('admin-beta-code').value.trim();
+            localStorage.setItem('activeBetaCode', code);
+            alert("Beta Code updated to: " + code);
+        }
         function saveGuidelines() {
             const text = document.getElementById('admin-base-guidelines').value.trim();
             localStorage.setItem('adminBaseGuidelines', text);
@@ -2313,6 +2340,7 @@
             document.getElementById('lock-reg-checkbox').checked = localStorage.getItem('regLocked') === 'true';
             document.getElementById('provider-order').value = localStorage.getItem('providerOrder') || 'sambanova,gemini,openrouter,pollinations';
             loadScrapes(); // Load scrapes
+            if(document.getElementById('admin-beta-code')) document.getElementById('admin-beta-code').value = localStorage.getItem('activeBetaCode') || 'NEO-BETA-2027';
             if(document.getElementById('admin-base-guidelines')) document.getElementById('admin-base-guidelines').value = localStorage.getItem('adminBaseGuidelines') || '';
 
             let feedbacks = JSON.parse(localStorage.getItem('globalFeedback') || '[]');
