@@ -520,24 +520,19 @@
             <div class="message assistant neon-border">NEOCRYPTZ AI // CLOUD OS V4.1.2 ONLINE. How can I assist you today?</div>
         </div>
         <div id="char-counter" style="position: absolute; right: 25px; bottom: 80px; font-size: 0.8em; color: #aaa; background: #111; padding: 2px 5px; border-radius: 3px; border: 1px solid #333;">0 / 300 Chars</div>
-        <div id="input-area" class="neon-border">
-            <input type="text" id="message-input" class="neon-border" placeholder="Enter command or question (50 words max)..." onkeypress="if(event.key==='Enter') sendMessage()">
-            <button id="mic-btn" onclick="toggleVoiceInput()" style="background: none; border: none; font-size: 1.5em; cursor: pointer; color: var(--primary);">🎤</button>
-            <button class="action-btn neon-border" onclick="downloadChat()" style="margin-right: 10px;" title="Download History">💾 Export Chat</button>
-            
-            <button class="action-btn neon-border" onclick="document.getElementById('polisher-modal').style.display='flex'" style="margin-right: 10px;" title="Grammar Polisher">✍️ Polish Text</button>
-
-            <button class="action-btn neon-border" onclick="document.getElementById('canvas-modal').style.display='flex'" style="margin-right: 10px;" title="Prompt Canvas">📝 Blueprint Canvas</button>
-
-            <button class="action-btn neon-border" onclick="requestSplitView()" style="margin-right: 10px;" title="A/B Split Generator">⚖️ Split View A/B</button>
-
-            <button class="action-btn neon-border" onclick="document.getElementById('canvas-modal').style.display='flex'" style="margin-right: 10px;" title="Prompt Canvas">📝 Blueprint Canvas</button>
-
-            <button class="action-btn neon-border" onclick="requestSplitView()" style="margin-right: 10px;" title="A/B Split Generator">⚖️ Split View A/B</button>
-            
-            <button class="action-btn neon-border" onclick="document.getElementById('polisher-modal').style.display='flex'" style="margin-right: 10px;" title="Grammar Polisher">✍️ Polish Text</button>
-            <button id="smart-paste-btn" class="action-btn neon-border" onclick="document.getElementById('smart-paste-modal').style.display='flex'" style="margin-right: 10px;" title="Smart Paste Cleaner">📋 Clean Paste</button>
-            <button id="send-btn" onclick="sendMessage()">EXECUTE</button>
+        <div id="input-area" class="neon-border" style="flex-direction: column; gap: 10px; align-items: stretch;">
+            <div style="display: flex; width: 100%; justify-content: center; align-items: center;">
+                <input type="text" id="message-input" class="neon-border" placeholder="Enter command or question (50 words max)..." onkeypress="if(event.key==='Enter') sendMessage()">
+                <button id="mic-btn" onclick="toggleVoiceInput()" style="background: none; border: none; font-size: 1.5em; cursor: pointer; color: var(--primary);">🎤</button>
+                <button id="send-btn" onclick="sendMessage()">EXECUTE</button>
+            </div>
+            <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+                <button class="btn neon-border" onclick="document.getElementById('smart-paste-modal').style.display='flex'" title="Smart Paste Cleaner">📋 Clean Paste</button>
+                <button class="btn neon-border" onclick="document.getElementById('polisher-modal').style.display='flex'" title="Grammar Polisher">✍️ Polish Text</button>
+                <button class="btn neon-border" onclick="document.getElementById('canvas-modal').style.display='flex'" title="Prompt Canvas">📝 Blueprint Canvas</button>
+                <button class="btn neon-border" onclick="requestSplitView()" title="A/B Split Generator">⚖️ Split View A/B</button>
+                <button class="btn neon-border" onclick="downloadChat()" title="Download History">💾 Export Chat</button>
+            </div>
         </div>
         <div id="ticker-container">
             <div id="ticker"></div>
@@ -927,19 +922,6 @@
                     <p>5 User Accounts</p>
                     <button class="btn" onclick="buyPlan('Corporate Team')">BUY NOW</button>
                 </div>
-                <div style="border:1px solid var(--primary); padding:20px; text-align:center; background: rgba(255,0,255,0.1);">
-                    <h3 style="color: var(--primary);">CORPORATE TEAM PACK</h3>
-                    <p>$999 / year</p>
-                    <p>5 User Accounts</p>
-                    <button class="btn" onclick="buyPlan('Corporate Team')">BUY NOW</button>
-                </div>
-            </div>
-            
-            <div style="margin-top:40px; text-align: center; border-top: 1px solid #333; padding-top: 20px;">
-                <h2 style="color: var(--secondary);">GIFT A SUBSCRIPTION</h2>
-                <p style="font-size: 0.9em; color: #aaa;">Buy a 1-Year Unlimited AI Voucher to give to a friend or colleague.</p>
-                <button class="btn" style="padding: 15px 30px; font-size: 1.1em;" onclick="buyGiftSubscription()">PURCHASE GIFT VOUCHER ($240)</button>
-                <div id="gift-code-output" style="display:none; margin-top: 15px; padding: 10px; background: #222; border: 1px dashed #0f0; color: #0f0; font-weight: bold;"></div>
             </div>
             
             <div style="margin-top:40px; text-align: center; border-top: 1px solid #333; padding-top: 20px;">
