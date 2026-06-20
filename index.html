@@ -1463,7 +1463,7 @@
                     </div>`;
                 }
 
-                appendMessage('assistant', aiText); triggerWebhook(aiText); triggerWebhook(aiText);
+                appendMessage('assistant', aiText); triggerWebhook(aiText);
 
                 // Increment Usage Count on Success
                 if (myUsername !== 'Neocryptz') {
@@ -1551,6 +1551,12 @@
                 if (voices.length > 0 && utterance.lang) {
                     const matchedVoice = voices.find(v => v.lang.startsWith(utterance.lang.split('-')[0]));
                     if (matchedVoice) utterance.voice = matchedVoice;
+                }
+                
+                // Extra fallback: If Google Translate modified the text but we don't have a matching voice,
+                // let the browser attempt to auto-detect the language from the text itself.
+                if (!utterance.voice && voices.length > 0) {
+                    utterance.voice = voices.find(v => v.default) || voices[0];
                 }
                 
                 window.speechSynthesis.speak(utterance);
