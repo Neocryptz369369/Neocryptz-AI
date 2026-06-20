@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
+import { createClient } from '@supabase/supabase-js';
+
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
@@ -7,6 +9,36 @@ export default async function handler(req, res) {
     if (!prompt) return res.status(400).json({ error: 'Missing prompt' });
 
     // The waterfall order exactly as requested: Gemini, OpenRouter, Pollinations, Groq
+    
+    const supabaseUrl = process.env.SUPABASE_URL || 'https://bxzvxgjnlvbexeuocbey.supabase.co';
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY;
+    let supabase = null;
+
+    if (supabaseKey) {
+        try {
+            supabase = createClient(supabaseUrl, supabaseKey);
+            const { data, error } = await supabase
+                .from('query_cache')
+                .select('response')
+                .eq('prompt', prompt.trim())
+                .single();
+                
+            if (data && data.response) {
+                {
+        if (supabase) {
+            try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: data.response }], { onConflict: 'prompt' }); } catch(e) {}
+        }
+        {
+        if (supabase) {
+            try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: data.response }], { onConflict: 'prompt' }); } catch(e) {}
+        }
+        return res.status(200).json({ result: data.response, provider: "System Cache (Zero-Cost)" });
+    }
+    }
+            }
+        } catch(e) { console.log("Cache lookup skipped."); }
+    }
+
     
     const supabaseUrl = process.env.SUPABASE_URL || 'https://bxzvxgjnlvbexeuocbey.supabase.co';
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY;
@@ -95,7 +127,12 @@ export default async function handler(req, res) {
         if (supabase) {
             try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: data.candidates[0].content.parts[0].text }], { onConflict: 'prompt' }); } catch(e) {}
         }
+        {
+        if (supabase) {
+            try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: data.candidates[0].content.parts[0].text }], { onConflict: 'prompt' }); } catch(e) {}
+        }
         return res.status(200).json({ result: data.candidates[0].content.parts[0].text, provider: "Gemini" });
+    }
     }
                 }
             } else {
@@ -132,7 +169,12 @@ export default async function handler(req, res) {
         if (supabase) {
             try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: data.choices[0].message.content }], { onConflict: 'prompt' }); } catch(e) {}
         }
+        {
+        if (supabase) {
+            try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: data.choices[0].message.content }], { onConflict: 'prompt' }); } catch(e) {}
+        }
         return res.status(200).json({ result: data.choices[0].message.content, provider: "OpenRouter" });
+    }
     }
                 }
             } else {
@@ -164,7 +206,12 @@ export default async function handler(req, res) {
         if (supabase) {
             try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: text }], { onConflict: 'prompt' }); } catch(e) {}
         }
+        {
+        if (supabase) {
+            try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: text }], { onConflict: 'prompt' }); } catch(e) {}
+        }
         return res.status(200).json({ result: text, provider: "Pollinations" });
+    }
     }
             } else {
                  lastError += "Pollinations Error: " + polRes.statusText + " | ";
@@ -200,7 +247,12 @@ export default async function handler(req, res) {
         if (supabase) {
             try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: data.choices[0].message.content }], { onConflict: 'prompt' }); } catch(e) {}
         }
+        {
+        if (supabase) {
+            try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: data.choices[0].message.content }], { onConflict: 'prompt' }); } catch(e) {}
+        }
         return res.status(200).json({ result: data.choices[0].message.content, provider: "SambaNova" });
+    }
     }
                 }
             } else {
