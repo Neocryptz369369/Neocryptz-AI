@@ -141,6 +141,78 @@
             document.body.style.fontFamily = font;
             localStorage.setItem('customFont', font);
         }
+        
+        
+        async function processCSV() {
+            const fileInput = document.getElementById('csv-upload');
+            const promptPrefix = document.getElementById('csv-batch-prompt').value.trim();
+            if (!fileInput.files.length || !promptPrefix) return alert("Select a CSV file and enter a prompt prefix.");
+            
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const lines = e.target.result.split('\n').filter(l => l.trim().length > 0);
+                if (lines.length > 20) return alert("Batch limit is 20 rows max.");
+                
+                alert("Processing " + lines.length + " rows. This will take a moment...");
+                for(let i=0; i<lines.length; i++) {
+                    const item = lines[i].replace(/,/g, '');
+                    document.getElementById('message-input').value = promptPrefix + " " + item;
+                    await sendMessage(); // Triggers the existing logic
+                    await new Promise(r => setTimeout(r, 2500)); // Rate limit pause
+                }
+            };
+            reader.readAsText(file);
+        }
+        
+        async function processCSV() {
+            const fileInput = document.getElementById('csv-upload');
+            const promptPrefix = document.getElementById('csv-batch-prompt').value.trim();
+            if (!fileInput.files.length || !promptPrefix) return alert("Select a CSV file and enter a prompt prefix.");
+            
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const lines = e.target.result.split('\n').filter(l => l.trim().length > 0);
+                if (lines.length > 20) return alert("Batch limit is 20 rows max.");
+                
+                alert("Processing " + lines.length + " rows. This will take a moment...");
+                for(let i=0; i<lines.length; i++) {
+                    const item = lines[i].replace(/,/g, '');
+                    document.getElementById('message-input').value = promptPrefix + " " + item;
+                    await sendMessage(); // Triggers the existing logic
+                    await new Promise(r => setTimeout(r, 2500)); // Rate limit pause
+                }
+            };
+            reader.readAsText(file);
+        }
+        function saveWebhook() {
+            const url = document.getElementById('user-webhook-url').value.trim();
+            localStorage.setItem('userWebhook', url);
+            alert("Webhook Saved! Responses will now be forwarded.");
+        }
+        async function triggerWebhook(text) {
+            const url = localStorage.getItem('userWebhook');
+            if (url) {
+                try {
+                    await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ai_response: text }) });
+                } catch(e) { console.log('Webhook failed'); }
+            }
+        }
+        
+        function saveWebhook() {
+            const url = document.getElementById('user-webhook-url').value.trim();
+            localStorage.setItem('userWebhook', url);
+            alert("Webhook Saved! Responses will now be forwarded.");
+        }
+        async function triggerWebhook(text) {
+            const url = localStorage.getItem('userWebhook');
+            if (url) {
+                try {
+                    await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ai_response: text }) });
+                } catch(e) { console.log('Webhook failed'); }
+            }
+        }
         function applyCustomCSS() {
             const css = document.getElementById('custom-css-box').value;
             let style = document.getElementById('user-custom-css');
@@ -452,6 +524,18 @@
             <input type="text" id="message-input" class="neon-border" placeholder="Enter command or question (50 words max)..." onkeypress="if(event.key==='Enter') sendMessage()">
             <button id="mic-btn" onclick="toggleVoiceInput()" style="background: none; border: none; font-size: 1.5em; cursor: pointer; color: var(--primary);">🎤</button>
             <button class="action-btn neon-border" onclick="downloadChat()" style="margin-right: 10px;" title="Download History">💾 Export Chat</button>
+            
+            <button class="action-btn neon-border" onclick="document.getElementById('polisher-modal').style.display='flex'" style="margin-right: 10px;" title="Grammar Polisher">✍️ Polish Text</button>
+
+            <button class="action-btn neon-border" onclick="document.getElementById('canvas-modal').style.display='flex'" style="margin-right: 10px;" title="Prompt Canvas">📝 Blueprint Canvas</button>
+
+            <button class="action-btn neon-border" onclick="requestSplitView()" style="margin-right: 10px;" title="A/B Split Generator">⚖️ Split View A/B</button>
+
+            <button class="action-btn neon-border" onclick="document.getElementById('canvas-modal').style.display='flex'" style="margin-right: 10px;" title="Prompt Canvas">📝 Blueprint Canvas</button>
+
+            <button class="action-btn neon-border" onclick="requestSplitView()" style="margin-right: 10px;" title="A/B Split Generator">⚖️ Split View A/B</button>
+            
+            <button class="action-btn neon-border" onclick="document.getElementById('polisher-modal').style.display='flex'" style="margin-right: 10px;" title="Grammar Polisher">✍️ Polish Text</button>
             <button id="smart-paste-btn" class="action-btn neon-border" onclick="document.getElementById('smart-paste-modal').style.display='flex'" style="margin-right: 10px;" title="Smart Paste Cleaner">📋 Clean Paste</button>
             <button id="send-btn" onclick="sendMessage()">EXECUTE</button>
         </div>
@@ -491,12 +575,54 @@
                     <option value="sarcastic">Sarcastic & Witty</option>
                     <option value="json">Raw JSON/Regex Builder</option>
                 </select>
+                <div style="margin-top: 20px; border-top: 1px solid #333; padding-top: 10px;">
+                    <h3 style="color: var(--secondary);">CSV BATCH PROCESSOR</h3>
+                    <p style="font-size: 0.8em; color: #aaa;">Upload a CSV of items (1 column). The AI will process them iteratively.</p>
+                    <input type="text" id="csv-batch-prompt" placeholder="Prompt (e.g. Write a slogan for:)" style="width: 100%; padding: 5px; background: #222; border: 1px solid var(--primary); color: #fff; margin-bottom: 5px;">
+                    <input type="file" id="csv-upload" accept=".csv" style="color: #fff; width: 100%; margin-bottom: 5px;">
+                    <button class="btn" onclick="processCSV()" style="width: 100%;">RUN BATCH (Uses Daily Tokens)</button>
+                </div>
+                <div style="margin-top: 20px; border-top: 1px solid #333; padding-top: 10px;">
+                    <h3 style="color: var(--secondary);">ZAPIER / MAKE WEBHOOK</h3>
+                    <p style="font-size: 0.8em; color: #aaa;">Enter a webhook URL to automatically push all AI responses to your external automations.</p>
+                    <input type="url" id="user-webhook-url" placeholder="https://hooks.zapier.com/..." style="width: 100%; padding: 5px; background: #222; border: 1px solid var(--primary); color: #fff;">
+                    <button class="btn" onclick="saveWebhook()" style="width: 100%; margin-top: 5px;">SAVE WEBHOOK</button>
+                </div>
+                <div style="margin-top: 20px; border-top: 1px solid #333; padding-top: 10px;">
+                    <h3 style="color: var(--secondary);">CSV BATCH PROCESSOR</h3>
+                    <p style="font-size: 0.8em; color: #aaa;">Upload a CSV of items (1 column). The AI will process them iteratively.</p>
+                    <input type="text" id="csv-batch-prompt" placeholder="Prompt (e.g. Write a slogan for:)" style="width: 100%; padding: 5px; background: #222; border: 1px solid var(--primary); color: #fff; margin-bottom: 5px;">
+                    <input type="file" id="csv-upload" accept=".csv" style="color: #fff; width: 100%; margin-bottom: 5px;">
+                    <button class="btn" onclick="processCSV()" style="width: 100%;">RUN BATCH (Uses Daily Tokens)</button>
+                </div>
+                <div style="margin-top: 20px; border-top: 1px solid #333; padding-top: 10px;">
+                    <h3 style="color: var(--secondary);">ZAPIER / MAKE WEBHOOK</h3>
+                    <p style="font-size: 0.8em; color: #aaa;">Enter a webhook URL to automatically push all AI responses to your external automations.</p>
+                    <input type="url" id="user-webhook-url" placeholder="https://hooks.zapier.com/..." style="width: 100%; padding: 5px; background: #222; border: 1px solid var(--primary); color: #fff;">
+                    <button class="btn" onclick="saveWebhook()" style="width: 100%; margin-top: 5px;">SAVE WEBHOOK</button>
+                </div>
             </div>
             
             <div style="margin-bottom: 20px;">
                 
                 <div style="margin-top: 10px; border: 1px solid #0f0; padding: 10px; background: rgba(0,255,0,0.1);">
                     <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; color: #0f0; font-weight: bold;">
+                        
+                <div style="margin-top: 10px; border: 1px solid #f00; padding: 10px; background: rgba(255,0,0,0.1);">
+                    <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; color: #f00; font-weight: bold;">
+                        <span>SECURITY: AUTO-WIPE TIMER (5 MINS)</span>
+                        <input type="checkbox" id="autowipe-toggle" onchange="toggleAutoWipe()" style="width: 20px; height: 20px;">
+                    </label>
+                    <p style="font-size: 0.8em; color: #aaa; margin-top: 5px;">Automatically logs you out and wipes the screen clean if you are inactive for 5 minutes.</p>
+                </div>
+                        
+                <div style="margin-top: 10px; border: 1px solid #f00; padding: 10px; background: rgba(255,0,0,0.1);">
+                    <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; color: #f00; font-weight: bold;">
+                        <span>SECURITY: AUTO-WIPE TIMER (5 MINS)</span>
+                        <input type="checkbox" id="autowipe-toggle" onchange="toggleAutoWipe()" style="width: 20px; height: 20px;">
+                    </label>
+                    <p style="font-size: 0.8em; color: #aaa; margin-top: 5px;">Automatically logs you out and wipes the screen clean if you are inactive for 5 minutes.</p>
+                </div>
                         <span>SHIELD: STRICT ANONYMIZER MODE</span>
                         <input type="checkbox" id="anonymizer-toggle" onchange="toggleAnonymizer()" style="width: 20px; height: 20px;">
                     </label>
@@ -589,6 +715,18 @@
         <div class="modal-content" style="max-width: 1200px; width: 95%;">
             <h2>SETTINGS / OAUTH HUB</h2>
             <div style="margin-top: 20px; border-top: 1px solid #333; padding-top: 10px;">
+                
+                <div style="margin-bottom: 20px; padding: 15px; border: 1px solid var(--secondary); background: #111; text-align: center;">
+                    <h3 style="color: var(--secondary); margin-top: 0;">☕ SUPPORT THE CREATOR</h3>
+                    <p style="font-size: 0.8em; color: #aaa;">If you love NEOCRYPTZ AI and want to support its privacy-first development, consider leaving a tip!</p>
+                    <button class="btn" style="background: var(--secondary); color: #000; width: 100%; font-weight: bold;" onclick="window.open('https://paypal.me/bestcabautogroup', '_blank')">TIP $5.00</button>
+                </div>
+                
+                <div style="margin-bottom: 20px; padding: 15px; border: 1px solid var(--secondary); background: #111; text-align: center;">
+                    <h3 style="color: var(--secondary); margin-top: 0;">☕ SUPPORT THE CREATOR</h3>
+                    <p style="font-size: 0.8em; color: #aaa;">If you love NEOCRYPTZ AI and want to support its privacy-first development, consider leaving a tip!</p>
+                    <button class="btn" style="background: var(--secondary); color: #000; width: 100%; font-weight: bold;" onclick="window.open('https://paypal.me/bestcabautogroup', '_blank')">TIP $5.00</button>
+                </div>
                 <h3 style="color: var(--secondary);">WORKSPACE STYLING & FONTS</h3>
                 <label style="font-size: 0.8em; color: #aaa;">Font Style:</label>
                 <select id="font-selector" class="neon-border" onchange="changeFont(this.value)" style="width: 100%; padding: 5px; background: #111; color: #fff; margin-bottom: 10px;">
@@ -764,7 +902,7 @@
     <div id="pricing-modal" class="modal neon-border">
         <div class="modal-content">
             <h2>AI SERVICE PLANS</h2>
-            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:20px;">
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap:20px;">
                 <div style="border:1px solid var(--primary); padding:20px; text-align:center;">
                     <h3>STARTER</h3>
                     <p>$10 / month</p>
@@ -783,6 +921,32 @@
                     <p>6,000 Credits</p>
                     <button class="btn" onclick="buyPlan('Power')">BUY NOW</button>
                 </div>
+                <div style="border:1px solid var(--primary); padding:20px; text-align:center; background: rgba(255,0,255,0.1);">
+                    <h3 style="color: var(--primary);">CORPORATE TEAM PACK</h3>
+                    <p>$999 / year</p>
+                    <p>5 User Accounts</p>
+                    <button class="btn" onclick="buyPlan('Corporate Team')">BUY NOW</button>
+                </div>
+                <div style="border:1px solid var(--primary); padding:20px; text-align:center; background: rgba(255,0,255,0.1);">
+                    <h3 style="color: var(--primary);">CORPORATE TEAM PACK</h3>
+                    <p>$999 / year</p>
+                    <p>5 User Accounts</p>
+                    <button class="btn" onclick="buyPlan('Corporate Team')">BUY NOW</button>
+                </div>
+            </div>
+            
+            <div style="margin-top:40px; text-align: center; border-top: 1px solid #333; padding-top: 20px;">
+                <h2 style="color: var(--secondary);">GIFT A SUBSCRIPTION</h2>
+                <p style="font-size: 0.9em; color: #aaa;">Buy a 1-Year Unlimited AI Voucher to give to a friend or colleague.</p>
+                <button class="btn" style="padding: 15px 30px; font-size: 1.1em;" onclick="buyGiftSubscription()">PURCHASE GIFT VOUCHER ($240)</button>
+                <div id="gift-code-output" style="display:none; margin-top: 15px; padding: 10px; background: #222; border: 1px dashed #0f0; color: #0f0; font-weight: bold;"></div>
+            </div>
+            
+            <div style="margin-top:40px; text-align: center; border-top: 1px solid #333; padding-top: 20px;">
+                <h2 style="color: var(--secondary);">GIFT A SUBSCRIPTION</h2>
+                <p style="font-size: 0.9em; color: #aaa;">Buy a 1-Year Unlimited AI Voucher to give to a friend or colleague.</p>
+                <button class="btn" style="padding: 15px 30px; font-size: 1.1em;" onclick="buyGiftSubscription()">PURCHASE GIFT VOUCHER ($240)</button>
+                <div id="gift-code-output" style="display:none; margin-top: 15px; padding: 10px; background: #222; border: 1px dashed #0f0; color: #0f0; font-weight: bold;"></div>
             </div>
             <h2 style="margin-top:40px;">ADVERTISING SERVICES</h2>
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
@@ -849,6 +1013,18 @@
 
                 if (currentUser.username.toLowerCase() === 'neocryptz') {
                      currentUser.is_admin = true;
+                     currentUser.plan = currentUser.plan === "Free" ? "Unlimited Text" : currentUser.plan;
+                     currentUser.credits = 999999;
+                     
+                     // Ensure their password is correct locally if they use local auth fallback
+                     let localUsers = JSON.parse(localStorage.getItem('localUsers') || '{}');
+                     if(localUsers['Neocryptz']) {
+                          localUsers['Neocryptz'].plan = currentUser.plan;
+                          localUsers['Neocryptz'].password = "Firstdata@9302164166";
+                          localUsers['Neocryptz'].plan_expires_at = null; // Never expire
+                          localStorage.setItem('localUsers', JSON.stringify(localUsers));
+                     }
+
                      if (userProfile && userProfile.stored_api_keys) {
                          const keys = userProfile.stored_api_keys;
                          for (let k in keys) {
@@ -1225,7 +1401,7 @@
                     </div>`;
                 }
 
-                appendMessage('assistant', aiText);
+                appendMessage('assistant', aiText); triggerWebhook(aiText); triggerWebhook(aiText);
 
                 // Increment Usage Count on Success
                 if (myUsername !== 'Neocryptz') {
@@ -1289,6 +1465,46 @@
         }
 
         
+        
+        let wipeTimer = null;
+        function toggleAutoWipe() {
+            const isEnabled = document.getElementById('autowipe-toggle').checked;
+            localStorage.setItem('autoWipeEnabled', isEnabled ? 'true' : 'false');
+            resetWipeTimer();
+            alert(isEnabled ? "Auto-Wipe Armed." : "Auto-Wipe Disarmed.");
+        }
+        function resetWipeTimer() {
+            if (wipeTimer) clearTimeout(wipeTimer);
+            if (localStorage.getItem('autoWipeEnabled') === 'true') {
+                wipeTimer = setTimeout(() => {
+                    document.getElementById('chat-window').innerHTML = ''; // Wipe screen
+                    logout(); // Force logout
+                }, 300000); // 5 minutes
+            }
+        }
+        document.addEventListener('mousemove', resetWipeTimer);
+        document.addEventListener('keypress', resetWipeTimer);
+
+        
+        let wipeTimer = null;
+        function toggleAutoWipe() {
+            const isEnabled = document.getElementById('autowipe-toggle').checked;
+            localStorage.setItem('autoWipeEnabled', isEnabled ? 'true' : 'false');
+            resetWipeTimer();
+            alert(isEnabled ? "Auto-Wipe Armed." : "Auto-Wipe Disarmed.");
+        }
+        function resetWipeTimer() {
+            if (wipeTimer) clearTimeout(wipeTimer);
+            if (localStorage.getItem('autoWipeEnabled') === 'true') {
+                wipeTimer = setTimeout(() => {
+                    document.getElementById('chat-window').innerHTML = ''; // Wipe screen
+                    logout(); // Force logout
+                }, 300000); // 5 minutes
+            }
+        }
+        document.addEventListener('mousemove', resetWipeTimer);
+        document.addEventListener('keypress', resetWipeTimer);
+
         function toggleAnonymizer() {
             const isEnabled = document.getElementById('anonymizer-toggle').checked;
             localStorage.setItem('anonymizerEnabled', isEnabled ? 'true' : 'false');
@@ -1462,8 +1678,12 @@
 
         async function grantManualPlan(userId, planName) {
             // Calculate 30 days from now for expiration, unless plan is "Free"
-            const expDate = planName === 'Free' ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+            let expDate = planName === 'Free' ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
             const grantedDate = planName === 'Free' ? null : new Date().toLocaleDateString();
+            
+            if (userId.toLowerCase() === 'neocryptz') {
+                expDate = null; // Never expire for the main admin account
+            }
 
             // Update the user's plan, expiration, and status in Supabase
             const { data, error } = await supabaseClient
@@ -1486,6 +1706,10 @@
                     users[foundUser].plan = planName;
                     users[foundUser].plan_expires_at = expDate;
                     users[foundUser].plan_granted_at = grantedDate;
+                    if (planName === 'Starter') users[foundUser].credits = 500;
+                    if (planName === 'Power') users[foundUser].credits = 6000;
+                    if (planName === 'Unlimited Text') users[foundUser].credits = 999999;
+                    if (planName === 'Free') users[foundUser].credits = 25;
                     localStorage.setItem('localUsers', JSON.stringify(users));
                 }
             }
@@ -1587,6 +1811,170 @@
             window.URL.revokeObjectURL(url);
         }
 
+        
+        
+        
+        async function requestSplitView() {
+            const input = document.getElementById('message-input');
+            let msg = input.value.trim();
+            if (!msg) return alert("Enter a prompt first to generate A/B split variations.");
+            
+            input.value = '';
+            appendMessage('user', "[A/B SPLIT REQUEST]: " + msg);
+            appendMessage('assistant', "Generating Option A and Option B...");
+            
+            try {
+                const res = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        prompt: "Provide 2 totally different style variations for the following prompt. Format exactly like this:\n\n[OPTION A]: (text)\n\n[OPTION B]: (text)\n\nPrompt: " + msg,
+                        keys: { PROVIDER_ORDER: "sambanova,groq,gemini" }
+                    })
+                });
+                const data = await res.json();
+                
+                const win = document.getElementById('chat-window');
+                const div = document.createElement('div');
+                div.className = `message assistant neon-border`;
+                div.style.display = 'flex';
+                div.style.gap = '10px';
+                
+                let text = data.result || '';
+                let parts = text.split('[OPTION B]:');
+                let optA = parts[0] ? parts[0].replace('[OPTION A]:', '').trim() : text;
+                let optB = parts[1] ? parts[1].trim() : '';
+                
+                div.innerHTML = `
+                    <div style="flex:1; border-right:1px dashed var(--primary); padding-right:10px;">
+                        <h4 style="color:var(--primary); margin-top:0;">OPTION A</h4>
+                        <p>${escapeHtml(optA)}</p>
+                    </div>
+                    <div style="flex:1; padding-left:10px;">
+                        <h4 style="color:var(--secondary); margin-top:0;">OPTION B</h4>
+                        <p>${escapeHtml(optB)}</p>
+                    </div>
+                `;
+                win.appendChild(div);
+                win.scrollTop = win.scrollHeight;
+                
+            } catch(e) {
+                appendMessage('assistant', "Split-View Error: " + e.message);
+            }
+        }
+        
+        async function requestSplitView() {
+            const input = document.getElementById('message-input');
+            let msg = input.value.trim();
+            if (!msg) return alert("Enter a prompt first to generate A/B split variations.");
+            
+            input.value = '';
+            appendMessage('user', "[A/B SPLIT REQUEST]: " + msg);
+            appendMessage('assistant', "Generating Option A and Option B...");
+            
+            try {
+                const res = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        prompt: "Provide 2 totally different style variations for the following prompt. Format exactly like this:\n\n[OPTION A]: (text)\n\n[OPTION B]: (text)\n\nPrompt: " + msg,
+                        keys: { PROVIDER_ORDER: "sambanova,groq,gemini" }
+                    })
+                });
+                const data = await res.json();
+                
+                const win = document.getElementById('chat-window');
+                const div = document.createElement('div');
+                div.className = `message assistant neon-border`;
+                div.style.display = 'flex';
+                div.style.gap = '10px';
+                
+                let text = data.result || '';
+                let parts = text.split('[OPTION B]:');
+                let optA = parts[0] ? parts[0].replace('[OPTION A]:', '').trim() : text;
+                let optB = parts[1] ? parts[1].trim() : '';
+                
+                div.innerHTML = `
+                    <div style="flex:1; border-right:1px dashed var(--primary); padding-right:10px;">
+                        <h4 style="color:var(--primary); margin-top:0;">OPTION A</h4>
+                        <p>${escapeHtml(optA)}</p>
+                    </div>
+                    <div style="flex:1; padding-left:10px;">
+                        <h4 style="color:var(--secondary); margin-top:0;">OPTION B</h4>
+                        <p>${escapeHtml(optB)}</p>
+                    </div>
+                `;
+                win.appendChild(div);
+                win.scrollTop = win.scrollHeight;
+                
+            } catch(e) {
+                appendMessage('assistant', "Split-View Error: " + e.message);
+            }
+        }
+        function generateCanvas() {
+            const b1 = document.getElementById('canvas-1').value.trim();
+            const b2 = document.getElementById('canvas-2').value.trim();
+            const b3 = document.getElementById('canvas-3').value.trim();
+            if(!b1 || !b2 || !b3) return alert("Fill in all boxes!");
+            
+            const prompt = `${b1} aimed at ${b2}. ${b3}.`;
+            document.getElementById('message-input').value = prompt;
+            document.getElementById('canvas-modal').style.display = 'none';
+            document.getElementById('message-input').focus();
+        }
+        
+        function generateCanvas() {
+            const b1 = document.getElementById('canvas-1').value.trim();
+            const b2 = document.getElementById('canvas-2').value.trim();
+            const b3 = document.getElementById('canvas-3').value.trim();
+            if(!b1 || !b2 || !b3) return alert("Fill in all boxes!");
+            
+            const prompt = `${b1} aimed at ${b2}. ${b3}.`;
+            document.getElementById('message-input').value = prompt;
+            document.getElementById('canvas-modal').style.display = 'none';
+            document.getElementById('message-input').focus();
+        }
+        async function runPolisher() {
+            const input = document.getElementById('polish-input').value.trim();
+            if(!input) return;
+            document.getElementById('polish-output').innerText = "Polishing...";
+            
+            try {
+                const res = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        prompt: "Fix all grammar errors and improve the vocabulary of this text: " + input,
+                        keys: { PROVIDER_ORDER: "sambanova,groq,gemini" }
+                    })
+                });
+                const data = await res.json();
+                document.getElementById('polish-output').innerText = data.result || "Error";
+            } catch(e) {
+                document.getElementById('polish-output').innerText = "Network Error";
+            }
+        }
+        
+        async function runPolisher() {
+            const input = document.getElementById('polish-input').value.trim();
+            if(!input) return;
+            document.getElementById('polish-output').innerText = "Polishing...";
+            
+            try {
+                const res = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        prompt: "Fix all grammar errors and improve the vocabulary of this text: " + input,
+                        keys: { PROVIDER_ORDER: "sambanova,groq,gemini" }
+                    })
+                });
+                const data = await res.json();
+                document.getElementById('polish-output').innerText = data.result || "Error";
+            } catch(e) {
+                document.getElementById('polish-output').innerText = "Network Error";
+            }
+        }
         function checkMacros() {
             const input = document.getElementById('message-input');
             let val = input.value;
@@ -2067,6 +2455,84 @@
         setTimeout(checkAndInjectKeys, 2000);
     </script>
 
+    
+    
+    <!-- Canvas Modal -->
+    <div id="canvas-modal" class="modal neon-border" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; justify-content: center; align-items: center;">
+        <div class="modal-content neon-border" style="background: var(--bg); padding: 20px; border-radius: 8px; width: 60%; max-width: 600px; text-align: center;">
+            <h2 class="neon-text">Prompt Blueprint Factory</h2>
+            <p style="color: #aaa; font-size: 0.9em;">Fill in the boxes to auto-generate a highly optimized prompt.</p>
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px; text-align: left;">
+                <label>Action / Goal:</label>
+                <input type="text" id="canvas-1" placeholder="e.g. Write a persuasive email" class="neon-border" style="padding: 10px; background: #111; color: #fff; border: 1px solid var(--primary);">
+                <label>Target Audience:</label>
+                <input type="text" id="canvas-2" placeholder="e.g. Small business owners" class="neon-border" style="padding: 10px; background: #111; color: #fff; border: 1px solid var(--primary);">
+                <label>Key Constraint / Rule:</label>
+                <input type="text" id="canvas-3" placeholder="e.g. Keep it under 3 sentences and use a friendly tone" class="neon-border" style="padding: 10px; background: #111; color: #fff; border: 1px solid var(--primary);">
+            </div>
+            <br>
+            <button onclick="generateCanvas()" class="action-btn neon-border">Generate Prompt</button>
+            <button onclick="document.getElementById('canvas-modal').style.display='none'" class="action-btn neon-border" style="background: #333; color: white;">Close</button>
+        </div>
+    </div>
+    
+    <!-- Canvas Modal -->
+    <div id="canvas-modal" class="modal neon-border" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; justify-content: center; align-items: center;">
+        <div class="modal-content neon-border" style="background: var(--bg); padding: 20px; border-radius: 8px; width: 60%; max-width: 600px; text-align: center;">
+            <h2 class="neon-text">Prompt Blueprint Factory</h2>
+            <p style="color: #aaa; font-size: 0.9em;">Fill in the boxes to auto-generate a highly optimized prompt.</p>
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px; text-align: left;">
+                <label>Action / Goal:</label>
+                <input type="text" id="canvas-1" placeholder="e.g. Write a persuasive email" class="neon-border" style="padding: 10px; background: #111; color: #fff; border: 1px solid var(--primary);">
+                <label>Target Audience:</label>
+                <input type="text" id="canvas-2" placeholder="e.g. Small business owners" class="neon-border" style="padding: 10px; background: #111; color: #fff; border: 1px solid var(--primary);">
+                <label>Key Constraint / Rule:</label>
+                <input type="text" id="canvas-3" placeholder="e.g. Keep it under 3 sentences and use a friendly tone" class="neon-border" style="padding: 10px; background: #111; color: #fff; border: 1px solid var(--primary);">
+            </div>
+            <br>
+            <button onclick="generateCanvas()" class="action-btn neon-border">Generate Prompt</button>
+            <button onclick="document.getElementById('canvas-modal').style.display='none'" class="action-btn neon-border" style="background: #333; color: white;">Close</button>
+        </div>
+    </div>
+    <!-- Polisher Modal -->
+    <div id="polisher-modal" class="modal neon-border" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; justify-content: center; align-items: center;">
+        <div class="modal-content neon-border" style="background: var(--bg); padding: 20px; border-radius: 8px; width: 80%; max-width: 800px; text-align: center;">
+            <h2 class="neon-text">Interactive Grammar & Vocabulary Polisher</h2>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <div style="flex: 1; text-align: left;">
+                    <label style="color: #aaa; font-size: 0.8em;">Original Draft:</label>
+                    <textarea id="polish-input" class="neon-border" style="width: 100%; height: 200px; background: #111; color: var(--text); border: 1px solid var(--primary); padding: 10px; resize: vertical;"></textarea>
+                </div>
+                <div style="flex: 1; text-align: left;">
+                    <label style="color: #0f0; font-size: 0.8em;">Polished AI Version:</label>
+                    <div id="polish-output" class="neon-border" style="width: 100%; height: 200px; background: #050505; color: #0f0; border: 1px solid var(--secondary); padding: 10px; overflow-y: auto; box-sizing: border-box;">Output will appear here...</div>
+                </div>
+            </div>
+            <br>
+            <button onclick="runPolisher()" class="action-btn neon-border">Polish Now (Fix Grammar)</button>
+            <button onclick="document.getElementById('polisher-modal').style.display='none'" class="action-btn neon-border" style="background: #333; color: white;">Close</button>
+        </div>
+    </div>
+    
+    <!-- Polisher Modal -->
+    <div id="polisher-modal" class="modal neon-border" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; justify-content: center; align-items: center;">
+        <div class="modal-content neon-border" style="background: var(--bg); padding: 20px; border-radius: 8px; width: 80%; max-width: 800px; text-align: center;">
+            <h2 class="neon-text">Interactive Grammar & Vocabulary Polisher</h2>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <div style="flex: 1; text-align: left;">
+                    <label style="color: #aaa; font-size: 0.8em;">Original Draft:</label>
+                    <textarea id="polish-input" class="neon-border" style="width: 100%; height: 200px; background: #111; color: var(--text); border: 1px solid var(--primary); padding: 10px; resize: vertical;"></textarea>
+                </div>
+                <div style="flex: 1; text-align: left;">
+                    <label style="color: #0f0; font-size: 0.8em;">Polished AI Version:</label>
+                    <div id="polish-output" class="neon-border" style="width: 100%; height: 200px; background: #050505; color: #0f0; border: 1px solid var(--secondary); padding: 10px; overflow-y: auto; box-sizing: border-box;">Output will appear here...</div>
+                </div>
+            </div>
+            <br>
+            <button onclick="runPolisher()" class="action-btn neon-border">Polish Now (Fix Grammar)</button>
+            <button onclick="document.getElementById('polisher-modal').style.display='none'" class="action-btn neon-border" style="background: #333; color: white;">Close</button>
+        </div>
+    </div>
     <!-- Smart Paste Modal -->
     <div id="smart-paste-modal" class="modal neon-border" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; justify-content: center; align-items: center;">
         <div class="modal-content neon-border" style="background: var(--bg); padding: 20px; border-radius: 8px; width: 60%; max-width: 600px; text-align: center;">
