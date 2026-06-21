@@ -1079,7 +1079,7 @@
                 if (currentUser.username.toLowerCase() === 'neocryptz') {
                      currentUser.is_admin = true;
                      currentUser.plan = currentUser.plan === "Free" ? "Unlimited Text" : currentUser.plan;
-                     currentUser.credits = 999999;
+                     if (currentUser.credits === undefined || currentUser.credits === null) currentUser.credits = 999999;
                      
                      // Ensure their password is correct locally if they use local auth fallback
                      let localUsers = JSON.parse(localStorage.getItem('localUsers') || '{}');
@@ -1358,6 +1358,31 @@
             }
 
             if (!msg) return;
+
+            // Credit Check: 5 credits per question
+            if (currentUser.credits !== null && currentUser.credits < 5) {
+                appendMessage("assistant", "Insufficient credits! Each question costs 5 credits. Please upgrade your plan.");
+                setTimeout(() => openModal("pricing-modal"), 1500);
+                return;
+            }
+
+            // Deduct 5 credits
+            if (currentUser.credits !== null) {
+                currentUser.credits -= 5;
+                if (currentUser.credits < 0) currentUser.credits = 0;
+                localStorage.setItem("currentUser", JSON.stringify(currentUser));
+
+                // Update localUsers as well
+                let localUsers = JSON.parse(localStorage.getItem("localUsers") || "{}");
+                if (localUsers[currentUser.username]) {
+                    localUsers[currentUser.username].credits = currentUser.credits;
+                    localStorage.setItem("localUsers", JSON.stringify(localUsers));
+                }
+
+                // Update UI
+                const creditsDisp = (currentUser.credits >= 999999) ? "Unlimited" : currentUser.credits;
+                document.getElementById("user-info").innerHTML = `USER: ${currentUser.username}<br>PLAN: ${currentUser.plan}<br>CREDITS: ${creditsDisp}`;
+            }
 
             // Enforce 50 word limit for user inputs
             const wordCount = msg.split(/\s+/).length;
