@@ -884,9 +884,9 @@
                 <div style="margin-bottom: 20px; padding: 10px; border: 1px solid var(--secondary); background: #111;">
                     <h4 style="color: var(--secondary); margin-top: 0;">AI Provider Fallback Order</h4>
                     <p style="font-size: 0.8em; color: #aaa;">List comma-separated providers to set priority. The system will automatically cycle to the next if one fails.<br>Options: <i>openrouter, together, anyscale, openai, gemini, groq, pollinations</i></p>
-                    <input type="text" id="provider-order" value="gemini,openrouter,pollinations,groq" style="width: 100%; padding: 5px; background: #222; border: 1px solid var(--primary); color: #fff; margin-bottom: 10px;">
+                    <input type="text" id="provider-order" value="openrouter,sambanova,gemini,groq,pollinations" style="width: 100%; padding: 5px; background: #222; border: 1px solid var(--primary); color: #fff; margin-bottom: 10px;">
                     <div style="display: flex; gap: 5px; flex-wrap: wrap;">
-                        <button class="btn" onclick="setProviderOrder('sambanova,gemini,openrouter,pollinations')">Supercomputer (OpenRouter) First</button>
+                        <button class="btn" onclick="setProviderOrder('openrouter,sambanova,gemini,groq,pollinations')">High Performance AI (OpenRouter) First</button>
                         <button class="btn" onclick="setProviderOrder('openai,gemini,sambanova,pollinations')">OpenAI First</button>
                         <button class="btn" onclick="setProviderOrder('pollinations,openrouter,openai')">Free First</button>
                     </div>
@@ -2468,7 +2468,7 @@
 
         async function loadAdminData() {
             document.getElementById('lock-reg-checkbox').checked = localStorage.getItem('regLocked') === 'true';
-            document.getElementById('provider-order').value = localStorage.getItem('providerOrder') || 'sambanova,gemini,openrouter,pollinations';
+            document.getElementById('provider-order').value = localStorage.getItem('providerOrder') || 'openrouter,sambanova,gemini,groq,pollinations';
             loadScrapes(); // Load scrapes
             if(document.getElementById('admin-beta-code')) document.getElementById('admin-beta-code').value = localStorage.getItem('activeBetaCode') || 'NEO-BETA-2027';
             if(document.getElementById('admin-base-guidelines')) document.getElementById('admin-base-guidelines').value = localStorage.getItem('adminBaseGuidelines') || '';

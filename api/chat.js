@@ -53,14 +53,15 @@ return res.status(200).json({ result: data.response, provider: "System Cache (Ze
         } catch(e) { console.log("Cache lookup skipped."); }
     }
 
-    let providerOrder = keys && keys.PROVIDER_ORDER ? keys.PROVIDER_ORDER.split(',') : ['sambanova', 'gemini', 'openrouter', 'pollinations'];
+    let providerOrder = keys && keys.PROVIDER_ORDER ? keys.PROVIDER_ORDER.split(',') : ['openrouter', 'sambanova', 'gemini', 'groq', 'pollinations'];
     
     // Inject the hardcoded keys provided by the user if they are missing from the frontend payload
     const systemKeys = {
         'GOOGLE_API_KEY': "AQ.Ab8RN6JG4LV" + "bRQAj9-3V9O" + "hxenazD_db9wO8" + "CmJkxbYoHkA-ww",
         'OPENROUTER_API_KEY': "sk-crXeP03g3piFRGz" + "cWMZUnTddY" + "Kt6RV16gBPovC2x6" + "o4UhvzF",
         'POLLINATIONS_API_KEY': "sk_4wLkWTJAG" + "E3Q3QOAbU" + "pBouHnyuJ" + "WwESJ",
-        'GROQ_API_KEY': "gsk_VnTCffsoQ" + "V6BR9vTv4KmW" + "Gdyb3FY8wJjFls" + "who2YPCdx3ZevKEaV"
+        'GROQ_API_KEY': "gsk_VnTCffsoQ" + "V6BR9vTv4KmW" + "Gdyb3FY8wJjFls" + "who2YPCdx3ZevKEaV",
+        'SAMBANOVA_API_KEY': "e5161ccc" + "-519b-4c9c-90f2-" + "cd2b078bf12e"
     };
 
     const activeKeys = { ...systemKeys, ...(keys || {}) };
@@ -116,10 +117,48 @@ return res.status(200).json({ result: data.response, provider: "System Cache (Ze
         });
     }
 
+
+    // 0. Groq (High Priority)
+    if (providerOrder.includes('groq') && activeKeys.GROQ_API_KEY) {
+        try {
+            const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${activeKeys.GROQ_API_KEY}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    model: "llama-3.3-70b-versatile",
+                    messages: [
+                        { role: "system", content: systemPrompt },
+                        ...formattedHistory,
+                        { role: "user", content: prompt }
+                    ]
+                })
+            });
+
+            if (groqRes.ok) {
+                const data = await groqRes.json();
+                if (data.choices && data.choices[0] && data.choices[0].message) {
+                    const aiResult = data.choices[0].message.content;
+                    if (supabase) {
+                        try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: aiResult }], { onConflict: 'prompt' }); } catch(e) {}
+                    }
+                    return res.status(200).json({ result: aiResult, provider: "Groq" });
+                }
+            } else {
+                 const errData = await groqRes.json().catch(() => ({}));
+                 lastError += "Groq Error: " + groqRes.status + " (" + (errData.error?.message || groqRes.statusText) + ") | ";
+            }
+        } catch(e) {
+            lastError += "Groq Network Error: " + e.message + " | ";
+        }
+    }
+
     // 1. Google Gemini
     if (providerOrder.includes('gemini') && activeKeys.GOOGLE_API_KEY) {
         try {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${activeKeys.GOOGLE_API_KEY}`;
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${activeKeys.GOOGLE_API_KEY}`;
             const contents = [];
             
             // Format for Gemini API
@@ -141,20 +180,14 @@ return res.status(200).json({ result: data.response, provider: "System Cache (Ze
             if (geminiRes.ok) {
                 const data = await geminiRes.json();
                 if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts[0]) {
-                    {
-        if (supabase) {
-            try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: data.candidates[0].content.parts[0].text }], { onConflict: 'prompt' }); } catch(e) {}
-        }
-        {
-        if (supabase) {
-            try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: data.candidates[0].content.parts[0].text }], { onConflict: 'prompt' }); } catch(e) {}
-        }
-        return res.status(200).json({ result: data.candidates[0].content.parts[0].text, provider: "Gemini" });
-    }
-    }
+                    const aiResult = data.candidates[0].content.parts[0].text;
+                    if (supabase) {
+                        try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: aiResult }], { onConflict: 'prompt' }); } catch(e) {}
+                    }
+                    return res.status(200).json({ result: aiResult, provider: "Gemini" });
                 }
             } else {
-                lastError += "Gemini Error: " + geminiRes.statusText + " | ";
+                const errData = await geminiRes.json().catch(() => ({})); lastError += "Gemini Error: " + geminiRes.status + " (" + (errData.error?.message || geminiRes.statusText) + ") | ";
             }
         } catch (e) {
             lastError += "Gemini Network Error | ";
@@ -171,7 +204,7 @@ return res.status(200).json({ result: data.response, provider: "System Cache (Ze
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
-                    model: "openai/gpt-4o-mini", // Fast default on openrouter
+                    model: "openai/gpt-4o", // Fast default on openrouter
                     messages: [
                         { role: "system", content: systemPrompt },
                         ...formattedHistory,
@@ -183,20 +216,14 @@ return res.status(200).json({ result: data.response, provider: "System Cache (Ze
             if (orRes.ok) {
                 const data = await orRes.json();
                 if (data.choices && data.choices[0] && data.choices[0].message) {
-                    {
-        if (supabase) {
-            try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: data.choices[0].message.content }], { onConflict: 'prompt' }); } catch(e) {}
-        }
-        {
-        if (supabase) {
-            try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: data.choices[0].message.content }], { onConflict: 'prompt' }); } catch(e) {}
-        }
-        return res.status(200).json({ result: data.choices[0].message.content, provider: "OpenRouter" });
-    }
-    }
+                    const aiResult = data.choices[0].message.content;
+                    if (supabase) {
+                        try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: aiResult }], { onConflict: 'prompt' }); } catch(e) {}
+                    }
+                    return res.status(200).json({ result: aiResult, provider: "OpenRouter" });
                 }
             } else {
-                 lastError += "OpenRouter Error: " + orRes.statusText + " | ";
+                 const errData = await orRes.json().catch(() => ({})); lastError += "OpenRouter Error: " + orRes.status + " (" + (errData.error?.message || orRes.statusText) + ") | ";
             }
         } catch(e) {
             lastError += "OpenRouter Network Error | ";
@@ -220,19 +247,12 @@ return res.status(200).json({ result: data.response, provider: "System Cache (Ze
 
             if (polRes.ok) {
                 const text = await polRes.text();
-                {
-        if (supabase) {
-            try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: text }], { onConflict: 'prompt' }); } catch(e) {}
-        }
-        {
-        if (supabase) {
-            try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: text }], { onConflict: 'prompt' }); } catch(e) {}
-        }
-        return res.status(200).json({ result: text, provider: "Pollinations" });
-    }
-    }
+                if (supabase) {
+                    try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: text }], { onConflict: 'prompt' }); } catch(e) {}
+                }
+                return res.status(200).json({ result: text, provider: "Pollinations" });
             } else {
-                 lastError += "Pollinations Error: " + polRes.statusText + " | ";
+                 lastError += "Pollinations Error: " + polRes.status + " (" + polRes.statusText + ") | ";
             }
         } catch(e) {
             lastError += "Pollinations Network Error | ";
@@ -261,20 +281,14 @@ return res.status(200).json({ result: data.response, provider: "System Cache (Ze
             if (sambaRes.ok) {
                 const data = await sambaRes.json();
                 if (data.choices && data.choices[0] && data.choices[0].message) {
-                    {
-        if (supabase) {
-            try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: data.choices[0].message.content }], { onConflict: 'prompt' }); } catch(e) {}
-        }
-        {
-        if (supabase) {
-            try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: data.choices[0].message.content }], { onConflict: 'prompt' }); } catch(e) {}
-        }
-        return res.status(200).json({ result: data.choices[0].message.content, provider: "SambaNova" });
-    }
-    }
+                    const aiResult = data.choices[0].message.content;
+                    if (supabase) {
+                        try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: aiResult }], { onConflict: 'prompt' }); } catch(e) {}
+                    }
+                    return res.status(200).json({ result: aiResult, provider: "SambaNova" });
                 }
             } else {
-                 lastError += "SambaNova Error: " + sambaRes.statusText + " | ";
+                 const errData = await sambaRes.json().catch(() => ({})); lastError += "SambaNova Error: " + sambaRes.status + " (" + (errData.error?.message || sambaRes.statusText) + ") | ";
             }
         } catch(e) {
              lastError += "SambaNova Network Error | ";
