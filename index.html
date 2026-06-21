@@ -784,8 +784,8 @@
                 <div id="user-support-chat-container" class="neon-border" style="padding: 15px; background: #050505;">
                     <div id="user-support-chat-box" style="height: 200px; overflow-y: auto; margin-bottom: 10px; padding: 10px; background: #000; border: 1px inset #8a2be2;"></div>
                     <div style="display: flex; gap: 10px;">
-                        <input type="text" id="user-support-input" placeholder="How can Dennis help you today?" style="flex: 1; padding: 10px; background: #111; border: 1px solid #8a2be2; color: #fff;">
-                        <button class="btn" onclick="sendSupportMessage(false)">SEND TO DENNIS</button>
+                        <input type="text" id="user-support-input" placeholder="How can Neocryptz help you today?" style="flex: 1; padding: 10px; background: #111; border: 1px solid #8a2be2; color: #fff;">
+                        <button class="btn" onclick="sendSupportMessage(false)">SEND TO NEOCRYPTZ</button>
                     </div>
                 </div>
             </div>
@@ -887,7 +887,7 @@
                 <div id="admin-feedback-list" style="max-height: 60vh; overflow-y: auto;"></div>
             </div>
             <div id="admin-support" class="admin-tab" style="display:none;">
-                <h3 style="color:#8a2be2;">SUPPORT CHAT (Support Dennis)</h3>
+                <h3 style="color:#8a2be2;">SUPPORT CHAT (Neocryptz)</h3>
                 <div style="display: flex; gap: 20px; height: 60vh;">
                     <div style="flex: 1; border: 1px solid #8a2be2; padding: 10px; overflow-y: auto; background: #050505;" id="support-user-list">
                         <p style="color: #aaa; text-align: center;">No active support requests.</p>
@@ -3028,7 +3028,7 @@
         </div>
     </div>
 
-    <audio id="support-alert-sound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
+    <audio id="support-alert-sound" src="https://actions.google.com/sounds/v1/alarms/industrial_alarm.ogg" preload="auto"></audio>
 <script>
     let selectedSupportUserId = null;
     let supportSubscription = null;
@@ -3074,12 +3074,18 @@
 
     async function selectSupportUser(uid, profile) {
         selectedSupportUserId = uid;
-        document.getElementById('support-user-details').innerHTML = `
-            <strong>Name:</strong> ${profile.full_name}<br>
-            <strong>Email:</strong> ${profile.email}<br>
-            <strong>Phone:</strong> ${profile.phone}<br>
-            <strong>Address:</strong> ${profile.address}<br>
-            <strong>Age:</strong> ${profile.age}
+        document.getElementById("support-user-details").innerHTML = `
+            <div style="background: rgba(138, 43, 226, 0.1); padding: 10px; border: 1px solid #8a2be2; border-radius: 5px;">
+                <h4 style="margin: 0 0 10px 0; color: #fff; text-transform: uppercase; letter-spacing: 1px;">User Registration Details</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div><strong>Username:</strong> ${profile.username || "N/A"}</div>
+                    <div><strong>Full Name:</strong> ${profile.full_name || "N/A"}</div>
+                    <div><strong>Email:</strong> ${profile.email || "N/A"}</div>
+                    <div><strong>Phone:</strong> ${profile.phone || "N/A"}</div>
+                    <div><strong>Address:</strong> ${profile.address || "N/A"}</div>
+                    <div><strong>Age:</strong> ${profile.age || "N/A"}</div>
+                </div>
+            </div>
         `;
         loadSupportMessages(uid, true);
         loadSupportUsers(); // Refresh list to update highlight
@@ -3101,8 +3107,8 @@
             msgDiv.style.marginBottom = '10px';
             msgDiv.style.padding = '5px';
             msgDiv.style.borderRadius = '5px';
-            msgDiv.style.background = msg.sender_name === 'Support Dennis' ? 'rgba(0, 255, 255, 0.1)' : 'rgba(255, 0, 255, 0.1)';
-            msgDiv.innerHTML = `<strong style="color: ${msg.sender_name === 'Support Dennis' ? 'var(--secondary)' : 'var(--primary)'}">${msg.sender_name}:</strong> ${escapeHtml(msg.message)}`;
+            msgDiv.style.background = msg.sender_name === 'Neocryptz' ? 'rgba(0, 255, 255, 0.1)' : 'rgba(255, 0, 255, 0.1)';
+            msgDiv.innerHTML = `<strong style="color: ${msg.sender_name === 'Neocryptz' ? 'var(--secondary)' : 'var(--primary)'}">${msg.sender_name}:</strong> ${escapeHtml(msg.message)}`;
             chatBox.appendChild(msgDiv);
         });
         chatBox.scrollTop = chatBox.scrollHeight;
@@ -3116,7 +3122,7 @@
         const uid = isAdmin ? selectedSupportUserId : (await supabaseClient.auth.getSession()).data.session?.user.id;
         if (!uid) return alert("User not identified.");
 
-        const senderName = isAdmin ? 'Support Dennis' : (currentUser?.username || 'User');
+        const senderName = isAdmin ? 'Neocryptz' : (currentUser?.username || 'User');
 
         const { error } = await supabaseClient
             .from('support_messages')
@@ -3139,14 +3145,14 @@
                 const newMsg = payload.new;
 
                 // Alert logic
-                if (currentUser?.is_admin && newMsg.sender_name !== 'Support Dennis') {
+                if (currentUser?.is_admin && newMsg.sender_name !== 'Neocryptz') {
                     // Admin gets notified of user messages
                     playSupportAlert();
                     if (selectedSupportUserId === newMsg.user_id) {
                         loadSupportMessages(newMsg.user_id, true);
                     }
                     loadSupportUsers();
-                } else if (!currentUser?.is_admin && newMsg.sender_name === 'Support Dennis') {
+                } else if (!currentUser?.is_admin && newMsg.sender_name === 'Neocryptz') {
                     // User gets notified of admin messages
                     supabaseClient.auth.getSession().then(({ data: { session } }) => {
                         if (session && session.user.id === newMsg.user_id) {
