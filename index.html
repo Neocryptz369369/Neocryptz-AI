@@ -1873,6 +1873,7 @@
                 loadUsersAndLogs();
             }
             if (id === 'settings-modal') renderOAuthList();
+            if (id === "settings-modal" && currentUser) loadSupportMessages(currentUser.id, false);
             if(document.getElementById('anonymizer-toggle')) document.getElementById('anonymizer-toggle').checked = localStorage.getItem('anonymizerEnabled') === 'true';
             if (id === 'share-modal') generateReferral();
             if (id === 'history-modal') loadPersonalHistory();
@@ -2388,6 +2389,7 @@
 
         function showAdminTab(id) {
             document.querySelectorAll('.admin-tab').forEach(t => t.style.display = 'none');
+            if (id === "admin-support") loadSupportUsers();
             document.getElementById(id).style.display = 'block';
         }
 
