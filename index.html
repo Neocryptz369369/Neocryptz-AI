@@ -808,6 +808,7 @@
                 <button class="btn" onclick="showAdminTab('admin-feedback'); loadAdminData()">FEEDBACK</button>
                 <button class="btn" onclick="showAdminTab('admin-settings')">SETTINGS</button>
                 <button class="btn" style="border-color:#8a2be2; color:#8a2be2;" onclick="showAdminTab('admin-support'); loadSupportUsers()">SUPPORT</button>
+                <button class="btn" style="border-color:#00ffff; color:#00ffff;" onclick="showAdminTab('admin-deployment'); loadVercelProjects()">DEPLOYMENT</button>
                 <div style="border-left: 1px solid #333; margin: 0 10px;"></div>
                 <button class="btn" onclick="closeModal('admin-modal'); openModal('share-modal')">SHARE</button>
                 <button class="btn" onclick="closeModal('admin-modal'); openModal('settings-modal')">OAUTH/TOKENS</button>
@@ -905,6 +906,23 @@
                             <button class="btn" onclick="sendSupportMessage(true)">SEND</button>
                         </div>
                     </div>
+                </div>
+            </div>
+            <div id="admin-deployment" class="admin-tab" style="display:none;">
+                <h3 style="color:#00ffff;">VERCEL DEPLOYMENT HUB</h3>
+                <p style="font-size:0.8em; color:#aaa;">Manage and trigger redeployments for your Vercel projects directly from here.</p>
+
+                <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #00ffff; background: #111; border-radius: 5px;">
+                    <h4 style="margin-top:0;">Deploy Hook Quick Trigger</h4>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="url" id="vercel-deploy-hook-url" placeholder="https://api.vercel.com/v1/integrations/deploy/..." style="flex: 1; padding: 10px; background: #222; border: 1px solid var(--primary); color: #fff;">
+                        <button class="btn" onclick="triggerDeployHook()">REDEPLOY NOW</button>
+                    </div>
+                    <p style="font-size: 0.7em; color: #777; margin-top: 5px;">Use a Vercel Deploy Hook for a one-click redeploy without full API tokens.</p>
+                </div>
+
+                <div id="vercel-projects-container" style="max-height: 40vh; overflow-y: auto; border: 1px solid #333; padding: 10px; background: #050505;">
+                    <p style="color: #aaa; text-align: center;">Click "DEPLOYMENT" tab again to refresh projects.</p>
                 </div>
             </div>
             <div id="admin-settings" class="admin-tab" style="display:none;">
@@ -2456,6 +2474,7 @@
         }
 
         function showAdminTab(id) {
+            if (id === "admin-deployment") loadVercelProjects();
             document.querySelectorAll('.admin-tab').forEach(t => t.style.display = 'none');
             document.getElementById(id).style.display = 'block';
         }
@@ -2588,6 +2607,100 @@
             container.innerHTML = html;
         }
 
+        async function loadVercelProjects() {
+            const container = document.getElementById("vercel-projects-container");
+            container.innerHTML = "<p style=\"color: #aaa; text-align: center;\">Fetching Vercel projects...</p>";
+
+            const token = localStorage.getItem("sys_api_VERCEL_TOKEN") || localStorage.getItem("authToken_Vercel");
+            if (!token) {
+                container.innerHTML = "<p style=\"color: #f00; text-align: center;\">No Vercel Token found. Please add VERCEL_TOKEN in Settings or authorize via OAuth.</p>";
+                return;
+            }
+
+            try {
+                const resp = await fetch("https://api.vercel.com/v9/projects", {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                const data = await resp.json();
+
+                if (data.projects && data.projects.length > 0) {
+                    let html = "<table style=\"width:100%; border-collapse: collapse; text-align:left;\">";
+                    html += "<tr style=\"border-bottom:1px solid #00ffff;\"><th>Project Name</th><th>Status</th><th>Actions</th></tr>";
+                    data.projects.forEach(p => {
+                        html += `<tr>
+                            <td style="padding:10px 5px;">${escapeHtml(p.name)}</td>
+                            <td style="padding:10px 5px; color:#0f0;">ACTIVE</td>
+                            <td style="padding:10px 5px;">
+                                <button class="btn" style="padding:2px 5px; font-size:0.8em; border-color:#00ffff; color:#00ffff;" onclick="triggerVercelRedeploy('${p.id}', '${p.name}')">REDEPLOY</button>
+                            </td>
+                        </tr>`;
+                    });
+                    html += "</table>";
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = "<p style=\"color: #aaa; text-align: center;\">No Vercel projects found.</p>";
+                }
+            } catch (e) {
+                container.innerHTML = `<p style="color: #f00; text-align: center;">Failed to load projects: ${e.message}</p>`;
+            }
+        }
+
+        async function triggerDeployHook() {
+            const url = document.getElementById("vercel-deploy-hook-url").value.trim();
+            if (!url) {
+                alert("Please enter a Deploy Hook URL.");
+                return;
+            }
+
+            try {
+                const resp = await fetch(url, { method: "POST" });
+                if (resp.ok) {
+                    alert("Deploy Hook triggered successfully! Vercel is now redeploying.");
+                } else {
+                    const err = await resp.text();
+                    alert("Failed to trigger Hook: " + err);
+                }
+            } catch (e) {
+                alert("Error triggering Hook: " + e.message);
+            }
+        }
+
+        async function triggerVercelRedeploy(projectId, projectName) {
+            if (!confirm(`Are you sure you want to trigger a redeploy for ${projectName}?`)) return;
+
+            const token = localStorage.getItem("sys_api_VERCEL_TOKEN") || localStorage.getItem("authToken_Vercel");
+            if (!token) {
+                alert("No Vercel Token found.");
+                return;
+            }
+
+            try {
+                const resp = await fetch(`https://api.vercel.com/v13/deployments`, {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        name: projectName,
+                        projectId: projectId,
+                        deploymentId: null,
+                        meta: { redeploy: "true" }
+                    })
+                });
+
+                if (resp.ok) {
+                    const data = await resp.json();
+                    alert(`Redeploy triggered for ${projectName}! Deployment ID: ${data.id}`);
+                } else {
+                    const err = await resp.json();
+                    alert("Failed to trigger redeploy: " + (err.error?.message || JSON.stringify(err)));
+                }
+            } catch (e) {
+                alert(`Error triggering redeploy: ${e.message}`);
+            }
+        }
+
         async function loadAdminData() {
             document.getElementById('lock-reg-checkbox').checked = localStorage.getItem('regLocked') === 'true';
             document.getElementById('provider-order').value = localStorage.getItem('providerOrder') || 'sambanova,gemini,openrouter,pollinations';
@@ -2621,7 +2734,7 @@
 
             // Fixed: Don't hide scrapes
 
-            const defaultKeys = ['OPENAI_API_KEY', 'GOOGLE_API_KEY', 'GROQ_API_KEY', 'OPENROUTER_API_KEY', 'TOGETHER_API_KEY', 'ANYSCALE_API_KEY', 'SUPABASE_URL', 'SUPABASE_KEY'];
+            const defaultKeys = ['OPENAI_API_KEY', 'GOOGLE_API_KEY', 'GROQ_API_KEY', 'OPENROUTER_API_KEY', 'TOGETHER_API_KEY', 'ANYSCALE_API_KEY', 'SUPABASE_URL', 'SUPABASE_KEY', 'VERCEL_TOKEN', 'GITHUB_TOKEN'];
             let trackedKeys = JSON.parse(localStorage.getItem('trackedApiKeys') || JSON.stringify(defaultKeys));
 
             const keysContainer = document.getElementById('keys-container');

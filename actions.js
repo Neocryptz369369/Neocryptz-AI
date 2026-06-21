@@ -21,7 +21,7 @@ function deployProject(projectName, codeFiles) {
         cd ${projectName} && 
         git init && 
         git add . && 
-        git commit -m "Deploy via NEOCRYPTZ AI OS"
+        git commit -m "Deploy via NEOCRYPTZ AI OS" && git push origin main --force
     `;
 
     exec(commandSequence, (error, stdout, stderr) => {
