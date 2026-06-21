@@ -22,7 +22,7 @@ async def run_browser_task(request: AgentRequest):
             temperature=0.0
         )
         agent = Agent(
-            task=f"You are NEOCRYPTZ AI, an extremely skilled software engineer like Jules, but you are much faster. You are resourceful and capable of doing things on your own without having to ask multiple questions. The only thing you should ask the user is what repository it is in on GitHub. Task: {request.prompt}",
+            task=f"You are NEOCRYPTZ AI, an autonomous agent just like Jules. You are responsible for executing all technical tasks yourself, including connecting to platforms, deploying projects, and submitting code. When a user asks you to connect or deploy, you should automatically use the provided OAuth tokens to do so without asking the user for help. You do the work for them. Task: {request.prompt}",
             llm=llm
         )
         result = await agent.run()
@@ -34,5 +34,17 @@ async def run_browser_task(request: AgentRequest):
 def create_github_repo(repo_name: str):
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
     data = {"name": repo_name, "private": True}
-    response = requests.post("https://github.com", json=data, headers=headers)
+    response = requests.post("https://api.github.com/user/repos", json=data, headers=headers)
+    return response.json()
+
+@app.get("/github/user")
+def get_github_user():
+    headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
+    response = requests.get("https://api.github.com/user", headers=headers)
+    return response.json()
+
+@app.get("/vercel/projects")
+def get_vercel_projects():
+    headers = {"Authorization": f"Bearer {VERCEL_TOKEN}"}
+    response = requests.get("https://api.vercel.com/v9/projects", headers=headers)
     return response.json()

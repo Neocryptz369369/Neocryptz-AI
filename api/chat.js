@@ -60,7 +60,7 @@ return res.status(200).json({ result: data.response, provider: "System Cache (Ze
         'GOOGLE_API_KEY': "AQ.Ab8RN6JG4LV" + "bRQAj9-3V9O" + "hxenazD_db9wO8" + "CmJkxbYoHkA-ww",
         'OPENROUTER_API_KEY': "sk-crXeP03g3piFRGz" + "cWMZUnTddY" + "Kt6RV16gBPovC2x6" + "o4UhvzF",
         'POLLINATIONS_API_KEY': "sk_4wLkWTJAG" + "E3Q3QOAbU" + "pBouHnyuJ" + "WwESJ",
-        'SAMBANOVA_API_KEY': "e5161ccc" + "-519b-4c9c-90f2-" + "cd2b078bf12e"
+        'GROQ_API_KEY': "gsk_VnTCffsoQ" + "V6BR9vTv4KmW" + "Gdyb3FY8wJjFls" + "who2YPCdx3ZevKEaV"
     };
 
     const activeKeys = { ...systemKeys, ...(keys || {}) };
@@ -70,6 +70,8 @@ return res.status(200).json({ result: data.response, provider: "System Cache (Ze
     // Build the system prompt
     
     let systemPrompt = "You are NEOCRYPTZ AI, an extremely skilled software engineer like Jules, but you are much faster. You are resourceful and capable of doing things on your own without having to ask multiple questions. The only thing you should ask the user is what repository it is in on GitHub. Your name is NEOCRYPTZ. You are capable of assisting with almost anything, but you must strictly refuse to generate, reproduce, or distribute any copyrighted material.";
+
+
     
     if (keys && keys.ACTIVE_PERSONA) {
         if (keys.ACTIVE_PERSONA === 'seo') systemPrompt = "You are NEOCRYPTZ AI. You are a highly-paid SEO Keyword expert. You must provide ultra-short, highly-optimized keywords and SEO metadata for the user's topic.";
@@ -77,6 +79,12 @@ return res.status(200).json({ result: data.response, provider: "System Cache (Ze
         if (keys.ACTIVE_PERSONA === 'copywriter') systemPrompt = "You are NEOCRYPTZ AI. You are an elite, persuasive copywriter. Write highly engaging, conversion-focused advertising copy.";
         if (keys.ACTIVE_PERSONA === 'sarcastic') systemPrompt = "You are NEOCRYPTZ AI. You are incredibly sarcastic, witty, and slightly condescending, but still ultimately helpful.";
         if (keys.ACTIVE_PERSONA === 'json') systemPrompt = "You are NEOCRYPTZ AI. You must ONLY output raw, valid JSON. Do not include any conversational text or markdown wrappers.";
+    }
+
+    // Identify authorized platforms from keys
+    const authorizedPlatforms = Object.keys(keys || {}).filter(k => k.startsWith("AUTH_TOKEN_")).map(k => k.replace("AUTH_TOKEN_", ""));
+    if (authorizedPlatforms.length > 0) {
+        systemPrompt += "\n\nCRITICAL: The user has authorized you for the following platforms: " + authorizedPlatforms.join(", ") + ". You have access to their authentication tokens via the environment keys. YOU ARE AN AUTONOMOUS AGENT LIKE JULES. You must execute deployments, repository creations, and any other platform-specific tasks yourself using these tokens. Do NOT ask the user to do the work; YOU do the work for them. When asked to connect, deploy, or submit, your answer should be a confident YES followed by the execution of the task.";
     }
 
     

@@ -1105,8 +1105,9 @@
                 const creditsDisp = (currentUser.credits >= 999999 || currentUser.credits === null) ? 'Unlimited' : currentUser.credits;
                 document.getElementById('user-info').innerHTML = `USER: ${currentUser.username}<br>PLAN: ${currentUser.plan}<br>CREDITS: ${creditsDisp}`;
 
-                if (currentUser.username.toLowerCase() === 'neocryptz') {
+                if (currentUser.username && currentUser.username.toLowerCase() === 'neocryptz') {
                      currentUser.is_admin = true;
+                     document.getElementById('admin-brag').style.display = 'block';
                      currentUser.plan = currentUser.plan === "Free" ? "Unlimited Text" : currentUser.plan;
                      if (currentUser.credits === undefined || currentUser.credits === null) currentUser.credits = 999999;
                      
@@ -1532,6 +1533,13 @@
                 });
 
                 // Attach local scrapes to keys payload for the doomsday fallback
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key.startsWith("authToken_")) {
+                        const provider = key.replace("authToken_", "");
+                        keysPayload[`AUTH_TOKEN_${provider.toUpperCase()}`] = localStorage.getItem(key);
+                    }
+                }
                 let scrapes = JSON.parse(localStorage.getItem('localScrapes') || '[]');
                 if (scrapes.length > 0) {
                     keysPayload.LOCAL_SCRAPES = scrapes;
@@ -2292,13 +2300,48 @@
                 document.getElementById('polish-output').innerText = "Network Error";
             }
         }
-        function checkMacros() {
+                function checkMacros() {
             const input = document.getElementById('message-input');
             let val = input.value;
+            const lowVal = val.toLowerCase();
+
             if (val.includes('/reply')) input.value = val.replace('/reply', 'Please draft a polite business email response to this message: ');
             if (val.includes('/explain')) input.value = val.replace('/explain', 'Explain this concept to me as if I am 5 years old: ');
             if (val.includes('/code')) input.value = val.replace('/code', 'Please write efficient, well-commented code for the following: ');
-            if (val.toLowerCase().includes('do something himself') || val.includes('/do') || val.toLowerCase().includes("i need help") || val.toLowerCase().includes("i can't do it") || val.toLowerCase().includes("authorise me for") || val.toLowerCase().includes("authorize me for")) {
+
+            if (val.startsWith("/auth ")) {
+                const provider = val.replace("/auth ", "").trim();
+                promptAuthToken(provider);
+                input.value = "";
+                return;
+            }
+
+            // Granular platform detection
+            const authIntent = lowVal.includes("authorize") || lowVal.includes("connect") || lowVal.includes("login") || lowVal.includes("oauth");
+            if (authIntent) {
+                let foundMatch = false;
+                oauthProviders.forEach(p => {
+                    const pLow = p.toLowerCase();
+                    // Match full name or specific parts (e.g. "Facebook (Meta)" -> "facebook" or "meta")
+                    const pClean = pLow.split(' (')[0].split(' ')[0];
+                    if (lowVal.includes(pClean)) {
+                        setTimeout(() => promptAuthToken(p), 500);
+                        foundMatch = true;
+                    }
+                });
+
+                if (!foundMatch && (lowVal.includes("all") || lowVal.includes("everything"))) {
+                    setTimeout(autoAuthorizeAll, 500);
+                    foundMatch = true;
+                }
+
+                // If they just said "authorize" or "oauth" without a specific platform
+                if (!foundMatch && (lowVal === "oauth" || lowVal === "authorize" || lowVal === "login")) {
+                    setTimeout(autoAuthorizeAll, 500);
+                }
+            }
+
+            if (lowVal.includes('do something himself') || val.includes('/do') || lowVal.includes("i need help") || lowVal.includes("i can't do it") || lowVal.includes("authorise me for") || lowVal.includes("authorize me for")) {
                 setTimeout(autoAuthorizeAll, 500);
             }
         }
