@@ -788,8 +788,8 @@
                 <div id="user-support-chat-container" class="neon-border" style="padding: 15px; background: #050505;">
                     <div id="user-support-chat-box" style="height: 200px; overflow-y: auto; margin-bottom: 10px; padding: 10px; background: #000; border: 1px inset #8a2be2;"></div>
                     <div style="display: flex; gap: 10px;">
-                        <input type="text" id="user-support-input" placeholder="How can Dennis help you today?" style="flex: 1; padding: 10px; background: #111; border: 1px solid #8a2be2; color: #fff;">
-                        <button class="btn" onclick="sendSupportMessage(false)">SEND TO DENNIS</button>
+                        <input type="text" id="user-support-input" placeholder="How can Neocryptz help you today?" style="flex: 1; padding: 10px; background: #111; border: 1px solid #8a2be2; color: #fff;">
+                        <button class="btn" onclick="sendSupportMessage(false)">SEND TO NEOCRYPTZ</button>
                     </div>
                 </div>
             </div>
@@ -890,7 +890,7 @@
                 <div id="admin-feedback-list" style="max-height: 60vh; overflow-y: auto;"></div>
             </div>
             <div id="admin-support" class="admin-tab" style="display:none;">
-                <h3 style="color:#8a2be2;">SUPPORT CHAT (Support Dennis)</h3>
+                <h3 style="color:#8a2be2;">SUPPORT CHAT (Neocryptz)</h3>
                 <div style="display: flex; gap: 20px; height: 60vh;">
                     <div style="flex: 1; border: 1px solid #8a2be2; padding: 10px; overflow-y: auto; background: #050505;" id="support-user-list">
                         <p style="color: #aaa; text-align: center;">No active support requests.</p>
@@ -2932,7 +2932,7 @@
             msgDiv.style.padding = '5px';
             msgDiv.style.borderRadius = '5px';
             const isSupport = msg.sender_name && msg.sender_name.toLowerCase() === 'neocryptz';
-            const displayName = isSupport ? 'Support Dennis' : msg.sender_name;
+            const displayName = isSupport ? 'Neocryptz' : msg.sender_name;
             msgDiv.style.background = isSupport ? 'rgba(0, 255, 255, 0.1)' : 'rgba(255, 0, 255, 0.1)';
             msgDiv.innerHTML = `<strong style="color: ${isSupport ? 'var(--secondary)' : 'var(--primary)'}">${displayName}:</strong> ${escapeHtml(msg.message)}`;
             chatBox.appendChild(msgDiv);
