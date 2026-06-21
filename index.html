@@ -1775,8 +1775,8 @@
             const oauthList = document.getElementById('oauth-list');
             const tokenList = document.getElementById('auth-token-list');
 
-            oauthList.innerHTML = oauthProviders.map(p => { const auth = localStorage.getItem(`authToken_${p}`); return `<button class="btn provider-btn ${auth ? "authorized" : ""}" style="padding: 10px; font-size: 0.9em;" onclick="autoAuthorizeAll()">OAuth: ${p}</button>`; }).join('');
-            tokenList.innerHTML = oauthProviders.map(p => { const auth = localStorage.getItem(`authToken_${p}`); return `<button class="btn provider-btn ${auth ? "authorized" : ""}" style="padding: 10px; font-size: 0.9em;" onclick="promptAuthToken('${p}')">Token: ${p}</button>`; }).join('');
+            oauthList.innerHTML = oauthProviders.map(p => { const auth = localStorage.getItem(`authToken_${p}`); return `<button class="btn provider-btn ${auth ? "authorized" : ""}" style="padding: 10px; font-size: 0.9em;" onclick="autoAuthorizeAll()">OAuth: ${p}${auth ? " [READY]" : ""}</button>`; }).join('');
+            tokenList.innerHTML = oauthProviders.map(p => { const auth = localStorage.getItem(`authToken_${p}`); return `<button class="btn provider-btn ${auth ? "authorized" : ""}" style="padding: 10px; font-size: 0.9em;" onclick="promptAuthToken('${p}')">Token: ${p}${auth ? " [SET]" : ""}</button>`; }).join('');
         }
 
         function filterOAuth() {

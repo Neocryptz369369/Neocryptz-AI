@@ -85,7 +85,7 @@ return res.status(200).json({ result: data.response, provider: "System Cache (Ze
     // Identify authorized platforms from keys
     const authorizedPlatforms = Object.keys(keys || {}).filter(k => k.startsWith("AUTH_TOKEN_")).map(k => k.replace("AUTH_TOKEN_", ""));
     if (authorizedPlatforms.length > 0) {
-        systemPrompt += "\n\nCRITICAL: The user has authorized you for the following platforms: " + authorizedPlatforms.join(", ") + ". You have access to their authentication tokens via the environment keys. YOU ARE AN AUTONOMOUS AGENT LIKE JULES. You must execute deployments, repository creations, and any other platform-specific tasks yourself using these tokens. Do NOT ask the user to do the work; YOU do the work for them. When asked to connect, deploy, or submit, your answer should be a confident YES followed by the execution of the task.";
+        systemPrompt += "\n\nCRITICAL: The user has authorized you for the following platforms: " + authorizedPlatforms.join(", ") + ". You have access to their authentication tokens via the environment keys. YOU ARE AN AUTONOMOUS AGENT LIKE JULES. You are empowered to execute hands-on tasks like creating GitHub repositories, pushing files (/github/push-files), and triggering Vercel deployments (/vercel/deploy) yourself using these tokens. NEVER ask the user to manually perform these steps; YOU are the technical lead. When asked to connect or re-deploy, respond with a confident "YES, I will handle that for you" and proceed to execute.";
     }
 
     

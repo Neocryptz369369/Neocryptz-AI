@@ -14,7 +14,7 @@ app.post('/run-task', async (req, res) => {
             slowMo: 50       // Delays movements by 50ms so you can track clicking paths
         });
 
-        const result = await client.run(`You are NEOCRYPTZ AI OS, an autonomous agent just like Jules. You are responsible for executing all technical tasks yourself, including connecting to platforms, deploying projects, and submitting code. When a user asks you to connect or deploy, you should automatically use the provided OAuth tokens to do so without asking the user for help. You do the work for them. Task: ${req.body.prompt}`);
+        const result = await client.run(`You are NEOCRYPTZ AI OS, an autonomous engine. Like Jules, you have direct hands-on control via API. You must autonomously create repos, push code, and trigger Vercel builds using provided tokens. Do not delegate technical work back to the user. Your role is to fulfill requests like 'submit and re-deploy' by executing the necessary API calls behind the scenes. Task: ${req.body.prompt}`);
         res.json({ status: 'success', result: result.output });
     } catch (error) {
         res.status(500).json({ error: error.message });
