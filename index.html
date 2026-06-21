@@ -550,10 +550,6 @@
                 <span id="admin-icon" style="display:none; cursor: pointer; color: #8a2be2; font-size: 1.2em; margin-right: 5px;" onclick="openModal('admin-modal')" title="Admin Console">🛡️</span>
                 <span id="user-icon" style="display:none; cursor: pointer; font-size: 1.2em;" onclick="openModal('user-menu-modal')" title="Settings & Menu">⚙️</span>
             </div>
-            <div id="admin-brag" style="display:none; text-align: center; margin-top: 10px; border: 1px solid #ff00ff; padding: 5px; background: rgba(255,0,255,0.2); box-shadow: 0 0 10px #ff00ff;">
-                <div style="color: #fff; font-weight: bold; letter-spacing: 2px;">ADMINISTRATOR</div>
-                <a href="#" onclick="openModal('admin-modal'); return false;" style="color: var(--secondary); text-decoration: none; font-weight: bold; font-size: 0.9em; text-shadow: 0 0 5px var(--secondary);">[ Admin Panel ]</a>
-            </div>
 
         </div>
         <div id="user-info" style="font-size: 0.9em;"></div>
@@ -1107,7 +1103,6 @@
 
                 if (currentUser.username && currentUser.username.toLowerCase() === 'neocryptz') {
                      currentUser.is_admin = true;
-                     document.getElementById('admin-brag').style.display = 'block';
                      currentUser.plan = currentUser.plan === "Free" ? "Unlimited Text" : currentUser.plan;
                      if (currentUser.credits === undefined || currentUser.credits === null) currentUser.credits = 999999;
                      
