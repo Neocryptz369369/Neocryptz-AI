@@ -2907,6 +2907,14 @@
         loadSupportMessages(uid, true);
         loadSupportUsers(); // Refresh list to update highlight
     }
+            supabaseClient.auth.getSession().then(({ data: { session } }) => {
+                if (session) loadSupportMessages(session.user.id, false);
+            });
+        }
+    }, 3000);
+</script>
+</body>
+</html>
     async function loadSupportMessages(uid, isAdminView) {
         const { data, error } = await supabaseClient
             .from('support_messages')
@@ -2923,7 +2931,7 @@
             msgDiv.style.marginBottom = '10px';
             msgDiv.style.padding = '5px';
             msgDiv.style.borderRadius = '5px';
-            const isSupport = msg.sender_name === 'Neocryptz';
+            const isSupport = msg.sender_name && msg.sender_name.toLowerCase() === 'neocryptz';
             const displayName = isSupport ? 'Support Dennis' : msg.sender_name;
             msgDiv.style.background = isSupport ? 'rgba(0, 255, 255, 0.1)' : 'rgba(255, 0, 255, 0.1)';
             msgDiv.innerHTML = `<strong style="color: ${isSupport ? 'var(--secondary)' : 'var(--primary)'}">${displayName}:</strong> ${escapeHtml(msg.message)}`;
@@ -2940,6 +2948,7 @@
         const uid = isAdmin ? selectedSupportUserId : (await supabaseClient.auth.getSession()).data.session?.user.id;
         if (!uid) return alert("User not identified.");
 
+        // Admin always sends as 'Neocryptz'
         const senderName = isAdmin ? 'Neocryptz' : (currentUser?.username || 'User');
 
         const { error } = await supabaseClient
@@ -2963,15 +2972,18 @@
                 const newMsg = payload.new;
 
                 // Alert logic
-                if (currentUser?.is_admin && newMsg.sender_name !== 'Neocryptz') {
-                    // Admin gets notified of user messages
+                const isAdmin = currentUser && currentUser.username && currentUser.username.toLowerCase() === 'neocryptz';
+                const isFromAdmin = newMsg.sender_name && newMsg.sender_name.toLowerCase() === 'neocryptz';
+
+                if (isAdmin && !isFromAdmin) {
+                    // Admin (Neocryptz) gets notified of user messages
                     playSupportAlert();
                     if (selectedSupportUserId === newMsg.user_id) {
                         loadSupportMessages(newMsg.user_id, true);
                     }
                     loadSupportUsers();
-                } else if (!currentUser?.is_admin && newMsg.sender_name === 'Neocryptz') {
-                    // User gets notified of admin messages
+                } else if (!isAdmin && isFromAdmin) {
+                    // User gets notified of admin (Neocryptz) messages
                     supabaseClient.auth.getSession().then(({ data: { session } }) => {
                         if (session && session.user.id === newMsg.user_id) {
                             playSupportAlert();
@@ -2994,7 +3006,7 @@
     // Initialize support realtime after login/init
     setTimeout(() => {
         setupSupportRealtime();
-        if (currentUser && !currentUser.is_admin) {
+        if (currentUser && currentUser.username && currentUser.username.toLowerCase() !== 'neocryptz') {
             supabaseClient.auth.getSession().then(({ data: { session } }) => {
                 if (session) loadSupportMessages(session.user.id, false);
             });
