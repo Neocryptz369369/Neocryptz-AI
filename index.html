@@ -1476,6 +1476,10 @@
             let aiText = '';
             if (resp.ok) {
                 aiText = data.result || 'Task execution initiated.';
+
+                // Final Branding Scrubber (Global)
+                const forbiddenNames = [/Pollinations/gi, /OpenRouter/gi, /SambaNova/gi, /Google Gemini/gi, /Groq/gi, /Anthropic/gi, /OpenAI/gi];
+                forbiddenNames.forEach(name => { aiText = aiText.replace(name, "Neocryptz"); });
                 if (isFlashcard) {
                     const topic = msg.replace('/flashcard', '').trim();
                     aiText = `
