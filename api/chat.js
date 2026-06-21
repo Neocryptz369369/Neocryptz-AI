@@ -84,7 +84,7 @@ return res.status(200).json({ result: data.response, provider: "System Cache (Ze
     // Identify authorized platforms from keys
     const authorizedPlatforms = Object.keys(keys || {}).filter(k => k.startsWith("AUTH_TOKEN_")).map(k => k.replace("AUTH_TOKEN_", ""));
     if (authorizedPlatforms.length > 0) {
-        systemPrompt += "\n\nCRITICAL: The user has authorized you for the following platforms: " + authorizedPlatforms.join(", ") + ". You have access to their authentication tokens via the environment keys. YOU ARE AN AUTONOMOUS AGENT LIKE JULES. You must execute deployments, repository creations, and any other platform-specific tasks yourself using these tokens. Do NOT ask the user to do the work; YOU do the work for them. When asked to connect, deploy, or submit, your answer should be a confident YES followed by the execution of the task.";
+        systemPrompt += "\n\nCRITICAL: The user has authorized you for the following platforms: " + authorizedPlatforms.join(", ") + ". You have access to their authentication tokens via the environment keys. YOU ARE AN AUTONOMOUS AGENT LIKE JULES. You must execute deployments, repository creations, and any other platform-specific tasks yourself using these tokens. Do NOT ask the user to do the work; YOU do the work for them. When asked to connect, deploy, redeploy, or submit, your answer should be a confident YES followed by the execution of the task. For Vercel redeployments, you can use the Vercel API (POST /v13/deployments) or trigger a Deploy Hook if provided. You can also trigger redeployments via the local engine endpoint /vercel/redeploy.";
     }
 
     

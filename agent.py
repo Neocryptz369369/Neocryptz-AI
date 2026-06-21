@@ -48,3 +48,17 @@ def get_vercel_projects():
     headers = {"Authorization": f"Bearer {VERCEL_TOKEN}"}
     response = requests.get("https://api.vercel.com/v9/projects", headers=headers)
     return response.json()
+
+@app.post("/vercel/redeploy")
+def trigger_vercel_redeploy(project_id: str, project_name: str):
+    headers = {
+        "Authorization": f"Bearer {VERCEL_TOKEN}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "name": project_name,
+        "projectId": project_id,
+        "meta": {"redeploy": "true"}
+    }
+    response = requests.post("https://api.vercel.com/v13/deployments", json=data, headers=headers)
+    return response.json()
