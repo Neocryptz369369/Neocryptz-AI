@@ -380,67 +380,67 @@
 </script>
     <style>
         :root {
-            --primary: #ff00ff; /* Neon Pink */
-            --secondary: #00ffff; /* Neon Blue */
+            --primary: #00ff00; /* Neon Pink */
+            --secondary: #006400; /* Neon Blue */
             --bg: #000;
             --text: #fff;
             --ticker-speed: 25s;
         }
         body { font-family: 'Courier New', Courier, monospace; background: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; }
-        #sidebar { width: 250px; border-right: 1px solid var(--primary); display: flex; flex-direction: column; padding: 20px; box-shadow: 2px 0 10px rgba(255, 0, 255, 0.2); }
+        #sidebar { width: 250px; border-right: 1px solid var(--primary); display: flex; flex-direction: column; padding: 20px; box-shadow: 2px 0 10px rgba(0, 255, 0, 0.2); }
         #main-content { flex: 1; display: flex; flex-direction: column; justify-content: space-between; position: relative; align-items: center; overflow: hidden; }
         #chat-window { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; width: 100%; box-sizing: border-box; }
         .message { margin-bottom: 15px; padding: 10px; border: 1px solid #333; width: 100%; max-width: 800px; align-self: center; box-sizing: border-box; }
-        .user { border-color: var(--primary); box-shadow: 0 0 5px rgba(255, 0, 255, 0.3); }
-        .assistant { border-color: var(--secondary); box-shadow: 0 0 5px rgba(0, 255, 255, 0.3); }
+        .user { border-color: var(--primary); box-shadow: 0 0 5px rgba(0, 255, 0, 0.3); }
+        .assistant { border-color: var(--secondary); box-shadow: 0 0 5px rgba(0, 100, 0, 0.3); }
         #input-area { padding: 20px; border-top: 1px solid #333; display: flex; justify-content: center; align-items: center; width: 100%; box-sizing: border-box; }
         #message-input { width: 600px; background: #111; border: 1px solid var(--primary); color: #fff; padding: 10px; outline: none; }
-        #message-input:focus { border-color: var(--secondary); box-shadow: 0 0 8px rgba(0, 255, 255, 0.5); }
+        #message-input:focus { border-color: var(--secondary); box-shadow: 0 0 8px rgba(0, 100, 0, 0.5); }
         #send-btn { background: var(--primary); color: #000; border: none; padding: 10px 20px; cursor: pointer; margin-left: 10px; font-weight: bold; transition: all 0.3s ease; }
-        #send-btn:hover { background: var(--secondary); box-shadow: 0 0 10px rgba(0, 255, 255, 0.6); }
+        #send-btn:hover { background: var(--secondary); box-shadow: 0 0 10px rgba(0, 100, 0, 0.6); }
         #send-btn:disabled { background: #555; cursor: not-allowed; box-shadow: none; }
 
         /* Ticker */
-        #ticker-container { width: 100%; height: 30px; border-top: 1px solid var(--primary); overflow: hidden; background: #050505; white-space: nowrap; box-shadow: 0 -2px 10px rgba(255, 0, 255, 0.2); }
+        #ticker-container { width: 100%; height: 30px; border-top: 1px solid var(--primary); overflow: hidden; background: #050505; white-space: nowrap; box-shadow: 0 -2px 10px rgba(0, 255, 0, 0.2); }
         #ticker { display: inline-block; animation: scroll var(--ticker-speed) linear infinite; }
         @keyframes scroll { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
         .ticker-item { display: inline-block; padding: 5px 20px; color: var(--primary); }
 
         /* Modals */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; }
-        .modal-content { background: #111; border: 1px solid var(--primary); padding: 30px; width: 80%; max-width: 1000px; max-height: 80vh; overflow-y: auto; box-shadow: 0 0 20px rgba(255, 0, 255, 0.3); }
+        .modal-content { background: #111; border: 1px solid var(--primary); padding: 30px; width: 80%; max-width: 1000px; max-height: 80vh; overflow-y: auto; box-shadow: 0 0 20px rgba(0, 255, 0, 0.3); }
 
         /* Auth Screen */
         #auth-screen { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #000; z-index: 2000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .auth-form { width: 300px; display: flex; flex-direction: column; }
         .auth-form input { margin-bottom: 10px; padding: 10px; background: #111; border: 1px solid var(--primary); color: #fff; }
-        .auth-form input:focus { border-color: var(--secondary); outline: none; box-shadow: 0 0 8px rgba(0, 255, 255, 0.4); }
+        .auth-form input:focus { border-color: var(--secondary); outline: none; box-shadow: 0 0 8px rgba(0, 100, 0, 0.4); }
 
         /* Buttons */
         .btn { background: #222; color: var(--primary); border: 1px solid var(--primary); padding: 5px 10px; cursor: pointer; margin: 5px; transition: all 0.3s ease; }
-        .btn:hover { background: var(--primary); color: #000; box-shadow: 0 0 10px rgba(255, 0, 255, 0.5); }
+        .btn:hover { background: var(--primary); color: #000; box-shadow: 0 0 10px rgba(0, 255, 0, 0.5); }
 
         pre { position: relative; background: #222; padding: 15px; overflow-x: auto; }
         .copy-btn { position: absolute; bottom: 5px; right: 5px; font-size: 10px; background: var(--primary); color: #000; border: none; padding: 2px 5px; cursor: pointer; }
 
-        #ad-sidebar { width: 200px; border-left: 1px solid var(--primary); padding: 10px; display: flex; flex-direction: column; box-shadow: -2px 0 10px rgba(255, 0, 255, 0.2); }
+        #ad-sidebar { width: 200px; border-left: 1px solid var(--primary); padding: 10px; display: flex; flex-direction: column; box-shadow: -2px 0 10px rgba(0, 255, 0, 0.2); }
         .ad-box { width: 180px; height: 180px; border: 1px solid #333; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; padding: 5px; transition: border-color 0.3s ease; }
-        .ad-box:hover { border-color: var(--secondary); box-shadow: 0 0 5px rgba(0, 255, 255, 0.3); }
+        .ad-box:hover { border-color: var(--secondary); box-shadow: 0 0 5px rgba(0, 100, 0, 0.3); }
 
         
         .flip-card { background-color: transparent; width: 100%; height: 200px; perspective: 1000px; margin-top: 10px; }
         .flip-card-inner { position: relative; width: 100%; height: 100%; text-align: center; transition: transform 0.6s; transform-style: preserve-3d; cursor: pointer; }
         .flip-card.flipped .flip-card-inner { transform: rotateY(180deg); }
-        .flip-card-front, .flip-card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; border: 1px solid var(--primary); border-radius: 10px; box-shadow: 0 0 15px rgba(255,0,255,0.3); }
+        .flip-card-front, .flip-card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; border: 1px solid var(--primary); border-radius: 10px; box-shadow: 0 0 15px rgba(0,255,0,0.3); }
         .flip-card-front { background-color: #111; color: var(--secondary); }
-        .flip-card-back { background-color: #050505; color: white; transform: rotateY(180deg); border-color: var(--secondary); box-shadow: 0 0 15px rgba(0,255,255,0.3); }
+        .flip-card-back { background-color: #050505; color: white; transform: rotateY(180deg); border-color: var(--secondary); box-shadow: 0 0 15px rgba(0,100,0,0.3); }
 
         /* Animated Neon Borders */
         .neon-border {
             position: relative;
             border: 2px solid transparent;
             background: linear-gradient(#000, #000) padding-box,
-                        linear-gradient(45deg, #00ffff, #ff00ff, #00ffff) border-box;
+                        linear-gradient(45deg, #00ff00, #006400, #00ff00) border-box;
             border-radius: 5px;
             animation: neonGlow 3s linear infinite alternate;
         }
@@ -459,8 +459,8 @@
         }
 
         @keyframes neonGlow {
-            0% { box-shadow: 0 0 10px #00ffff, inset 0 0 10px #00ffff; }
-            100% { box-shadow: 0 0 20px #ff00ff, inset 0 0 20px #ff00ff; }
+            0% { box-shadow: 0 0 10px #00ff00, inset 0 0 10px #00ff00; }
+            100% { box-shadow: 0 0 20px #006400, inset 0 0 20px #006400; }
         }
 
 </style>
@@ -521,7 +521,7 @@
 
     <div id="admin-notif" style="display:none; position:fixed; top:20px; left:50%; transform:translateX(-50%); background:rgba(255,0,0,0.8); color:#fff; padding:10px 20px; border:1px solid #ff00ff; border-radius:5px; z-index:9999; font-weight:bold; box-shadow:0 0 15px #ff0000;"></div>
     <div id="auth-screen">
-        <h1 style="color: var(--primary); text-shadow: 0 0 10px rgba(255, 0, 255, 0.8), 0 0 20px rgba(0, 255, 255, 0.5);">NEOCRYPTZ AI</h1>
+        <h1 style="color: var(--primary); text-shadow: 0 0 10px rgba(255, 0, 255, 0.8), 0 0 20px rgba(0, 100, 0, 0.5);">NEOCRYPTZ AI</h1>
         <div id="login-form" class="auth-form neon-border">
             <h2 style="text-align:center;">LOGIN</h2>
             <input type="text" id="login-user" placeholder="Username" autocomplete="username">
