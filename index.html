@@ -1225,7 +1225,7 @@
             openModal('legal-modal');
         }
 
-        async function handleAuth(type) {
+                async function handleAuth(type) {
             let email, pass, username;
             if (type === 'login') {
                 username = document.getElementById('login-user').value;
@@ -1237,14 +1237,12 @@
                 pass = document.getElementById('reg-pass').value;
             }
 
-            // Re-route legacy username login fields to email format for Supabase if not an email
             const formatEmail = (input) => input.includes('@') ? input : `${input}@neocryptz.ai`;
             const validEmail = formatEmail(email);
 
             if (type === 'login') {
                 if (!email || !pass) return alert("Enter credentials");
 
-                // Try Supabase first
                 let supaError = null;
                 try {
                     const { data, error } = await supabaseClient.auth.signInWithPassword({
@@ -1254,45 +1252,17 @@
                     supaError = error;
                 } catch(err) { supaError = err; }
 
-                // Fallback to local storage if Supabase fails or error
                 if (supaError) {
                     let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
                     const foundUser = users[username] || users[validEmail];
                     if (foundUser && foundUser.password === pass) {
-                        if (foundUser.banned) {
-                            return alert("ACCESS DENIED: Your account has been banned for violating the terms of service.");
-                        }
-
-                        // Check if plan expired
-                        if (foundUser.plan_expires_at && new Date() > new Date(foundUser.plan_expires_at)) {
-                            foundUser.plan = "Free";
-                            foundUser.plan_expires_at = null;
-                            localStorage.setItem('localUsers', JSON.stringify(users));
-
-                // Sync to Supabase profiles table if authenticated
-                if (supabaseClient) {
-                    supabaseClient.auth.getSession().then(({ data: { session } }) => {
-                        if (session) {
-                            supabaseClient.from('profiles').upsert({
-                                id: session.user.id,
-                                username: username,
-                                full_name: fullName,
-                                email: validEmail,
-                                address: fullAddress,
-                                phone: phone,
-                                age: age
-                            }).then(() => console.log("Profile synced to Supabase")).catch(err => console.log("Profile sync error", err));
-                        }
-                    });
-                }
-                            alert("Your paid plan has expired. You have been downgraded to the Free plan.");
-                        }
+                        if (foundUser.banned) return alert("ACCESS DENIED: Banned.");
 
                         localStorage.setItem('currentUser', JSON.stringify(foundUser));
-                        localStorage.setItem('token', 'local-token-' + (users[username] ? username : validEmail));
+                        localStorage.setItem('token', 'local-token-' + username);
                         location.reload();
                     } else {
-                        alert('Login Failed: ' + supaError.message + " (Local fallback also failed: invalid credentials)");
+                        alert("Login Failed: " + supaError.message);
                     }
                 } else {
                     location.reload();
@@ -1300,7 +1270,6 @@
             } else {
                 if (await checkGeoBlock()) return;
                 if (!document.getElementById('reg-tos').checked) return alert('Agree to terms');
-                if (!email || !pass) return alert("Enter all details");
 
                 const fullName = document.getElementById('reg-name')?.value || '';
                 const address = document.getElementById('reg-address')?.value || '';
@@ -1316,82 +1285,36 @@
                     const { data, error } = await supabaseClient.auth.signUp({
                         email: validEmail,
                         password: pass,
-                        options: { data: { full_name: fullName, address: fullAddress, phone: phone, age: age } }
+                        options: { data: { username, full_name: fullName, address: fullAddress, phone, age } }
                     });
                     supaError = error;
+
+                    if (!error && data.user) {
+                        await supabaseClient.from('profiles').upsert({
+                            id: data.user.id,
+                            username: username,
+                            full_name: fullName,
+                            email: validEmail,
+                            address: fullAddress,
+                            phone: phone,
+                            age: age
+                        });
+                    }
                 } catch(err) { supaError = err; }
 
-                // Verify uniqueness
                 let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
-
-                // If it's the admin or a local test, bypass IP check
-                if (username.toLowerCase() !== 'neocryptz') {
-                    // Simple IP constraint mock (would be done backend normally)
-                    const ipConstraint = localStorage.getItem('registered_ip');
-                    if (ipConstraint && ipConstraint !== username) {
-                         // Only allow one non-admin account
-                         alert("Registration Failed: Only one account is allowed per IP.");
-                         return;
-                    }
-                    localStorage.setItem('registered_ip', username);
-                }
-
-                // Always save to local storage as fallback and for Admin view
-                
-                const betaInput = document.getElementById('reg-beta-code') ? document.getElementById('reg-beta-code').value.trim() : '';
-                const activeBeta = localStorage.getItem('activeBetaCode') || 'NEO-BETA-2027';
-                let startingCredits = 25;
-                if (betaInput && betaInput === activeBeta) {
-                    startingCredits = 100;
-                    alert("Beta Code Accepted! 100 Credits Applied to Account.");
-                }
-
-                users[username] = {
-                    username: username,
-                    email: validEmail,
-                    password: pass,
-                    full_name: fullName,
-                    address: fullAddress,
-                    phone: phone,
-                    age: age,
-                    plan: "Free",
-                    credits: startingCredits,
-                    banned: false,
-                    is_admin: (username.toLowerCase() === 'neocryptz')
-                };
+                users[username] = { username, email: validEmail, password: pass, full_name: fullName, address: fullAddress, phone, age, plan: "Free", credits: 25, banned: false, is_admin: (username.toLowerCase() === 'neocryptz') };
                 localStorage.setItem('localUsers', JSON.stringify(users));
 
-                // Sync to Supabase profiles table if authenticated
-                if (supabaseClient) {
-                    supabaseClient.auth.getSession().then(({ data: { session } }) => {
-                        if (session) {
-                            supabaseClient.from('profiles').upsert({
-                                id: session.user.id,
-                                username: username,
-                                full_name: fullName,
-                                email: validEmail,
-                                address: fullAddress,
-                                phone: phone,
-                                age: age
-                            }).then(() => console.log("Profile synced to Supabase")).catch(err => console.log("Profile sync error", err));
-                        }
-                    });
-                }
-
-                if (supaError && (supaError.message.includes('email_address_invalid') || supaError.message.includes('not allowed'))) {
-                     alert('Registered successfully locally (Supabase email validation bypassed). Please Login.');
-                     toggleAuth();
-                } else if (supaError) {
-                    alert('Registration fallback active. Saved locally. Supabase error: ' + supaError.message);
-                    toggleAuth();
+                if (supaError) {
+                    alert("Registration fallback active. Saved locally. Error: " + supaError.message);
                 } else {
-                    alert('Registered successfully. Please Login.');
-                    toggleAuth();
+                    alert("Registered successfully. Please Login.");
                 }
+                toggleAuth();
             }
         }
 
-        // Also update the logout function to sign out of Supabase
         async function logout() {
             try { await supabaseClient.auth.signOut(); } catch(e){ console.log(e); }
             localStorage.removeItem('token');
