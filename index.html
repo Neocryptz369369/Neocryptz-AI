@@ -2907,7 +2907,6 @@
         loadSupportMessages(uid, true);
         loadSupportUsers(); // Refresh list to update highlight
     }
-
     async function loadSupportMessages(uid, isAdminView) {
         const { data, error } = await supabaseClient
             .from('support_messages')
@@ -2924,8 +2923,10 @@
             msgDiv.style.marginBottom = '10px';
             msgDiv.style.padding = '5px';
             msgDiv.style.borderRadius = '5px';
-            msgDiv.style.background = msg.sender_name === 'Support Dennis' ? 'rgba(0, 255, 255, 0.1)' : 'rgba(255, 0, 255, 0.1)';
-            msgDiv.innerHTML = `<strong style="color: ${msg.sender_name === 'Support Dennis' ? 'var(--secondary)' : 'var(--primary)'}">${msg.sender_name}:</strong> ${escapeHtml(msg.message)}`;
+            const isSupport = msg.sender_name === 'Neocryptz';
+            const displayName = isSupport ? 'Support Dennis' : msg.sender_name;
+            msgDiv.style.background = isSupport ? 'rgba(0, 255, 255, 0.1)' : 'rgba(255, 0, 255, 0.1)';
+            msgDiv.innerHTML = `<strong style="color: ${isSupport ? 'var(--secondary)' : 'var(--primary)'}">${displayName}:</strong> ${escapeHtml(msg.message)}`;
             chatBox.appendChild(msgDiv);
         });
         chatBox.scrollTop = chatBox.scrollHeight;
@@ -2939,7 +2940,7 @@
         const uid = isAdmin ? selectedSupportUserId : (await supabaseClient.auth.getSession()).data.session?.user.id;
         if (!uid) return alert("User not identified.");
 
-        const senderName = isAdmin ? 'Support Dennis' : (currentUser?.username || 'User');
+        const senderName = isAdmin ? 'Neocryptz' : (currentUser?.username || 'User');
 
         const { error } = await supabaseClient
             .from('support_messages')
@@ -2962,14 +2963,14 @@
                 const newMsg = payload.new;
 
                 // Alert logic
-                if (currentUser?.is_admin && newMsg.sender_name !== 'Support Dennis') {
+                if (currentUser?.is_admin && newMsg.sender_name !== 'Neocryptz') {
                     // Admin gets notified of user messages
                     playSupportAlert();
                     if (selectedSupportUserId === newMsg.user_id) {
                         loadSupportMessages(newMsg.user_id, true);
                     }
                     loadSupportUsers();
-                } else if (!currentUser?.is_admin && newMsg.sender_name === 'Support Dennis') {
+                } else if (!currentUser?.is_admin && newMsg.sender_name === 'Neocryptz') {
                     // User gets notified of admin messages
                     supabaseClient.auth.getSession().then(({ data: { session } }) => {
                         if (session && session.user.id === newMsg.user_id) {
