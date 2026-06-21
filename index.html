@@ -1013,26 +1013,26 @@
                 // Ignore geoblock for Admin
                 if (localStorage.getItem('currentUser')) {
                     const usr = JSON.parse(localStorage.getItem('currentUser'));
-                    if (usr.username && usr.username.toLowerCase() === 'neocryptz') return;
+                    if (usr.username && usr.username.toLowerCase() === 'neocryptz') return false;
                 }
 
-                const res = await fetch('http://ip-api.com/json/?fields=status,countryCode,regionName,proxy,hosting');
+                const res = await fetch('https://freeipapi.com/api/json/');
                 const data = await res.json();
                 
-                if (data.status === 'success') {
+                if (data) {
                     // Block non-US
                     if (data.countryCode !== 'US') {
                         document.body.innerHTML = '<h1 style="color:red; text-align:center; margin-top:20vh;">ACCESS DENIED</h1><p style="text-align:center;">NEOCRYPTZ AI is currently restricted to US residents only.</p>';
                         return true;
                     }
                     // Block California
-                    if (data.regionName === 'California') {
+                    if (data.regionCode === 'CA') {
                         document.body.innerHTML = '<h1 style="color:red; text-align:center; margin-top:20vh;">ACCESS DENIED</h1><p style="text-align:center;">Due to state regulations, NEOCRYPTZ AI is not available in California.</p>';
                         return true;
                     }
-                    // Block VPNs / Proxies / Datacenters to prevent fraud
-                    if (data.proxy || data.hosting) {
-                        document.body.innerHTML = '<h1 style="color:red; text-align:center; margin-top:20vh;">SECURITY ALERT</h1><p style="text-align:center;">VPN, Proxy, or Cloud Datacenter detected. Please disable your VPN to access NEOCRYPTZ AI and prevent credit card fraud.</p>';
+                    // Block VPNs / Proxies
+                    if (data.isProxy) {
+                        document.body.innerHTML = '<h1 style="color:red; text-align:center; margin-top:20vh;">SECURITY ALERT</h1><p style="text-align:center;">VPN or Proxy detected. Please disable your VPN to access NEOCRYPTZ AI.</p>';
                         return true;
                     }
                 }
@@ -1208,6 +1208,7 @@
                     location.reload();
                 }
             } else {
+                if (await checkGeoBlock()) return;
                 if (!document.getElementById('reg-tos').checked) return alert('Agree to terms');
                 if (!email || !pass) return alert("Enter all details");
 

@@ -3,6 +3,29 @@ export default async function handler(req, res) {
 
     const { prompt, keys } = req.body;
     if (!prompt) return res.status(400).json({ error: 'Missing prompt' });
+    // Server-side Geo and VPN blocking
+    const country = req.headers['x-vercel-ip-country'];
+    const region = req.headers['x-vercel-ip-country-region'];
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+
+    if (country && country !== 'US') {
+        return res.status(403).json({ error: "ACCESS DENIED: NEOCRYPTZ AI is currently restricted to US residents only." });
+    }
+    if (region && region === 'CA') {
+        return res.status(403).json({ error: "ACCESS DENIED: Due to state regulations, NEOCRYPTZ AI is not available in California." });
+    }
+
+    // VPN/Proxy check
+    try {
+        const geoRes = await fetch(`https://freeipapi.com/api/json/${ip}`);
+        const geoData = await geoRes.json();
+        if (geoData && geoData.isProxy) {
+            return res.status(403).json({ error: "SECURITY ALERT: VPN or Proxy detected. Please disable your VPN to access NEOCRYPTZ AI." });
+        }
+    } catch (e) {
+        console.error("Server-side geo-check failed:", e);
+    }
+
 
     // The user requested: "The Tool: Together AI (Flux Schnell or SDXL Turbo) or Groq... keeping your $240 collection as pure profit."
     // I can try Together AI using a fallback, but since the user didn't explicitly hand me a Together AI key right now,
