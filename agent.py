@@ -34,5 +34,17 @@ async def run_browser_task(request: AgentRequest):
 def create_github_repo(repo_name: str):
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
     data = {"name": repo_name, "private": True}
-    response = requests.post("https://github.com", json=data, headers=headers)
+    response = requests.post("https://api.github.com/user/repos", json=data, headers=headers)
+    return response.json()
+
+@app.get("/github/user")
+def get_github_user():
+    headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
+    response = requests.get("https://api.github.com/user", headers=headers)
+    return response.json()
+
+@app.get("/vercel/projects")
+def get_vercel_projects():
+    headers = {"Authorization": f"Bearer {VERCEL_TOKEN}"}
+    response = requests.get("https://api.vercel.com/v9/projects", headers=headers)
     return response.json()
