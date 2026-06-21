@@ -92,12 +92,18 @@
 
                 const data = await response.json();
                 if (response.ok) {
-                    resEl.innerText = "SUCCESS! Fallback activated.\n\nResponse:\n" + data.result;
+                    resEl.innerText = "SUCCESS! Fallback activated.
+
+Response:
+" + data.result;
                 } else {
-                    resEl.innerText = "FAILED.\n\n" + data.error;
+                    resEl.innerText = "FAILED.
+
+" + data.error;
                 }
             } catch(e) {
-                resEl.innerText = "Network Error:\n" + e.message;
+                resEl.innerText = "Network Error:
+" + e.message;
             }
         }
 
@@ -166,7 +172,8 @@
             const file = fileInput.files[0];
             const reader = new FileReader();
             reader.onload = async (e) => {
-                const lines = e.target.result.split('\n').filter(l => l.trim().length > 0);
+                const lines = e.target.result.split('
+').filter(l => l.trim().length > 0);
                 if (lines.length > 20) return alert("Batch limit is 20 rows max.");
                 
                 alert("Processing " + lines.length + " rows. This will take a moment...");
@@ -188,7 +195,8 @@
             const file = fileInput.files[0];
             const reader = new FileReader();
             reader.onload = async (e) => {
-                const lines = e.target.result.split('\n').filter(l => l.trim().length > 0);
+                const lines = e.target.result.split('
+').filter(l => l.trim().length > 0);
                 if (lines.length > 20) return alert("Batch limit is 20 rows max.");
                 
                 alert("Processing " + lines.length + " rows. This will take a moment...");
@@ -365,16 +373,73 @@
         }
 
 
-        function unlockQuestions() {
-            alert('Loading Sponsored Partner Link... (Simulating Ad View)');
-            setTimeout(() => {
-                let stats = JSON.parse(localStorage.getItem('dailyUsage') || '{"count": 0}');
-                stats.count -= 5;
-                if(stats.count < 0) stats.count = 0;
-                localStorage.setItem('dailyUsage', JSON.stringify(stats));
-                alert('Success! 5 Questions Unlocked. Thank you to our sponsors!');
-                window.location.reload();
-            }, 2000);
+
+        let adCooldownTimer = null;
+        async function unlockQuestions() {
+            const cooldownEnd = localStorage.getItem('adCooldownEnd');
+            if (cooldownEnd && Date.now() < cooldownEnd) {
+                return alert('Please wait for the cooldown to end.');
+            }
+
+            openModal('video-ad-modal');
+            const container = document.getElementById('video-container');
+            const status = document.getElementById('video-ad-status');
+            const rewardBtn = document.getElementById('video-ad-reward-btn-container');
+
+            rewardBtn.style.display = 'none';
+            status.innerText = 'Loading Adsterra Sponsored Content...';
+
+            container.innerHTML = `
+                <div style="padding: 20px; color: #ff0050;">
+                    <h3 class="neon-text">ADSTERRA REWARDED CONTENT</h3>
+                    <p>Ad will appear. Please stay on this screen to earn credits.</p>
+                    <div id="adsterra-placeholder"></div>
+                </div>
+            `;
+
+            let timeLeft = 60; // 1 minute watch as requested
+            const timer = setInterval(() => {
+                timeLeft--;
+                status.innerText = `Watch ad for ${timeLeft}s to claim reward...`;
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    status.innerText = "Ad complete! Click below to claim.";
+                    rewardBtn.style.display = 'block';
+                }
+            }, 1000);
+        }
+
+        async function claimVideoReward() {
+            try {
+                const token = localStorage.getItem('token');
+                const resp = await fetch('/api/reward', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ userId: currentUser.id })
+                });
+
+                const result = await resp.json();
+                if (result.success) {
+                    alert(result.message);
+                    startAdCooldown(result.cooldown || 60);
+                    closeModal('video-ad-modal');
+
+                    if (result.newCredits !== undefined) {
+                        currentUser.credits = result.newCredits;
+                        const creditsDisp = (currentUser.credits >= 999999 || currentUser.credits === null) ? 'Unlimited' : currentUser.credits;
+                        const userInfoEl = document.getElementById('user-info');
+                        if (userInfoEl) userInfoEl.innerHTML = `USER: ${currentUser.username}<br>PLAN: ${currentUser.plan}<br>CREDITS: ${creditsDisp}`;
+                    }
+                } else {
+                    alert('Reward failed: ' + (result.error || 'Unknown error'));
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Connection error. Please try again.');
+            }
         }
 
 </script>
@@ -464,6 +529,16 @@
         }
 
 </style>
+
+    <!-- ADSTERRA CONFIGURATION BLOCK -->
+    <script>
+        // PASTE YOUR ADSTERRA POPUNDER CODE BELOW THIS LINE
+
+        // PASTE YOUR ADSTERRA SOCIAL BAR CODE ABOVE THE CLOSING
+    <!-- ADSTERRA SOCIAL BAR -->
+    <!-- PASTE YOUR SOCIAL BAR SCRIPT HERE -->
+</body> TAG
+    </script>
 </head>
 <body>
 
@@ -688,11 +763,26 @@
                 <button class="btn" onclick="closeModal('user-menu-modal'); openModal('settings-modal')">SETTINGS / OAUTH</button>
                 <button class="btn" onclick="closeModal('user-menu-modal'); openModal('history-modal')">CHAT HISTORY</button>
                 <button class="btn" onclick="closeModal('user-menu-modal'); openModal('pricing-modal')">UPGRADE / ADS</button>
-                <button class="btn" style="border-color: #ff0050; color: #ff0050; margin-top: 10px;" onclick="closeModal('user-menu-modal'); unlockQuestions()">UNLOCK +5 QUESTIONS (AD)</button>
+                <button class="btn" style="border-color: #ff0050; color: #ff0050; margin-top: 10px;" id="unlock-ad-btn" onclick="unlockQuestions()">UNLOCK +5 QUESTIONS (AD)</button>
                 <button class="btn" onclick="closeModal('user-menu-modal'); openModal('feedback-modal')">PROVIDE FEEDBACK</button>
                 <button class="btn" style="border-color: #f00; color: #f00; margin-top: 20px;" onclick="logout()">LOGOUT</button>
             </div>
             <button class="btn" onclick="closeModal('user-menu-modal')" style="margin-top: 20px;">CLOSE</button>
+        </div>
+    </div>
+
+    <!-- Video Ad Modal -->
+    <div id="video-ad-modal" class="modal neon-border">
+        <div class="modal-content" style="max-width: 800px; text-align: center; background: #000;">
+            <h2 id="video-ad-title" style="color: #ff0050;">SPONSORED VIDEO</h2>
+            <div id="video-container" style="width: 100%; aspect-ratio: 16/9; background: #111; margin-bottom: 20px; border: 1px solid #333;">
+                <!-- Adsterra will be injected here -->
+            </div>
+            <p id="video-ad-status" style="color: #00ffff;">Watch the full video to unlock +5 questions.</p>
+            <div id="video-ad-reward-btn-container" style="display: none;">
+                <button class="btn" onclick="claimVideoReward()" style="border-color: #0f0; color: #0f0; font-weight: bold;">CLAIM +5 QUESTIONS</button>
+            </div>
+            <button id="close-video-btn" class="btn" onclick="closeModal('video-ad-modal')" style="margin-top: 20px;">CLOSE</button>
         </div>
     </div>
 
@@ -911,6 +1001,18 @@
                     <thead><tr style="border-bottom: 1px solid #333;"><th>Type</th><th>Content</th><th>Status</th><th>Action</th></tr></thead>
                     <tbody id="admin-ad-list"></tbody>
                 </table>
+                <h3 style="color: #ff0050; border-top: 1px solid #333; padding-top: 20px;">VIDEO AD MANAGEMENT</h3><div id="admin-video-stats" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; text-align: center;"><div style="border: 1px solid #333; padding: 10px;"><small>Total Views</small><div id="total-video-views" style="color: #0f0; font-size: 1.2em; font-weight: bold;">0</div></div><div style="border: 1px solid #333; padding: 10px;"><small>Total Earnings</small><div id="total-video-earnings" style="color: #0f0; font-size: 1.2em; font-weight: bold;">$0.00</div></div><div style="border: 1px solid #333; padding: 10px;"><small>CPM Rate</small><div style="color: #00ffff; font-size: 1.2em; font-weight: bold;">$50.00</div></div></div>
+                <div style="margin-bottom: 20px; display: flex; gap: 10px;">
+                    <input type="text" id="new-video-url" placeholder="Video URL (Direct link or YouTube Embed)" style="flex: 2; padding:10px;">
+                    <input type="text" id="new-video-sponsor" placeholder="Sponsor Name" style="flex: 1; padding:10px;">
+                    <button class="btn" onclick="addVideoAd()">ADD VIDEO AD</button>
+                </div>
+                <div id="admin-video-ad-list-container" style="max-height: 300px; overflow-y: auto;">
+                    <table style="width:100%; border-collapse: collapse;">
+                        <thead><tr style="border-bottom: 1px solid #333;"><th>Sponsor</th><th>Views</th><th>Status</th><th>Action</th></tr></thead>
+                        <tbody id="admin-video-ad-list"></tbody>
+                    </table>
+                </div>
             </div>
             <div id="admin-feedback" class="admin-tab" style="display:none;">
                 <h3>USER FEEDBACK LOGS</h3>
@@ -1113,7 +1215,41 @@
             return false;
         }
 
-        async function init() {
+
+        let adCooldownTimer = null;
+
+        function startAdCooldown(seconds) {
+            const btn = document.getElementById('unlock-ad-btn');
+            if (!btn) return;
+
+            localStorage.setItem('adCooldownEnd', Date.now() + seconds * 1000);
+            updateAdCooldownUI();
+        }
+
+        function updateAdCooldownUI() {
+            const btn = document.getElementById('unlock-ad-btn');
+            if (!btn) return;
+
+            const cooldownEnd = localStorage.getItem('adCooldownEnd');
+            if (cooldownEnd && Date.now() < cooldownEnd) {
+                const remaining = Math.ceil((cooldownEnd - Date.now()) / 1000);
+                btn.disabled = true;
+                btn.innerText = `COOLDOWN: ${remaining}s`;
+                btn.style.opacity = '0.5';
+
+                if (adCooldownTimer) clearTimeout(adCooldownTimer);
+                adCooldownTimer = setTimeout(updateAdCooldownUI, 1000);
+            } else {
+                btn.disabled = false;
+                btn.innerText = "UNLOCK +5 QUESTIONS (AD)";
+                btn.style.opacity = '1';
+                localStorage.removeItem('adCooldownEnd');
+            }
+        }
+
+        // Call on init
+        setTimeout(updateAdCooldownUI, 2000);
+async function init() {
             // Check local storage first (Fallback)
             if (await checkGeoBlock()) return;
             let localUser = localStorage.getItem('currentUser');
@@ -1181,7 +1317,7 @@
                      document.getElementById('user-icon').style.display = 'inline-block';
                 }
             }
-            loadAds();
+            loadAds(); updateAdCooldownUI();
             loadCustomStyles();
         }
 
@@ -1835,7 +1971,8 @@
             return escapedText.replace(/```([\s\S]*?)```/g, (match, code) => {
                 const id = uuidv4();
                 return `<pre id="${id}">${code}<button class="copy-btn" onclick="copyToClipboard('${id}')">COPY</button></pre>`;
-            }).replace(/\n/g, '<br>');
+            }).replace(/
+/g, '<br>');
         }
 
         async function copyToClipboard(id) {
@@ -2196,7 +2333,13 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        prompt: "Provide 2 totally different style variations for the following prompt. Format exactly like this:\n\n[OPTION A]: (text)\n\n[OPTION B]: (text)\n\nPrompt: " + msg,
+                        prompt: "Provide 2 totally different style variations for the following prompt. Format exactly like this:
+
+[OPTION A]: (text)
+
+[OPTION B]: (text)
+
+Prompt: " + msg,
                         keys: { PROVIDER_ORDER: "sambanova,groq,gemini" }
                     })
                 });
@@ -2245,7 +2388,13 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        prompt: "Provide 2 totally different style variations for the following prompt. Format exactly like this:\n\n[OPTION A]: (text)\n\n[OPTION B]: (text)\n\nPrompt: " + msg,
+                        prompt: "Provide 2 totally different style variations for the following prompt. Format exactly like this:
+
+[OPTION A]: (text)
+
+[OPTION B]: (text)
+
+Prompt: " + msg,
                         keys: { PROVIDER_ORDER: "sambanova,groq,gemini" }
                     })
                 });
@@ -2831,13 +2980,13 @@
             ads = ads.filter(ad => ad.id !== id);
             setLocalAds(ads);
             loadAdminData(); // Refreshes the table
-            loadAds(); // Refreshes the ticker and ad boxes
+            loadAds(); updateAdCooldownUI(); // Refreshes the ticker and ad boxes
         }
 
         async function saveSettings() {
             const speed = document.getElementById('speed-slider').value;
             localStorage.setItem('tickerSpeed', speed);
-            loadAds();
+            loadAds(); updateAdCooldownUI();
             alert('Settings Saved');
         }
 
@@ -2862,7 +3011,7 @@
             alert('Ad created successfully');
             document.getElementById('new-ad-text').value = '';
             loadAdminData(); // Refreshes the table
-            loadAds(); // Refreshes the ticker and ad boxes
+            loadAds(); updateAdCooldownUI(); // Refreshes the ticker and ad boxes
         }
 
         async function viewLogs(username) {
@@ -3217,5 +3366,8 @@
         }
     }, 3000);
 </script>
+
+    <!-- ADSTERRA SOCIAL BAR -->
+    <!-- PASTE YOUR SOCIAL BAR SCRIPT HERE -->
 </body>
 </html>
