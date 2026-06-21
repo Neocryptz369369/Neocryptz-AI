@@ -96,7 +96,7 @@
             // Poll for recent active users (who have sent logs or logged in)
             adminPollInterval = setInterval(async () => {
                 const { data, error } = await supabaseClient
-                    .from('users')
+                    .from('profiles')
                     .select('username, plan, status, updated_at')
                     .order('updated_at', { ascending: false })
                     .limit(5);
@@ -117,7 +117,7 @@
         }
 
         async function fetchLiveUserStats() {
-            const { data: users, error } = await supabaseClient.from('users').select('*');
+            const { data: users, error } = await supabaseClient.from('profiles').select('*');
             if (users) {
                 let html = '<h4>LIVE USER STATISTICS</h4><table style="width:100%; border-collapse: collapse;">';
                 html += '<tr style="border-bottom:1px solid #ff00ff; color: #00ffff;"><th>Username</th><th>Status</th><th>Plan</th><th>Credits / Questions</th><th>Last Active</th></tr>';
@@ -1056,7 +1056,7 @@
                 // Ignore geoblock for Admin
                 if (localStorage.getItem('currentUser')) {
                     const usr = JSON.parse(localStorage.getItem('currentUser'));
-                    if (usr.username && usr.username.toLowerCase() === 'neocryptz') return false;
+                    if (usr.username && usr.username.toLowerCase() === 'Neocryptz') return false;
                 }
 
                 const res = await fetch('https://freeipapi.com/api/json/');
@@ -1119,7 +1119,7 @@
                 const creditsDisp = (currentUser.credits >= 999999 || currentUser.credits === null) ? 'Unlimited' : currentUser.credits;
                 document.getElementById('user-info').innerHTML = `USER: ${currentUser.username}<br>PLAN: ${currentUser.plan}<br>CREDITS: ${creditsDisp}`;
 
-                if (currentUser.username && currentUser.username.toLowerCase() === 'neocryptz') {
+                if (currentUser.username && currentUser.username.toLowerCase() === 'Neocryptz') {
                      currentUser.is_admin = true;
                      currentUser.plan = currentUser.plan === "Free" ? "Unlimited Text" : currentUser.plan;
                      if (currentUser.credits === undefined || currentUser.credits === null) currentUser.credits = 999999;
@@ -1295,7 +1295,7 @@
                 let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
 
                 // If it's the admin or a local test, bypass IP check
-                if (username.toLowerCase() !== 'neocryptz') {
+                if (username.toLowerCase() !== 'Neocryptz') {
                     // Simple IP constraint mock (would be done backend normally)
                     const ipConstraint = localStorage.getItem('registered_ip');
                     if (ipConstraint && ipConstraint !== username) {
@@ -1327,7 +1327,7 @@
                     plan: "Free",
                     credits: startingCredits,
                     banned: false,
-                    is_admin: (username.toLowerCase() === 'neocryptz')
+                    is_admin: (username.toLowerCase() === 'Neocryptz')
                 };
                 localStorage.setItem('localUsers', JSON.stringify(users));
 
@@ -1975,7 +1975,7 @@
             }
 
             try {
-                await supabaseClient.from('users').update({ banned: true }).eq('id', userId);
+                await supabaseClient.from('profiles').update({ banned: true }).eq('id', userId);
             } catch(e) {}
 
             alert("User has been completely BANNED.");
@@ -1989,7 +1989,7 @@
             let expDate = planName === 'Free' ? null : new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
             const grantedDate = planName === 'Free' ? null : new Date().toLocaleDateString();
             
-            if (userId.toLowerCase() === 'neocryptz') {
+            if (userId.toLowerCase() === 'Neocryptz') {
                 expDate = null; // Never expire for the main admin account
             }
 
@@ -1998,7 +1998,7 @@
 
             // Update the user's plan, expiration, and status in Supabase
             const { data, error } = await supabaseClient
-                .from('users')
+                .from('profiles')
                 .update({
                     plan: planName,
                     status: planName === 'Free' ? 'inactive' : 'active',
@@ -2142,7 +2142,7 @@
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'neocryptz_chat_export.txt';
+            a.download = 'Neocryptz_chat_export.txt';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -3056,7 +3056,11 @@
             return;
         }
 
+
+        const isUUID = (str) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
         for (const uid of uniqueUserIds) {
+            if (!isUUID(uid)) continue;
+
             const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', uid).single();
             const lastMsg = data.find(m => m.user_id === uid);
 
