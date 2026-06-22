@@ -29,11 +29,19 @@ export default async function handler(req, res) {
     const { prompt, keys, history } = req.body;
     if (!prompt) return res.status(400).json({ error: 'Missing prompt' });
 
-    // The waterfall order exactly as requested: Gemini, OpenRouter, Pollinations, Groq
-    
+    // Helper to cache AI responses to Supabase
+    async function upsertCache(supabase, promptText, responseText) {
+        if (!supabase) return;
+        try {
+            await supabase.from('query_cache').upsert(
+                [{ prompt: promptText.trim(), response: responseText }],
+                { onConflict: 'prompt' }
+            );
+        } catch (e) {
+            console.error("Cache upsert failed:", e.message);
+        }
+    }
 
-
-    
     const supabaseUrl = process.env.SUPABASE_URL || 'https://bxzvxgjnlvbexeuocbey.supabase.co';
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY;
     let supabase = null;
@@ -48,7 +56,7 @@ export default async function handler(req, res) {
                 .single();
                 
             if (data && data.response) {
-return res.status(200).json({ result: data.response, provider: "System Cache (Zero-Cost)" });
+                return res.status(200).json({ result: data.response, provider: "System Cache (Zero-Cost)" });
             }
         } catch(e) { console.log("Cache lookup skipped."); }
     }
@@ -57,10 +65,13 @@ return res.status(200).json({ result: data.response, provider: "System Cache (Ze
     
     // Inject the hardcoded keys provided by the user if they are missing from the frontend payload
     const systemKeys = {
-        'GOOGLE_API_KEY': "AQ.Ab8RN6JG4LV" + "bRQAj9-3V9O" + "hxenazD_db9wO8" + "CmJkxbYoHkA-ww",
-        'OPENROUTER_API_KEY': "sk-crXeP03g3piFRGz" + "cWMZUnTddY" + "Kt6RV16gBPovC2x6" + "o4UhvzF",
-        'POLLINATIONS_API_KEY': "sk_4wLkWTJAG" + "E3Q3QOAbU" + "pBouHnyuJ" + "WwESJ",
-        'GROQ_API_KEY': "gsk_VnTCffsoQ" + "V6BR9vTv4KmW" + "Gdyb3FY8wJjFls" + "who2YPCdx3ZevKEaV"
+        'GOOGLE_API_KEY': process.env.GOOGLE_API_KEY || "",
+        'OPENROUTER_API_KEY': process.env.OPENROUTER_API_KEY || "",
+        'POLLINATIONS_API_KEY': process.env.POLLINATIONS_API_KEY || "",
+        'SAMBANOVA_API_KEY': process.env.SAMBANOVA_API_KEY || "",
+        'GROQ_API_KEY': process.env.GROQ_API_KEY || "",
+        'GITHUB_TOKEN': process.env.GITHUB_TOKEN || "",
+        'VERCEL_TOKEN': process.env.VERCEL_TOKEN || ""
     };
 
     const activeKeys = { ...systemKeys, ...(keys || {}) };
@@ -72,7 +83,6 @@ return res.status(200).json({ result: data.response, provider: "System Cache (Ze
     let systemPrompt = "You are Neocryptz AI, an extremely skilled software engineer like Jules, but you are much faster. You are resourceful and capable of doing things on your own without having to ask multiple questions. The only thing you should ask the user is what repository it is in on GitHub. Your name is Neocryptz. You are capable of assisting with almost anything, but you must strictly refuse to generate, reproduce, or distribute any copyrighted material.";
 
 
-    
     if (keys && keys.ACTIVE_PERSONA) {
         if (keys.ACTIVE_PERSONA === 'seo') systemPrompt = "You are Neocryptz AI. You are a highly-paid SEO Keyword expert. You must provide ultra-short, highly-optimized keywords and SEO metadata for the user's topic.";
         if (keys.ACTIVE_PERSONA === 'code') systemPrompt = "You are Neocryptz AI. You are a Senior Principal Software Engineer. Find the bug in the user's code and provide a clean, secure fix.";
@@ -81,25 +91,19 @@ return res.status(200).json({ result: data.response, provider: "System Cache (Ze
         if (keys.ACTIVE_PERSONA === 'json') systemPrompt = "You are Neocryptz AI. You must ONLY output raw, valid JSON. Do not include any conversational text or markdown wrappers.";
     }
 
-    // Identify authorized platforms from keys
     const authorizedPlatforms = Object.keys(keys || {}).filter(k => k.startsWith("AUTH_TOKEN_")).map(k => k.replace("AUTH_TOKEN_", ""));
     if (authorizedPlatforms.length > 0) {
-        systemPrompt += "\n\nCRITICAL: The user has authorized you for the following platforms: " + authorizedPlatforms.join(", ") + ". You have access to their authentication tokens via the environment keys. YOU ARE AN AUTONOMOUS AGENT LIKE JULES. You must execute deployments, repository creations, and any other platform-specific tasks yourself using these tokens. Do NOT ask the user to do the work; YOU do the work for them. When asked to connect, deploy, redeploy, or submit, your answer should be a confident YES followed by the execution of the task. For Vercel redeployments, you can use the Vercel API (POST /v13/deployments) or trigger a Deploy Hook if provided. You can also trigger redeployments via the local engine endpoint /vercel/redeploy.";
+        systemPrompt += "\n\nCRITICAL: The user has authorized you for the following platforms: " + authorizedPlatforms.join(", ") + ". You have access to their authentication tokens via the environment keys. YOU ARE AN AUTONOMOUS AGENT LIKE JULES. You must execute deployments, repository creations, and any other platform-specific tasks yourself using these tokens. Do NOT ask the user to do the work; YOU do the work for them. When asked to connect, deploy, redeploy, or submit, your answer should be a confident YES followed by the execution of the task.";
     }
 
-    
-    
     if (keys && keys.TARGET_LANGUAGE) {
         systemPrompt = "CRITICAL DIRECTIVE: YOU MUST TRANSLATE YOUR ENTIRE RESPONSE INTO " + keys.TARGET_LANGUAGE.toUpperCase() + ". DO NOT USE ENGLISH. " + systemPrompt;
     }
-
 
     if (keys && keys.BASE_GUIDELINES) {
         systemPrompt += "\n\nCOMPANY BRAND GUIDELINES TO FOLLOW STRICTLY:\n" + keys.BASE_GUIDELINES;
     }
 
-    
-    // Add Doomsday Scrapes fallback data if provided
     if (keys && keys.LOCAL_SCRAPES && keys.LOCAL_SCRAPES.length > 0) {
         systemPrompt += "\n\nCRITICAL CONTEXT FROM SYSTEM SCRAPER:\n";
         keys.LOCAL_SCRAPES.forEach(s => {
@@ -107,7 +111,6 @@ return res.status(200).json({ result: data.response, provider: "System Cache (Ze
         });
     }
 
-    // Format chat history
     let formattedHistory = [];
     if (history && history.length > 0) {
         history.forEach(h => {
@@ -116,27 +119,24 @@ return res.status(200).json({ result: data.response, provider: "System Cache (Ze
         });
     }
 
-    // 1. Google Gemini
-    if (providerOrder.includes('gemini') && activeKeys.GOOGLE_API_KEY) {
+    // Waterfall Waterfall
+    for (const provider of providerOrder) {
         try {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${activeKeys.GOOGLE_API_KEY}`;
-            const contents = [];
-            
-            // Format for Gemini API
-            contents.push({ role: "user", parts: [{ text: systemPrompt }] });
-            formattedHistory.forEach(h => {
-                contents.push({
-                    role: h.role === "assistant" ? "model" : "user",
-                    parts: [{ text: h.content }]
+            // 1. Google Gemini
+            if (provider === 'gemini' && activeKeys.GOOGLE_API_KEY) {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${activeKeys.GOOGLE_API_KEY}`;
+                const contents = [];
+                contents.push({ role: "user", parts: [{ text: systemPrompt }] });
+                formattedHistory.forEach(h => {
+                    contents.push({ role: h.role === "assistant" ? "model" : "user", parts: [{ text: h.content }] });
                 });
-            });
-            contents.push({ role: "user", parts: [{ text: prompt }] });
+                contents.push({ role: "user", parts: [{ text: prompt }] });
 
-            const geminiRes = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents })
-            });
+                const resGemini = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents })
+                });
 
             if (geminiRes.ok) {
                 const data = await geminiRes.json();
@@ -147,32 +147,18 @@ return res.status(200).json({ result: data.response, provider: "System Cache (Ze
                     }
                     return res.status(200).json({ result: text, provider: "Gemini" });
                 }
-            } else {
-                lastError += "Gemini Error: " + geminiRes.statusText + " | ";
             }
-        } catch (e) {
-            lastError += "Gemini Network Error | ";
-        }
-    }
 
-    // 2. OpenRouter
-    if (providerOrder.includes('openrouter') && activeKeys.OPENROUTER_API_KEY) {
-        try {
-            const orRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${activeKeys.OPENROUTER_API_KEY}`,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    model: "openai/gpt-4o-mini", // Fast default on openrouter
-                    messages: [
-                        { role: "system", content: systemPrompt },
-                        ...formattedHistory,
-                        { role: "user", content: prompt }
-                    ]
-                })
-            });
+            // 2. OpenRouter
+            if (provider === 'openrouter' && activeKeys.OPENROUTER_API_KEY) {
+                const orRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                    method: "POST",
+                    headers: { "Authorization": `Bearer ${activeKeys.OPENROUTER_API_KEY}`, "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        model: "openai/gpt-4o-mini",
+                        messages: [{ role: "system", content: systemPrompt }, ...formattedHistory, { role: "user", content: prompt }]
+                    })
+                });
 
             if (orRes.ok) {
                 const data = await orRes.json();
@@ -183,28 +169,17 @@ return res.status(200).json({ result: data.response, provider: "System Cache (Ze
                     }
                     return res.status(200).json({ result: text, provider: "OpenRouter" });
                 }
-            } else {
-                 lastError += "OpenRouter Error: " + orRes.statusText + " | ";
             }
-        } catch(e) {
-            lastError += "OpenRouter Network Error | ";
-        }
-    }
 
-    // 3. Pollinations AI (Free Tier bypass text generation)
-    if (providerOrder.includes('pollinations')) {
-        try {
-            let messages = [
-                { role: "system", content: systemPrompt },
-                ...formattedHistory,
-                { role: "user", content: prompt }
-            ];
-            
-            const polRes = await fetch("https://text.pollinations.ai/", {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages: messages })
-            });
+            // 3. Pollinations AI
+            if (provider === 'pollinations') {
+                const polRes = await fetch("https://text.pollinations.ai/", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        messages: [{ role: "system", content: systemPrompt }, ...formattedHistory, { role: "user", content: prompt }]
+                    })
+                });
 
             if (polRes.ok) {
                 const text = await polRes.text();
@@ -214,30 +189,25 @@ return res.status(200).json({ result: data.response, provider: "System Cache (Ze
                 return res.status(200).json({ result: text, provider: "Pollinations" });
             } else {
                  lastError += "Pollinations Error: " + polRes.statusText + " | ";
+                if (polRes.ok) {
+                    const text = await polRes.text();
+                    await upsertCache(supabase, prompt, text);
+                    return res.status(200).json({ result: text, provider: "Pollinations" });
+                } else {
+                    lastError += "Pollinations Error: " + polRes.statusText + " | ";
+                }
             }
-        } catch(e) {
-            lastError += "Pollinations Network Error | ";
-        }
-    }
 
-    // 4. SambaNova
-    if (providerOrder.includes('sambanova') && activeKeys.SAMBANOVA_API_KEY) {
-        try {
-            const sambaRes = await fetch("https://api.sambanova.ai/v1/chat/completions", {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${activeKeys.SAMBANOVA_API_KEY}`,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    model: "Meta-Llama-3.3-70B-Instruct",
-                    messages: [
-                        { role: "system", content: systemPrompt },
-                        ...formattedHistory,
-                        { role: "user", content: prompt }
-                    ]
-                })
-            });
+            // 4. SambaNova
+            if (provider === 'sambanova' && activeKeys.SAMBANOVA_API_KEY) {
+                const sambaRes = await fetch("https://api.sambanova.ai/v1/chat/completions", {
+                    method: "POST",
+                    headers: { "Authorization": `Bearer ${activeKeys.SAMBANOVA_API_KEY}`, "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        model: "Meta-Llama-3.3-70B-Instruct",
+                        messages: [{ role: "system", content: systemPrompt }, ...formattedHistory, { role: "user", content: prompt }]
+                    })
+                });
 
             if (sambaRes.ok) {
                 const data = await sambaRes.json();
@@ -247,16 +217,23 @@ return res.status(200).json({ result: data.response, provider: "System Cache (Ze
                         try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: text }], { onConflict: 'prompt' }); } catch(e) {}
                     }
                     return res.status(200).json({ result: text, provider: "SambaNova" });
+                if (sambaRes.ok) {
+                    const data = await sambaRes.json();
+                    if (data.choices && data.choices[0] && data.choices[0].message) {
+                        const text = data.choices[0].message.content;
+                        await upsertCache(supabase, prompt, text);
+                        return res.status(200).json({ result: text, provider: "SambaNova" });
+                    }
+                } else {
+                    lastError += "SambaNova Error: " + sambaRes.statusText + " | ";
                 }
-            } else {
-                 lastError += "SambaNova Error: " + sambaRes.statusText + " | ";
             }
-        } catch(e) {
-             lastError += "SambaNova Network Error | ";
+        } catch (e) {
+            lastError += `${provider} Network Error | `;
         }
     }
 
-    // Doomsday Fallback (If all APIs fail, but we have scrapes)
+    // Doomsday Fallback
     if (keys && keys.LOCAL_SCRAPES && keys.LOCAL_SCRAPES.length > 0) {
         return res.status(200).json({ 
             result: `[DOOMSDAY FALLBACK ACTIVATED]\nAll external AI endpoints failed.\n\nReturning latest scraped data summary:\n\n${keys.LOCAL_SCRAPES[0].text.substring(0, 1000)}...`, 

@@ -105,6 +105,8 @@
             const reader = new FileReader();
             reader.onload = async (e) => {
                 const lines = e.target.result.split('\n').filter(l => l.trim().length > 0);
+                const lines = e.target.result.split('
+').filter(l => l.trim().length > 0);
                 if (lines.length > 20) return alert("Batch limit is 20 rows max.");
                 
                 alert("Processing " + lines.length + " rows. This will take a moment...");
@@ -114,6 +116,14 @@
                     await sendMessage();
                     await new Promise(r => setTimeout(r, 2500));
                 }
+                    await sendMessage(); // Triggers the existing logic
+                    await new Promise(r => setTimeout(r, 2500)); // Rate limit pause
+                }
+            };
+            reader.readAsText(file);
+        }
+        
+
             };
             reader.readAsText(file);
         }
@@ -1186,7 +1196,7 @@ async function init() {
                      let localUsers = JSON.parse(localStorage.getItem('localUsers') || '{}');
                      if(localUsers['Neocryptz']) {
                           localUsers['Neocryptz'].plan = currentUser.plan;
-                          localUsers['Neocryptz'].password = "Firstdata@9302164166";
+                          // localUsers["Neocryptz"].password removed for security
                           localUsers['Neocryptz'].plan_expires_at = null; // Never expire
                           localStorage.setItem('localUsers', JSON.stringify(localUsers));
                      }
@@ -1506,9 +1516,16 @@ async function init() {
                 // Update UI
                 const creditsDisp = (currentUser.credits >= 999999) ? "Unlimited" : currentUser.credits;
                 document.getElementById("user-info").innerHTML = `USER: ${currentUser.username}<br>PLAN: ${currentUser.plan}<br>CREDITS: ${creditsDisp}`;
+
+                // Sync to Supabase profiles
+                if (supabaseClient) {
+                    supabaseClient.from('profiles').update({ credits: currentUser.credits }).eq('id', currentUser.id)
+                        .then(() => console.log("Credits synced to Supabase"))
+                        .catch(err => console.log("Credit sync error", err));
+                }
             }
 
-            // Enforce 50 word limit for user inputs
+            // Enforce 40 word limit for user inputs
             const wordCount = msg.split(/\s+/).length;
             const myUsernameLimitCheck = currentUser?.username || 'Unknown';
             if (myUsernameLimitCheck !== 'Neocryptz' && wordCount > 40) {
@@ -2007,9 +2024,13 @@ async function init() {
                 await supabaseClient.from('profiles').update({ banned: true }).eq('id', userId);
             } catch(e) { console.log(e); }
 
-            alert("User has been completely BANNED.");
-            loadAdminData();
-            loadUsersAndLogs();
+                alert("User has been completely BANNED.");
+                if (typeof loadAdminData === 'function') loadAdminData();
+                if (typeof loadUsersAndLogs === 'function') loadUsersAndLogs();
+            } catch(e) {
+                console.error("Ban error:", e);
+                alert("Failed to ban user: " + e.message);
+            }
         }
 
         async function grantManualPlan(userId, planName, period = 'monthly') {
@@ -2201,19 +2222,7 @@ async function init() {
             }
         }
         
-        async function requestSplitView() {
-            const input = document.getElementById('message-input');
-            let msg = input.value.trim();
-            if (!msg) return alert("Enter a prompt first to generate A/B split variations.");
-            
-            input.value = '';
-            appendMessage('user', "[A/B SPLIT REQUEST]: " + msg);
-            appendMessage('assistant', "Generating Option A and Option B...");
-            
-            try {
-                const res = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+        ,
                     body: JSON.stringify({ 
                         prompt: "Provide 2 totally different style variations for the following prompt. Format exactly like this:\n\n[OPTION A]: (text)\n\n[OPTION B]: (text)\n\nPrompt: " + msg,
                         keys: { PROVIDER_ORDER: "pollinations,sambanova,groq,gemini" }
@@ -2280,15 +2289,7 @@ async function init() {
             }
         }
         
-        async function runPolisher() {
-            const input = document.getElementById('polish-input').value.trim();
-            if(!input) return;
-            document.getElementById('polish-output').innerText = "Polishing...";
-            
-            try {
-                const res = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+        ,
                     body: JSON.stringify({ 
                         prompt: "Fix all grammar errors and improve the vocabulary of this text: " + input,
                         keys: { PROVIDER_ORDER: "pollinations,sambanova,groq,gemini" }
@@ -2776,10 +2777,7 @@ async function init() {
             loadAdminData();
         }
 
-        async function banUser(username) {
-            alert(`${username} banned`);
-            loadAdminData();
-        }
+
 
         async function deleteAd(id) {
             let ads = getLocalAds();
