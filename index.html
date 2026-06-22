@@ -172,30 +172,26 @@ Response:
             const file = fileInput.files[0];
             const reader = new FileReader();
             reader.onload = async (e) => {
-                const lines = e.target.result.split('
-').filter(l => l.trim().length > 0);
+                const lines = e.target.result.split('\n').filter(l => l.trim().length > 0);
                 if (lines.length > 20) return alert("Batch limit is 20 rows max.");
                 
                 alert("Processing " + lines.length + " rows. This will take a moment...");
                 for(let i=0; i<lines.length; i++) {
                     const item = lines[i].replace(/,/g, '');
                     document.getElementById('message-input').value = promptPrefix + " " + item;
-                    await sendMessage(); // Triggers the existing logic
-                    await new Promise(r => setTimeout(r, 2500)); // Rate limit pause
+                    await sendMessage();
+                    await new Promise(r => setTimeout(r, 2500));
                 }
             };
             reader.readAsText(file);
         }
-        
 
-            };
-            reader.readAsText(file);
-        }
         function saveWebhook() {
             const url = document.getElementById('user-webhook-url').value.trim();
             localStorage.setItem('userWebhook', url);
             alert("Webhook Saved! Responses will now be forwarded.");
         }
+
         async function triggerWebhook(text) {
             const url = localStorage.getItem('userWebhook');
             if (url) {
@@ -204,12 +200,7 @@ Response:
                 } catch(e) { console.log('Webhook failed'); }
             }
         }
-        
 
-        , body: JSON.stringify({ ai_response: text }) });
-                } catch(e) { console.log('Webhook failed'); }
-            }
-        }
         function applyCustomCSS() {
             const css = document.getElementById('custom-css-box').value;
             let style = document.getElementById('user-custom-css');
@@ -1336,25 +1327,22 @@ async function init() {
         }
 
         async function handleAuth(type) {
-            let email, pass, username;
-            if (type === 'login') {
-                username = document.getElementById('login-user').value;
-                pass = document.getElementById('login-pass').value;
-                email = username;
-            } else {
-                username = document.getElementById('reg-user').value;
-                email = document.getElementById('reg-email').value;
+            let email = document.getElementById('login-email').value;
+            let pass = document.getElementById('login-pass').value;
+            let username = email;
+
+            if (type === 'register') {
+                username = document.getElementById('reg-user').value.trim();
+                email = document.getElementById('reg-email').value.trim();
                 pass = document.getElementById('reg-pass').value;
             }
 
-            // Re-route legacy username login fields to email format for Supabase if not an email
             const formatEmail = (input) => input.includes('@') ? input : `${input}@neocryptz.ai`;
             const validEmail = formatEmail(email);
 
             if (type === 'login') {
                 if (!email || !pass) return alert("Enter credentials");
 
-                // Try Supabase first
                 let supaError = null;
                 try {
                     const { data, error } = await supabaseClient.auth.signInWithPassword({
@@ -1364,7 +1352,6 @@ async function init() {
                     supaError = error;
                 } catch(err) { supaError = err; }
 
-                // Fallback to local storage if Supabase fails or error
                 if (supaError) {
                     let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
                     const foundUser = users[username] || users[validEmail];
@@ -1373,28 +1360,10 @@ async function init() {
                             return alert("ACCESS DENIED: Your account has been banned for violating the terms of service.");
                         }
 
-                        // Check if plan expired
                         if (foundUser.plan_expires_at && new Date() > new Date(foundUser.plan_expires_at)) {
                             foundUser.plan = "Free";
                             foundUser.plan_expires_at = null;
                             localStorage.setItem('localUsers', JSON.stringify(users));
-
-                // Sync to Supabase profiles table if authenticated
-                if (supabaseClient) {
-                    supabaseClient.auth.getSession().then(({ data: { session } }) => {
-                        if (session) {
-                            supabaseClient.from('profiles').upsert({
-                                id: session.user.id,
-                                username: username,
-                                full_name: fullName,
-                                email: validEmail,
-                                address: fullAddress,
-                                phone: phone,
-                                age: age
-                            }).then(() => console.log("Profile synced to Supabase")).catch(err => console.log("Profile sync error", err));
-                        }
-                    });
-                }
                             alert("Your paid plan has expired. You have been downgraded to the Free plan.");
                         }
 
@@ -1428,26 +1397,38 @@ async function init() {
                         password: pass,
                         options: { data: { full_name: fullName, address: fullAddress, phone: phone, age: age } }
                     });
-                    supaError = error;
-                } catch(err) { supaError = err; }
+                    if (error) throw error;
 
-                // Verify uniqueness
+                    // Sync to profiles table immediately after signup
+                    if (data.user) {
+                        await supabaseClient.from('profiles').upsert({
+                            id: data.user.id,
+                            username: username,
+                            full_name: fullName,
+                            email: validEmail,
+                            address: fullAddress,
+                            phone: phone,
+                            age: age,
+                            plan: 'Free',
+                            credits: 25
+                        });
+                    }
+                } catch(err) {
+                    console.error("Signup error:", err);
+                    alert("Registration failed: " + err.message);
+                    return;
+                }
+
                 let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
-
-                // If it's the admin or a local test, bypass IP check
                 if (username.toLowerCase() !== 'neocryptz') {
-                    // Simple IP constraint mock (would be done backend normally)
                     const ipConstraint = localStorage.getItem('registered_ip');
                     if (ipConstraint && ipConstraint !== username) {
-                         // Only allow one non-admin account
                          alert("Registration Failed: Only one account is allowed per IP.");
                          return;
                     }
                     localStorage.setItem('registered_ip', username);
                 }
 
-                // Always save to local storage as fallback and for Admin view
-                
                 const betaInput = document.getElementById('reg-beta-code') ? document.getElementById('reg-beta-code').value.trim() : '';
                 const activeBeta = localStorage.getItem('activeBetaCode') || 'NEO-BETA-2027';
                 let startingCredits = 25;
@@ -1457,76 +1438,16 @@ async function init() {
                 }
 
                 users[username] = {
-                    username: username,
-                    email: validEmail,
-                    password: pass,
-                    full_name: fullName,
-                    address: fullAddress,
-                    phone: phone,
-                    age: age,
-                    plan: "Free",
-                    credits: startingCredits,
-                    banned: false,
-                    is_admin: (username.toLowerCase() === 'neocryptz')
+                    username, email: validEmail, password: pass,
+                    full_name: fullName, address: fullAddress, phone, age,
+                    plan: 'Free', credits: startingCredits, banned: false
                 };
                 localStorage.setItem('localUsers', JSON.stringify(users));
-
-                // Sync to Supabase profiles table if authenticated
-                if (supabaseClient) {
-                    supabaseClient.auth.getSession().then(({ data: { session } }) => {
-                        if (session) {
-                            supabaseClient.from('profiles').upsert({
-                                id: session.user.id,
-                                username: username,
-                                full_name: fullName,
-                                email: validEmail,
-                                address: fullAddress,
-                                phone: phone,
-                                age: age
-                            }).then(() => console.log("Profile synced to Supabase")).catch(err => console.log("Profile sync error", err));
-                        }
-                    });
-                }
-
-                if (supaError && (supaError.message.includes('email_address_invalid') || supaError.message.includes('not allowed'))) {
-                     alert('Registered successfully locally (Supabase email validation bypassed). Please Login.');
-                     toggleAuth();
-                } else if (supaError) {
-                    alert('Registration fallback active. Saved locally. Supabase error: ' + supaError.message);
-                    toggleAuth();
-                } else {
-                    alert('Registered successfully. Please Login.');
-                    toggleAuth();
-                }
+                alert('Account Created Successfully! Please check your email for confirmation and then log in.');
+                location.reload();
             }
         }
 
-        // Also update the logout function to sign out of Supabase
-        async function logout() {
-            try { await supabaseClient.auth.signOut(); } catch(e){ console.log(e); }
-            localStorage.removeItem('token');
-            localStorage.removeItem('currentUser');
-            location.reload();
-        }
-
-        
-        document.addEventListener('DOMContentLoaded', () => {
-            const input = document.getElementById('message-input');
-            if(input) {
-                input.addEventListener('input', () => {
-                    const counter = document.getElementById('char-counter');
-                    if(counter) {
-                        const len = input.value.length;
-                        counter.innerText = len + " / 300 Chars";
-                        if (len > 250) counter.style.color = '#ff0000';
-                        else if (len > 200) counter.style.color = '#ff8c00';
-                        else counter.style.color = '#aaa';
-                    }
-                });
-            }
-        });
-
-        let recognition;
         function toggleVoiceInput() {
             if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
                 alert("Voice input is not supported in this browser. Try Chrome or Edge.");
@@ -2353,49 +2274,6 @@ Prompt: " + msg,
                 appendMessage('assistant', "Split-View Error: " + e.message);
             }
         }
-        
-        ,
-                    body: JSON.stringify({ 
-                        prompt: "Provide 2 totally different style variations for the following prompt. Format exactly like this:
-
-[OPTION A]: (text)
-
-[OPTION B]: (text)
-
-Prompt: " + msg,
-                        keys: { PROVIDER_ORDER: "pollinations,sambanova,gemini,openrouter" }
-                    })
-                });
-                const data = await res.json();
-                
-                const win = document.getElementById('chat-window');
-                const div = document.createElement('div');
-                div.className = `message assistant neon-border`;
-                div.style.display = 'flex';
-                div.style.gap = '10px';
-                
-                let text = data.result || '';
-                let parts = text.split('[OPTION B]:');
-                let optA = parts[0] ? parts[0].replace('[OPTION A]:', '').trim() : text;
-                let optB = parts[1] ? parts[1].trim() : '';
-                
-                div.innerHTML = `
-                    <div style="flex:1; border-right:1px dashed var(--primary); padding-right:10px;">
-                        <h4 style="color:var(--primary); margin-top:0;">OPTION A</h4>
-                        <p>${escapeHtml(optA)}</p>
-                    </div>
-                    <div style="flex:1; padding-left:10px;">
-                        <h4 style="color:var(--secondary); margin-top:0;">OPTION B</h4>
-                        <p>${escapeHtml(optB)}</p>
-                    </div>
-                `;
-                win.appendChild(div);
-                win.scrollTop = win.scrollHeight;
-                
-            } catch(e) {
-                appendMessage('assistant', "Split-View Error: " + e.message);
-            }
-        }
         function generateCanvas() {
             const b1 = document.getElementById('canvas-1').value.trim();
             const b2 = document.getElementById('canvas-2').value.trim();
@@ -2427,20 +2305,7 @@ Prompt: " + msg,
                 document.getElementById('polish-output').innerText = "Network Error";
             }
         }
-        
-        ,
-                    body: JSON.stringify({ 
-                        prompt: "Fix all grammar errors and improve the vocabulary of this text: " + input,
-                        keys: { PROVIDER_ORDER: "pollinations,sambanova,gemini,openrouter" }
-                    })
-                });
-                const data = await res.json();
-                document.getElementById('polish-output').innerText = data.result || "Error";
-            } catch(e) {
-                document.getElementById('polish-output').innerText = "Network Error";
-            }
-        }
-                function checkMacros() {
+        function checkMacros() {
             const input = document.getElementById('message-input');
             let val = input.value;
             const lowVal = val.toLowerCase();
