@@ -92,18 +92,18 @@
 
                 const data = await response.json();
                 if (response.ok) {
-                    resEl.innerText = "SUCCESS! Fallback activated.
+                    resEl.innerText = `SUCCESS! Fallback activated.
 
 Response:
-" + data.result;
+" + data.result`;
                 } else {
-                    resEl.innerText = "FAILED.
+                    resEl.innerText = `FAILED.
 
-" + data.error;
+" + data.error`;
                 }
             } catch(e) {
-                resEl.innerText = "Network Error:
-" + e.message;
+                resEl.innerText = `Network Error:
+" + e.message`;
             }
         }
 
@@ -500,9 +500,9 @@ Response:
         // PASTE YOUR ADSTERRA POPUNDER CODE BELOW THIS LINE
 
         // PASTE YOUR ADSTERRA SOCIAL BAR CODE ABOVE THE CLOSING
-    <!-- ADSTERRA SOCIAL BAR -->
-    <!-- PASTE YOUR SOCIAL BAR SCRIPT HERE -->
-</body> TAG
+    // <!-- ADSTERRA SOCIAL BAR -->
+    // <!-- PASTE YOUR SOCIAL BAR SCRIPT HERE -->
+// </body> TAG
     </script>
 </head>
 <body>
@@ -2234,13 +2234,13 @@ async function init() {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        prompt: "Provide 2 totally different style variations for the following prompt. Format exactly like this:
+                        prompt: `Provide 2 totally different style variations for the following prompt. Format exactly like this:
 
 [OPTION A]: (text)
 
 [OPTION B]: (text)
 
-Prompt: " + msg,
+Prompt: ` + msg,
                         keys: { PROVIDER_ORDER: "pollinations,sambanova,gemini,openrouter" }
                     })
                 });
@@ -3177,7 +3177,7 @@ Prompt: " + msg,
     }, 3000);
 </script>
 
-    <!-- ADSTERRA SOCIAL BAR -->
-    <!-- PASTE YOUR SOCIAL BAR SCRIPT HERE -->
+    // <!-- ADSTERRA SOCIAL BAR -->
+    // <!-- PASTE YOUR SOCIAL BAR SCRIPT HERE -->
 </body>
 </html>
