@@ -61,7 +61,7 @@ export default async function handler(req, res) {
         } catch(e) { console.log("Cache lookup skipped."); }
     }
 
-    let providerOrder = keys && keys.PROVIDER_ORDER ? keys.PROVIDER_ORDER.split(',').map(p => p.trim().toLowerCase()) : ['pollinations', 'sambanova', 'gemini', 'openrouter'];
+    let providerOrder = keys && keys.PROVIDER_ORDER ? keys.PROVIDER_ORDER.split(',') : ['pollinations', 'sambanova', 'gemini', 'openrouter'];
     
     // Inject the hardcoded keys provided by the user if they are missing from the frontend payload
     const systemKeys = {
@@ -79,10 +79,12 @@ export default async function handler(req, res) {
     let lastError = "";
 
     // Build the system prompt
+    
     let systemPrompt = "You are Neocryptz AI, an extremely skilled software engineer like Jules, but you are much faster. You are resourceful and capable of doing things on your own without having to ask multiple questions. The only thing you should ask the user is what repository it is in on GitHub. Your name is Neocryptz. You are capable of assisting with almost anything, but you must strictly refuse to generate, reproduce, or distribute any copyrighted material.";
 
+
     if (keys && keys.ACTIVE_PERSONA) {
-        if (keys.ACTIVE_PERSONA === 'seo') systemPrompt = "You are Neocryptz AI. You are a highly-paid SEO Keyword expert. You provide ultra-short, highly-optimized keywords and SEO metadata.";
+        if (keys.ACTIVE_PERSONA === 'seo') systemPrompt = "You are Neocryptz AI. You are a highly-paid SEO Keyword expert. You must provide ultra-short, highly-optimized keywords and SEO metadata for the user's topic.";
         if (keys.ACTIVE_PERSONA === 'code') systemPrompt = "You are Neocryptz AI. You are a Senior Principal Software Engineer. Find the bug in the user's code and provide a clean, secure fix.";
         if (keys.ACTIVE_PERSONA === 'copywriter') systemPrompt = "You are Neocryptz AI. You are an elite, persuasive copywriter. Write highly engaging, conversion-focused advertising copy.";
         if (keys.ACTIVE_PERSONA === 'sarcastic') systemPrompt = "You are Neocryptz AI. You are incredibly sarcastic, witty, and slightly condescending, but still ultimately helpful.";
@@ -136,15 +138,14 @@ export default async function handler(req, res) {
                     body: JSON.stringify({ contents })
                 });
 
-                if (resGemini.ok) {
-                    const data = await resGemini.json();
-                    if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts[0]) {
-                        const text = data.candidates[0].content.parts[0].text;
-                        await upsertCache(supabase, prompt, text);
-                        return res.status(200).json({ result: text, provider: "Gemini" });
+            if (geminiRes.ok) {
+                const data = await geminiRes.json();
+                if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts[0]) {
+                    const text = data.candidates[0].content.parts[0].text;
+                    if (supabase) {
+                        try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: text }], { onConflict: 'prompt' }); } catch(e) {}
                     }
-                } else {
-                    lastError += "Gemini Error: " + resGemini.statusText + " | ";
+                    return res.status(200).json({ result: text, provider: "Gemini" });
                 }
             }
 
@@ -159,15 +160,14 @@ export default async function handler(req, res) {
                     })
                 });
 
-                if (orRes.ok) {
-                    const data = await orRes.json();
-                    if (data.choices && data.choices[0] && data.choices[0].message) {
-                        const text = data.choices[0].message.content;
-                        await upsertCache(supabase, prompt, text);
-                        return res.status(200).json({ result: text, provider: "OpenRouter" });
+            if (orRes.ok) {
+                const data = await orRes.json();
+                if (data.choices && data.choices[0] && data.choices[0].message) {
+                    const text = data.choices[0].message.content;
+                    if (supabase) {
+                        try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: text }], { onConflict: 'prompt' }); } catch(e) {}
                     }
-                } else {
-                    lastError += "OpenRouter Error: " + orRes.statusText + " | ";
+                    return res.status(200).json({ result: text, provider: "OpenRouter" });
                 }
             }
 
@@ -181,6 +181,14 @@ export default async function handler(req, res) {
                     })
                 });
 
+            if (polRes.ok) {
+                const text = await polRes.text();
+                if (supabase) {
+                    try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: text }], { onConflict: 'prompt' }); } catch(e) {}
+                }
+                return res.status(200).json({ result: text, provider: "Pollinations" });
+            } else {
+                 lastError += "Pollinations Error: " + polRes.statusText + " | ";
                 if (polRes.ok) {
                     const text = await polRes.text();
                     await upsertCache(supabase, prompt, text);
@@ -201,6 +209,14 @@ export default async function handler(req, res) {
                     })
                 });
 
+            if (sambaRes.ok) {
+                const data = await sambaRes.json();
+                if (data.choices && data.choices[0] && data.choices[0].message) {
+                    const text = data.choices[0].message.content;
+                    if (supabase) {
+                        try { await supabase.from('query_cache').upsert([{ prompt: prompt.trim(), response: text }], { onConflict: 'prompt' }); } catch(e) {}
+                    }
+                    return res.status(200).json({ result: text, provider: "SambaNova" });
                 if (sambaRes.ok) {
                     const data = await sambaRes.json();
                     if (data.choices && data.choices[0] && data.choices[0].message) {

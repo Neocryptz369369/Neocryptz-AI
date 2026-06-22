@@ -14,96 +14,28 @@
 
         async function testDoomsdayFallback() {
             const resEl = document.getElementById('doomsday-test-result');
+            if (!resEl) return;
             resEl.style.display = 'block';
             resEl.innerText = "Simulating total AI failure... routing to Doomsday Fallback...";
-
             let scrapes = JSON.parse(localStorage.getItem('localScrapes') || '[]');
-
             try {
-
-            if (userMessage.startsWith('/imagine')) {
-                const imgHtml = await processImageGeneration(userMessage);
-                appendMessage('assistant', imgHtml);
-                saveChat(userMessage, imgHtml);
-                return;
-            }
-
-
-            // Cooldown logic with TikTok Injection
-            const overlay = document.getElementById('cooldown-overlay');
-            const timerEl = document.getElementById('cooldown-timer');
-            const sponsorEl = document.getElementById('sponsor-content');
-
-            let timeLeft = (currentUser?.username === 'Neocryptz') ? 0 : 60;
-            if (timeLeft > 0) overlay.style.display = 'flex';
-            timerEl.innerText = timeLeft + 's';
-
-            // Fetch TikTok active recommendation securely
-            sponsorEl.innerHTML = '<p style="color:#aaa;">Loading Partner Offer...</p>';
-            fetch('/api/recommendations/active')
-                .then(r => r.ok ? r.json() : null)
-                .then(data => {
-                    if (data && data.id) {
-                        sponsorEl.innerHTML = `
-                            <div style="margin-top: 10px;">
-                                <span style="display: inline-block; padding: 4px 10px; font-size: 0.75rem; font-weight: 600; color: #ff0050; background: rgba(255, 0, 80, 0.1); border: 1px solid rgba(255, 0, 80, 0.4); border-radius: 9999px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em;">
-                                    🔥 ${data.visual_badge_text || "Trending on TikTok"}
-                                </span>
-                                <h4 style="font-size: 1.25rem; font-weight: 700; color: #fff; margin: 0 0 4px 0;">${data.product_name}</h4>
-                                <p style="font-size: 0.875rem; color: #aaa; padding: 0 16px; margin: 0 0 16px 0;">${data.display_headline}</p>
-
-                                <a
-                                    href="/api/recommendations/go?id=${data.id}"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    class="btn neon-border"
-                                    style="display: flex; align-items: center; justify-content: center; width: 100%; padding: 12px; font-weight: 600; color: #000; background: #fff; border-radius: 12px; text-decoration: none; transition: all 0.2s;"
-                                >
-                                    Check it out on TikTok
-                                </a>
-                            </div>
-                        `;
-                    } else {
-                        sponsorEl.innerHTML = '<p style="color:#777;">No active promotions right now.</p>';
-                    }
-                })
-                .catch(() => sponsorEl.innerHTML = '<p style="color:#777;">Failed to load promotion.</p>');
-
-            if (timeLeft > 0) {
-                const timerInt = setInterval(() => {
-                    timeLeft--;
-                    timerEl.innerText = timeLeft + 's';
-                    if (timeLeft <= 0) {
-                        clearInterval(timerInt);
-                        overlay.style.display = 'none';
-                    }
-                }, 1000);
-            }
-
-            const response = await fetch('/api/chat', {
+                const response = await fetch('/api/chat', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentToken}` },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': "Bearer " + (localStorage.getItem('token') || '') },
                     body: JSON.stringify({
                         prompt: "System test.",
                         keys: { PROVIDER_ORDER: 'force_fail', LOCAL_SCRAPES: scrapes },
                         history: []
                     })
                 });
-
                 const data = await response.json();
                 if (response.ok) {
-                    resEl.innerText = "SUCCESS! Fallback activated.
-
-Response:
-" + data.result;
+                    resEl.innerText = "SUCCESS! Fallback activated.\n\nResponse:\n" + data.result;
                 } else {
-                    resEl.innerText = "FAILED.
-
-" + data.error;
+                    resEl.innerText = "FAILED.\n\n" + (data.error || "Unknown error");
                 }
             } catch(e) {
-                resEl.innerText = "Network Error:
-" + e.message;
+                resEl.innerText = "Network Error:\n" + e.message;
             }
         }
 
@@ -115,7 +47,7 @@ Response:
             // Poll for recent active users (who have sent logs or logged in)
             adminPollInterval = setInterval(async () => {
                 const { data, error } = await supabaseClient
-                    .from('users')
+                    .from('profiles')
                     .select('username, plan, status, updated_at')
                     .order('updated_at', { ascending: false })
                     .limit(5);
@@ -136,7 +68,7 @@ Response:
         }
 
         async function fetchLiveUserStats() {
-            const { data: users, error } = await supabaseClient.from('users').select('*');
+            const { data: users, error } = await supabaseClient.from('profiles').select('*');
             if (users) {
                 let html = '<h4>LIVE USER STATISTICS</h4><table style="width:100%; border-collapse: collapse;">';
                 html += '<tr style="border-bottom:1px solid #ff00ff; color: #00ffff;"><th>Username</th><th>Status</th><th>Plan</th><th>Credits / Questions</th><th>Last Active</th></tr>';
@@ -172,6 +104,7 @@ Response:
             const file = fileInput.files[0];
             const reader = new FileReader();
             reader.onload = async (e) => {
+                const lines = e.target.result.split('\n').filter(l => l.trim().length > 0);
                 const lines = e.target.result.split('
 ').filter(l => l.trim().length > 0);
                 if (lines.length > 20) return alert("Batch limit is 20 rows max.");
@@ -180,6 +113,9 @@ Response:
                 for(let i=0; i<lines.length; i++) {
                     const item = lines[i].replace(/,/g, '');
                     document.getElementById('message-input').value = promptPrefix + " " + item;
+                    await sendMessage();
+                    await new Promise(r => setTimeout(r, 2500));
+                }
                     await sendMessage(); // Triggers the existing logic
                     await new Promise(r => setTimeout(r, 2500)); // Rate limit pause
                 }
@@ -201,12 +137,6 @@ Response:
             if (url) {
                 try {
                     await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ai_response: text }) });
-                } catch(e) { console.log('Webhook failed'); }
-            }
-        }
-        
-
-        , body: JSON.stringify({ ai_response: text }) });
                 } catch(e) { console.log('Webhook failed'); }
             }
         }
@@ -509,9 +439,8 @@ Response:
         // PASTE YOUR ADSTERRA POPUNDER CODE BELOW THIS LINE
 
         // PASTE YOUR ADSTERRA SOCIAL BAR CODE ABOVE THE CLOSING
-    <!-- ADSTERRA SOCIAL BAR -->
-    <!-- PASTE YOUR SOCIAL BAR SCRIPT HERE -->
-</body> TAG
+    // ADSTERRA SOCIAL BAR
+    // PASTE YOUR SOCIAL BAR SCRIPT HERE
     </script>
 </head>
 <body>
@@ -1191,7 +1120,6 @@ Response:
 
 
 
-
         function startAdCooldown(seconds) {
             const btn = document.getElementById('unlock-ad-btn');
             if (!btn) return;
@@ -1379,23 +1307,6 @@ async function init() {
                             foundUser.plan_expires_at = null;
                             localStorage.setItem('localUsers', JSON.stringify(users));
 
-                // Sync to Supabase profiles table if authenticated
-                if (supabaseClient) {
-                    supabaseClient.auth.getSession().then(({ data: { session } }) => {
-                        if (session) {
-                            supabaseClient.from('profiles').upsert({
-                                id: session.user.id,
-                                username: username,
-                                full_name: fullName,
-                                email: validEmail,
-                                address: fullAddress,
-                                phone: phone,
-                                age: age
-                            }).then(() => console.log("Profile synced to Supabase")).catch(err => console.log("Profile sync error", err));
-                        }
-                    });
-                }
-                            alert("Your paid plan has expired. You have been downgraded to the Free plan.");
                         }
 
                         localStorage.setItem('currentUser', JSON.stringify(foundUser));
@@ -1595,6 +1506,11 @@ async function init() {
                 if (localUsers[currentUser.username]) {
                     localUsers[currentUser.username].credits = currentUser.credits;
                     localStorage.setItem("localUsers", JSON.stringify(localUsers));
+                }
+
+                // Sync to Supabase if possible
+                if (supabaseClient && currentUser.id) {
+                    supabaseClient.from('profiles').update({ credits: currentUser.credits }).eq('id', currentUser.id);
                 }
 
                 // Update UI
@@ -2097,27 +2013,16 @@ async function init() {
         }
 
         async function banUser(userId) {
-            if (!confirm("Are you sure you want to PERMANENTLY BAN this user?")) return;
+            let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
+            let foundUserKey = Object.keys(users).find(k => users[k].id === userId || users[k].username === userId);
+            if (foundUserKey) {
+                users[foundUserKey].banned = true;
+                localStorage.setItem('localUsers', JSON.stringify(users));
+            }
 
             try {
-                let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
-                let foundKey = Object.keys(users).find(k => users[k].id === userId || users[k].username === userId);
-                if (foundKey) {
-                    users[foundKey].banned = true;
-                    localStorage.setItem('localUsers', JSON.stringify(users));
-                }
-
-                if (supabaseClient) {
-                    const { error } = await supabaseClient
-                        .from('profiles')
-                        .update({ banned: true })
-                        .eq('id', userId);
-
-                    if (error) {
-                        // Try by username if ID fails or if userId was a username
-                        await supabaseClient.from('profiles').update({ banned: true }).eq('username', userId);
-                    }
-                }
+                await supabaseClient.from('profiles').update({ banned: true }).eq('id', userId);
+            } catch(e) { console.log(e); }
 
                 alert("User has been completely BANNED.");
                 if (typeof loadAdminData === 'function') loadAdminData();
@@ -2129,70 +2034,40 @@ async function init() {
         }
 
         async function grantManualPlan(userId, planName, period = 'monthly') {
-            if (!confirm(`Grant ${planName} (${period}) to user ${userId}?`)) return;
-
             const days = period === 'yearly' ? 365 : 30;
             let expDate = planName === 'Free' ? null : new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
             const grantedDate = planName === 'Free' ? null : new Date().toLocaleDateString();
             
-            if (userId.toLowerCase() === 'neocryptz') {
-                expDate = null;
-            }
-
+            if (userId.toLowerCase() === 'neocryptz') expDate = null;
             if (planName === 'Unlimited') planName = 'Unlimited Text';
 
-            const multiplier = period === 'yearly' ? 12 : 1;
-            let newCredits = 25;
-            if (planName === 'Starter') newCredits = 500 * multiplier;
-            if (planName === 'Power') newCredits = 6000 * multiplier;
-            if (planName === 'Unlimited Text') newCredits = 999999;
-
             try {
-                // Update local storage
-                let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
-                let foundKey = Object.keys(users).find(k => users[k].id === userId || users[k].username === userId);
-                if (foundKey) {
-                    users[foundKey].plan = planName;
-                    users[foundKey].plan_expires_at = expDate;
-                    users[foundKey].plan_granted_at = grantedDate;
-                    users[foundKey].credits = newCredits;
-                    localStorage.setItem('localUsers', JSON.stringify(users));
-                }
+                await supabaseClient.from('profiles').update({
+                    plan: planName,
+                    status: planName === 'Free' ? 'inactive' : 'active',
+                    updated_at: new Date(),
+                    plan_expires_at: expDate,
+                    plan_granted_at: grantedDate
+                }).eq('id', userId);
+            } catch(e) { console.log(e); }
 
-                // Update Supabase profiles
-                if (supabaseClient) {
-                    const { error } = await supabaseClient
-                        .from('profiles')
-                        .update({
-                            plan: planName,
-                            credits: newCredits,
-                            plan_expires_at: expDate,
-                            plan_granted_at: grantedDate,
-                            updated_at: new Date()
-                        })
-                        .eq('id', userId);
-
-                    if (error) {
-                        // Try by username
-                        await supabaseClient.from('profiles')
-                            .update({
-                                plan: planName,
-                                credits: newCredits,
-                                plan_expires_at: expDate,
-                                plan_granted_at: grantedDate,
-                                updated_at: new Date()
-                            })
-                            .eq('username', userId);
-                    }
-                }
-
-                alert(`Manual plan granted to ${userId}`);
-                if (typeof loadAdminData === 'function') loadAdminData();
-                if (typeof loadUsersAndLogs === 'function') loadUsersAndLogs();
-            } catch(e) {
-                console.error("Grant plan error:", e);
-                alert("Failed to grant plan: " + e.message);
+            let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
+            let foundUser = Object.keys(users).find(k => users[k].id === userId || users[k].username === userId);
+            if (foundUser) {
+                users[foundUser].plan = planName;
+                users[foundUser].plan_expires_at = expDate;
+                users[foundUser].plan_granted_at = grantedDate;
+                const multiplier = period === 'yearly' ? 12 : 1;
+                if (planName === 'Starter') users[foundUser].credits = 500 * multiplier;
+                if (planName === 'Power') users[foundUser].credits = 6000 * multiplier;
+                if (planName === 'Unlimited Text') users[foundUser].credits = 999999;
+                if (planName === 'Free') users[foundUser].credits = 25;
+                localStorage.setItem('localUsers', JSON.stringify(users));
             }
+
+            alert(planName === 'Free' ? 'User plan revoked.' : `Plan ${planName} (${period}) updated successfully!`);
+            loadAdminData();
+            loadUsersAndLogs();
         }
 
         function loadUsersAndLogs() {
@@ -2313,14 +2188,8 @@ async function init() {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        prompt: "Provide 2 totally different style variations for the following prompt. Format exactly like this:
-
-[OPTION A]: (text)
-
-[OPTION B]: (text)
-
-Prompt: " + msg,
-                        keys: { PROVIDER_ORDER: "pollinations,sambanova,gemini,openrouter" }
+                        prompt: "Provide 2 totally different style variations for the following prompt. Format exactly like this:\n\n[OPTION A]: (text)\n\n[OPTION B]: (text)\n\nPrompt: " + msg,
+                        keys: { PROVIDER_ORDER: "pollinations,sambanova,groq,gemini" }
                     })
                 });
                 const data = await res.json();
@@ -2350,20 +2219,13 @@ Prompt: " + msg,
                 win.scrollTop = win.scrollHeight;
                 
             } catch(e) {
-                appendMessage('assistant', "Split-View Error: " + e.message);
             }
         }
         
         ,
                     body: JSON.stringify({ 
-                        prompt: "Provide 2 totally different style variations for the following prompt. Format exactly like this:
-
-[OPTION A]: (text)
-
-[OPTION B]: (text)
-
-Prompt: " + msg,
-                        keys: { PROVIDER_ORDER: "pollinations,sambanova,gemini,openrouter" }
+                        prompt: "Provide 2 totally different style variations for the following prompt. Format exactly like this:\n\n[OPTION A]: (text)\n\n[OPTION B]: (text)\n\nPrompt: " + msg,
+                        keys: { PROVIDER_ORDER: "pollinations,sambanova,groq,gemini" }
                     })
                 });
                 const data = await res.json();
@@ -2393,7 +2255,6 @@ Prompt: " + msg,
                 win.scrollTop = win.scrollHeight;
                 
             } catch(e) {
-                appendMessage('assistant', "Split-View Error: " + e.message);
             }
         }
         function generateCanvas() {
@@ -2404,9 +2265,9 @@ Prompt: " + msg,
             
             const prompt = `${b1} aimed at ${b2}. ${b3}.`;
             document.getElementById('message-input').value = prompt;
-            document.getElementById('canvas-modal').style.display = 'none';
-            document.getElementById('message-input').focus();
+            closeModal('canvas-modal');
         }
+        
         async function runPolisher() {
             const input = document.getElementById('polish-input').value.trim();
             if(!input) return;
@@ -2418,7 +2279,7 @@ Prompt: " + msg,
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         prompt: "Fix all grammar errors and improve the vocabulary of this text: " + input,
-                        keys: { PROVIDER_ORDER: "pollinations,sambanova,gemini,openrouter" }
+                        keys: { PROVIDER_ORDER: "pollinations,sambanova,groq,gemini" }
                     })
                 });
                 const data = await res.json();
@@ -2431,7 +2292,7 @@ Prompt: " + msg,
         ,
                     body: JSON.stringify({ 
                         prompt: "Fix all grammar errors and improve the vocabulary of this text: " + input,
-                        keys: { PROVIDER_ORDER: "pollinations,sambanova,gemini,openrouter" }
+                        keys: { PROVIDER_ORDER: "pollinations,sambanova,groq,gemini" }
                     })
                 });
                 const data = await res.json();
@@ -2440,7 +2301,7 @@ Prompt: " + msg,
                 document.getElementById('polish-output').innerText = "Network Error";
             }
         }
-                function checkMacros() {
+        function checkMacros() {
             const input = document.getElementById('message-input');
             let val = input.value;
             const lowVal = val.toLowerCase();
@@ -2577,7 +2438,6 @@ Prompt: " + msg,
                 
                 loadTikTokLinks();
             } catch(e) {
-                alert("Failed to save link: " + e.message);
             }
         }
 
@@ -2588,7 +2448,7 @@ Prompt: " + msg,
                 }
                 await supabaseClient.from('tiktok_recommendations').update({ is_active: makeActive }).eq('id', id);
                 loadTikTokLinks();
-            } catch(e) { alert("Failed to toggle: " + e.message); }
+            } catch(e) { console.log(e); }
         }
 
         async function deleteTikTokLink(id) {
@@ -2596,7 +2456,7 @@ Prompt: " + msg,
             try {
                 await supabaseClient.from('tiktok_recommendations').delete().eq('id', id);
                 loadTikTokLinks();
-            } catch(e) { alert("Failed to delete: " + e.message); }
+            } catch(e) { console.log(e); }
         }
 
         function showAdminTab(id) {
@@ -2787,7 +2647,6 @@ Prompt: " + msg,
                     alert("Failed to trigger Hook: " + err);
                 }
             } catch (e) {
-                alert("Error triggering Hook: " + e.message);
             }
         }
 
