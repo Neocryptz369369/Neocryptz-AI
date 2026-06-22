@@ -3,7 +3,7 @@ const fs = require('fs');
 
 // System function to deploy code automatically to your platforms
 function deployProject(projectName, codeFiles) {
-    console.log(`Initializing NEOCRYPTZ Git pipeline for: ${projectName}`);
+    console.log(`Initializing Neocryptz Git pipeline for: ${projectName}`);
     
     // 1. Create a local temporary directory for git initialization
     const dir = `./${projectName}`;
@@ -21,7 +21,7 @@ function deployProject(projectName, codeFiles) {
         cd ${projectName} && 
         git init && 
         git add . && 
-        git commit -m "Deploy via NEOCRYPTZ AI OS" && git push origin main --force
+        git commit -m "Deploy via Neocryptz AI OS" && git push origin main --force
     `;
 
     exec(commandSequence, (error, stdout, stderr) => {
