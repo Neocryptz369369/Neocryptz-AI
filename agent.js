@@ -1,6 +1,6 @@
-const { BrowserUse } = require('browser-use-sdk');
-const express = require('express');
-const { deployProject } = require('./actions');
+import { BrowserUse } from 'browser-use-sdk';
+import express from 'express';
+import { deployProject } from './actions.js';
 const app = express();
 app.use(express.json());
 
