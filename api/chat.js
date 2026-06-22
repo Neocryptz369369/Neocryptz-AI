@@ -1,6 +1,6 @@
-const { createClient  } = require('@supabase/supabase-js');
+import { createClient   } from '@supabase/supabase-js';
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
     // Server-side Geo and VPN blocking
