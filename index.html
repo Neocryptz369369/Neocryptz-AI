@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NEOCRYPTZ AI // CLOUD OS V4.1.2</title>
+    <title>Neocryptz AI // CLOUD OS V4.1.2</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         function setProviderOrder(order) {
@@ -14,96 +14,28 @@
 
         async function testDoomsdayFallback() {
             const resEl = document.getElementById('doomsday-test-result');
+            if (!resEl) return;
             resEl.style.display = 'block';
             resEl.innerText = "Simulating total AI failure... routing to Doomsday Fallback...";
-
             let scrapes = JSON.parse(localStorage.getItem('localScrapes') || '[]');
-
             try {
-
-            if (userMessage.startsWith('/imagine')) {
-                const imgHtml = await processImageGeneration(userMessage);
-                appendMessage('assistant', imgHtml);
-                saveChat(userMessage, imgHtml);
-                return;
-            }
-
-
-            // Cooldown logic with TikTok Injection
-            const overlay = document.getElementById('cooldown-overlay');
-            const timerEl = document.getElementById('cooldown-timer');
-            const sponsorEl = document.getElementById('sponsor-content');
-
-            let timeLeft = (currentUser?.username === 'Neocryptz') ? 0 : 60;
-            if (timeLeft > 0) overlay.style.display = 'flex';
-            timerEl.innerText = timeLeft + 's';
-
-            // Fetch TikTok active recommendation securely
-            sponsorEl.innerHTML = '<p style="color:#aaa;">Loading Partner Offer...</p>';
-            fetch('/api/recommendations/active')
-                .then(r => r.ok ? r.json() : null)
-                .then(data => {
-                    if (data && data.id) {
-                        sponsorEl.innerHTML = `
-                            <div style="margin-top: 10px;">
-                                <span style="display: inline-block; padding: 4px 10px; font-size: 0.75rem; font-weight: 600; color: #ff0050; background: rgba(255, 0, 80, 0.1); border: 1px solid rgba(255, 0, 80, 0.4); border-radius: 9999px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em;">
-                                    🔥 ${data.visual_badge_text || "Trending on TikTok"}
-                                </span>
-                                <h4 style="font-size: 1.25rem; font-weight: 700; color: #fff; margin: 0 0 4px 0;">${data.product_name}</h4>
-                                <p style="font-size: 0.875rem; color: #aaa; padding: 0 16px; margin: 0 0 16px 0;">${data.display_headline}</p>
-
-                                <a
-                                    href="/api/recommendations/go?id=${data.id}"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    class="btn neon-border"
-                                    style="display: flex; align-items: center; justify-content: center; width: 100%; padding: 12px; font-weight: 600; color: #000; background: #fff; border-radius: 12px; text-decoration: none; transition: all 0.2s;"
-                                >
-                                    Check it out on TikTok
-                                </a>
-                            </div>
-                        `;
-                    } else {
-                        sponsorEl.innerHTML = '<p style="color:#777;">No active promotions right now.</p>';
-                    }
-                })
-                .catch(() => sponsorEl.innerHTML = '<p style="color:#777;">Failed to load promotion.</p>');
-
-            if (timeLeft > 0) {
-                const timerInt = setInterval(() => {
-                    timeLeft--;
-                    timerEl.innerText = timeLeft + 's';
-                    if (timeLeft <= 0) {
-                        clearInterval(timerInt);
-                        overlay.style.display = 'none';
-                    }
-                }, 1000);
-            }
-
-            const response = await fetch('/api/chat', {
+                const response = await fetch('/api/chat', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentToken}` },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': "Bearer " + (localStorage.getItem('token') || '') },
                     body: JSON.stringify({
                         prompt: "System test.",
                         keys: { PROVIDER_ORDER: 'force_fail', LOCAL_SCRAPES: scrapes },
                         history: []
                     })
                 });
-
                 const data = await response.json();
                 if (response.ok) {
-                    resEl.innerText = "SUCCESS! Fallback activated.
-
-Response:
-" + data.result;
+                    resEl.innerText = "SUCCESS! Fallback activated.\n\nResponse:\n" + data.result;
                 } else {
-                    resEl.innerText = "FAILED.
-
-" + data.error;
+                    resEl.innerText = "FAILED.\n\n" + (data.error || "Unknown error");
                 }
             } catch(e) {
-                resEl.innerText = "Network Error:
-" + e.message;
+                resEl.innerText = "Network Error:\n" + e.message;
             }
         }
 
@@ -115,7 +47,7 @@ Response:
             // Poll for recent active users (who have sent logs or logged in)
             adminPollInterval = setInterval(async () => {
                 const { data, error } = await supabaseClient
-                    .from('users')
+                    .from('profiles')
                     .select('username, plan, status, updated_at')
                     .order('updated_at', { ascending: false })
                     .limit(5);
@@ -136,7 +68,7 @@ Response:
         }
 
         async function fetchLiveUserStats() {
-            const { data: users, error } = await supabaseClient.from('users').select('*');
+            const { data: users, error } = await supabaseClient.from('profiles').select('*');
             if (users) {
                 let html = '<h4>LIVE USER STATISTICS</h4><table style="width:100%; border-collapse: collapse;">';
                 html += '<tr style="border-bottom:1px solid #ff00ff; color: #00ffff;"><th>Username</th><th>Status</th><th>Plan</th><th>Credits / Questions</th><th>Last Active</th></tr>';
@@ -172,57 +104,19 @@ Response:
             const file = fileInput.files[0];
             const reader = new FileReader();
             reader.onload = async (e) => {
-                const lines = e.target.result.split('
-').filter(l => l.trim().length > 0);
+                const lines = e.target.result.split('\n').filter(l => l.trim().length > 0);
                 if (lines.length > 20) return alert("Batch limit is 20 rows max.");
                 
                 alert("Processing " + lines.length + " rows. This will take a moment...");
                 for(let i=0; i<lines.length; i++) {
                     const item = lines[i].replace(/,/g, '');
                     document.getElementById('message-input').value = promptPrefix + " " + item;
-                    await sendMessage(); // Triggers the existing logic
-                    await new Promise(r => setTimeout(r, 2500)); // Rate limit pause
+                    await sendMessage();
+                    await new Promise(r => setTimeout(r, 2500));
                 }
             };
             reader.readAsText(file);
         }
-        
-        async function processCSV() {
-            const fileInput = document.getElementById('csv-upload');
-            const promptPrefix = document.getElementById('csv-batch-prompt').value.trim();
-            if (!fileInput.files.length || !promptPrefix) return alert("Select a CSV file and enter a prompt prefix.");
-            
-            const file = fileInput.files[0];
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                const lines = e.target.result.split('
-').filter(l => l.trim().length > 0);
-                if (lines.length > 20) return alert("Batch limit is 20 rows max.");
-                
-                alert("Processing " + lines.length + " rows. This will take a moment...");
-                for(let i=0; i<lines.length; i++) {
-                    const item = lines[i].replace(/,/g, '');
-                    document.getElementById('message-input').value = promptPrefix + " " + item;
-                    await sendMessage(); // Triggers the existing logic
-                    await new Promise(r => setTimeout(r, 2500)); // Rate limit pause
-                }
-            };
-            reader.readAsText(file);
-        }
-        function saveWebhook() {
-            const url = document.getElementById('user-webhook-url').value.trim();
-            localStorage.setItem('userWebhook', url);
-            alert("Webhook Saved! Responses will now be forwarded.");
-        }
-        async function triggerWebhook(text) {
-            const url = localStorage.getItem('userWebhook');
-            if (url) {
-                try {
-                    await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ai_response: text }) });
-                } catch(e) { console.log('Webhook failed'); }
-            }
-        }
-        
         function saveWebhook() {
             const url = document.getElementById('user-webhook-url').value.trim();
             localStorage.setItem('userWebhook', url);
@@ -535,9 +429,8 @@ Response:
         // PASTE YOUR ADSTERRA POPUNDER CODE BELOW THIS LINE
 
         // PASTE YOUR ADSTERRA SOCIAL BAR CODE ABOVE THE CLOSING
-    <!-- ADSTERRA SOCIAL BAR -->
-    <!-- PASTE YOUR SOCIAL BAR SCRIPT HERE -->
-</body> TAG
+    // ADSTERRA SOCIAL BAR
+    // PASTE YOUR SOCIAL BAR SCRIPT HERE
     </script>
 </head>
 <body>
@@ -596,7 +489,7 @@ Response:
 
     <div id="admin-notif" style="display:none; position:fixed; top:20px; left:50%; transform:translateX(-50%); background:rgba(255,0,0,0.8); color:#fff; padding:10px 20px; border:1px solid #ff00ff; border-radius:5px; z-index:9999; font-weight:bold; box-shadow:0 0 15px #ff0000;"></div>
     <div id="auth-screen">
-        <h1 style="color: var(--primary); text-shadow: 0 0 10px rgba(255, 0, 255, 0.8), 0 0 20px rgba(0, 255, 255, 0.5);">NEOCRYPTZ AI</h1>
+        <h1 style="color: var(--primary); text-shadow: 0 0 10px rgba(255, 0, 255, 0.8), 0 0 20px rgba(0, 255, 255, 0.5);">Neocryptz AI</h1>
         <div id="login-form" class="auth-form neon-border">
             <h2 style="text-align:center;">LOGIN</h2>
             <input type="text" id="login-user" placeholder="Username" autocomplete="username">
@@ -633,7 +526,7 @@ Response:
 
     <div id="sidebar" class="neon-border">
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 10px;">
-            <h2 style="color: var(--primary); font-size: 1.2em; margin: 0;">NEOCRYPTZ AI</h2>
+            <h2 style="color: var(--primary); font-size: 1.2em; margin: 0;">Neocryptz AI</h2>
             <div>
                 <span id="admin-icon" style="display:none; cursor: pointer; color: #8a2be2; font-size: 1.2em; margin-right: 5px;" onclick="openModal('admin-modal')" title="Admin Console">🛡️</span>
                 <span id="user-icon" style="display:none; cursor: pointer; font-size: 1.2em;" onclick="openModal('user-menu-modal')" title="Settings & Menu">⚙️</span>
@@ -657,7 +550,7 @@ Response:
 
     <div id="main-content" class="neon-border">
         <div id="chat-window">
-            <div class="message assistant neon-border">NEOCRYPTZ AI // CLOUD OS V4.1.2 ONLINE. How can I assist you today?</div>
+            <div class="message assistant neon-border">Neocryptz AI // CLOUD OS V4.1.2 ONLINE. How can I assist you today?</div>
         </div>
         <div id="char-counter" style="position: absolute; right: 25px; bottom: 80px; font-size: 0.8em; color: #aaa; background: #111; padding: 2px 5px; border-radius: 3px; border: 1px solid #333;">0 / 300 Chars</div>
         <div id="input-area" class="neon-border" style="flex-direction: column; gap: 10px; align-items: stretch;">
@@ -703,7 +596,7 @@ Response:
             <div style="margin-bottom: 20px;">
                 <label style="color: var(--secondary); font-size: 0.8em; display:block; margin-bottom: 5px;">AI PERSONA MODULE</label>
                 <select id="persona-select" class="neon-border" onchange="setPersona(this.value)" style="width: 100%; padding: 10px; background: #111; color: var(--text); border: 1px solid var(--primary); outline: none;">
-                    <option value="default">Default: NEOCRYPTZ Assistant</option>
+                    <option value="default">Default: Neocryptz Assistant</option>
                     <option value="seo">SEO Keyword Shortener</option>
                     <option value="code">Code Bug Finder</option>
                     <option value="copywriter">Catchy Copywriter</option>
@@ -758,7 +651,7 @@ Response:
                     <button class="btn" style="font-size:0.7em;" onclick="useTemplate('Summarize the top tech headline of the morning about [TOPIC]')">Daily Briefing</button>
                 </div>
             </div><div style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
-                <button class="btn" onclick="closeModal('user-menu-modal'); openModal('share-modal')">SHARE NEOCRYPTZ</button>
+                <button class="btn" onclick="closeModal('user-menu-modal'); openModal('share-modal')">SHARE Neocryptz</button>
                 <button class="btn" onclick="closeModal('user-menu-modal'); openModal('embed-modal')">GET CHATBOT WIDGET</button>
                 <button class="btn" onclick="closeModal('user-menu-modal'); openModal('settings-modal')">SETTINGS / OAUTH</button>
                 <button class="btn" onclick="closeModal('user-menu-modal'); openModal('history-modal')">CHAT HISTORY</button>
@@ -789,7 +682,7 @@ Response:
     <!-- Share Modal -->
     <div id="share-modal" class="modal neon-border">
         <div class="modal-content" style="max-width: 500px; text-align: center;">
-            <h2 style="color: var(--primary);">SHARE NEOCRYPTZ AI</h2>
+            <h2 style="color: var(--primary);">SHARE Neocryptz AI</h2>
             <div style="margin: 20px 0; padding: 15px; border: 1px solid #333; background: rgba(0,0,0,0.5); font-size: 0.9em; color: #fff; text-align: left;">
                 Check out Neocryptz AI I'm only letting 25 people in today. You can pay $20 month-to-month, or lock in your spot for a full year for $240 for unlimited AI so you never have to worry about price increases when I expand the server later. Limit 40 questions a day.<br><br>
                 <a href="https://neocryptz-ai.vercel.app/" style="color: var(--secondary); text-decoration: none;">https://neocryptz-ai.vercel.app/</a>
@@ -829,7 +722,7 @@ Response:
     <div id="embed-modal" class="modal neon-border">
         <div class="modal-content" style="max-width: 600px; text-align: center;">
             <h2 style="color: var(--primary);">MICRO-CHATBOT WIDGET</h2>
-            <p style="font-size: 0.9em; color: #aaa;">Embed the NEOCRYPTZ AI onto your own website or blog! Your visitors will be able to chat with it directly.</p>
+            <p style="font-size: 0.9em; color: #aaa;">Embed the Neocryptz AI onto your own website or blog! Your visitors will be able to chat with it directly.</p>
             <div style="margin: 20px 0; padding: 15px; border: 1px solid #333; background: rgba(0,0,0,0.5);">
                 <textarea id="embed-code" style="width: 100%; height: 100px; background: #111; color: var(--secondary); border: 1px solid var(--primary); padding: 10px; font-family: monospace;" readonly></textarea>
             </div>
@@ -888,7 +781,7 @@ Response:
                     <div id="user-support-chat-box" style="height: 200px; overflow-y: auto; margin-bottom: 10px; padding: 10px; background: #000; border: 1px inset #8a2be2;"></div>
                     <div style="display: flex; gap: 10px;">
                         <input type="text" id="user-support-input" placeholder="How can Neocryptz help you today?" style="flex: 1; padding: 10px; background: #111; border: 1px solid #8a2be2; color: #fff;">
-                        <button class="btn" onclick="sendSupportMessage(false)">SEND TO NEOCRYPTZ</button>
+                        <button class="btn" onclick="sendSupportMessage(false)">SEND TO Neocryptz</button>
                     </div>
                 </div>
             </div>
@@ -1150,7 +1043,7 @@ Response:
 
             <div style="margin-bottom: 20px; padding: 15px; border: 1px solid var(--secondary); background: #111; text-align: center;">
                 <h3 style="color: var(--secondary); margin-top: 0;">☕ SUPPORT THE CREATOR</h3>
-                <p style="font-size: 0.8em; color: #aaa;">If you love NEOCRYPTZ AI and want to support its privacy-first development, consider leaving a tip!</p>
+                <p style="font-size: 0.8em; color: #aaa;">If you love Neocryptz AI and want to support its privacy-first development, consider leaving a tip!</p>
                 <button class="btn" style="background: var(--secondary); color: #000; width: 100%; font-weight: bold;" onclick="window.open('https://paypal.me/bestcabautogroup', '_blank')">TIP $5.00</button>
             </div>
 
@@ -1197,17 +1090,17 @@ Response:
                 if (data) {
                     // Block non-US
                     if (data.countryCode !== 'US') {
-                        document.body.innerHTML = '<h1 style="color:red; text-align:center; margin-top:20vh;">ACCESS DENIED</h1><p style="text-align:center;">NEOCRYPTZ AI is currently restricted to US residents only.</p>';
+                        document.body.innerHTML = '<h1 style="color:red; text-align:center; margin-top:20vh;">ACCESS DENIED</h1><p style="text-align:center;">Neocryptz AI is currently restricted to US residents only.</p>';
                         return true;
                     }
                     // Block California
                     if (data.regionCode === 'CA') {
-                        document.body.innerHTML = '<h1 style="color:red; text-align:center; margin-top:20vh;">ACCESS DENIED</h1><p style="text-align:center;">Due to state regulations, NEOCRYPTZ AI is not available in California.</p>';
+                        document.body.innerHTML = '<h1 style="color:red; text-align:center; margin-top:20vh;">ACCESS DENIED</h1><p style="text-align:center;">Due to state regulations, Neocryptz AI is not available in California.</p>';
                         return true;
                     }
                     // Block VPNs / Proxies
                     if (data.isProxy) {
-                        document.body.innerHTML = '<h1 style="color:red; text-align:center; margin-top:20vh;">SECURITY ALERT</h1><p style="text-align:center;">VPN or Proxy detected. Please disable your VPN to access NEOCRYPTZ AI.</p>';
+                        document.body.innerHTML = '<h1 style="color:red; text-align:center; margin-top:20vh;">SECURITY ALERT</h1><p style="text-align:center;">VPN or Proxy detected. Please disable your VPN to access Neocryptz AI.</p>';
                         return true;
                     }
                 }
@@ -1216,7 +1109,6 @@ Response:
         }
 
 
-        let adCooldownTimer = null;
 
         function startAdCooldown(seconds) {
             const btn = document.getElementById('unlock-ad-btn');
@@ -1405,23 +1297,6 @@ async function init() {
                             foundUser.plan_expires_at = null;
                             localStorage.setItem('localUsers', JSON.stringify(users));
 
-                // Sync to Supabase profiles table if authenticated
-                if (supabaseClient) {
-                    supabaseClient.auth.getSession().then(({ data: { session } }) => {
-                        if (session) {
-                            supabaseClient.from('profiles').upsert({
-                                id: session.user.id,
-                                username: username,
-                                full_name: fullName,
-                                email: validEmail,
-                                address: fullAddress,
-                                phone: phone,
-                                age: age
-                            }).then(() => console.log("Profile synced to Supabase")).catch(err => console.log("Profile sync error", err));
-                        }
-                    });
-                }
-                            alert("Your paid plan has expired. You have been downgraded to the Free plan.");
                         }
 
                         localStorage.setItem('currentUser', JSON.stringify(foundUser));
@@ -1621,6 +1496,11 @@ async function init() {
                 if (localUsers[currentUser.username]) {
                     localUsers[currentUser.username].credits = currentUser.credits;
                     localStorage.setItem("localUsers", JSON.stringify(localUsers));
+                }
+
+                // Sync to Supabase if possible
+                if (supabaseClient && currentUser.id) {
+                    supabaseClient.from('profiles').update({ credits: currentUser.credits }).eq('id', currentUser.id);
                 }
 
                 // Update UI
@@ -1971,8 +1851,7 @@ async function init() {
             return escapedText.replace(/```([\s\S]*?)```/g, (match, code) => {
                 const id = uuidv4();
                 return `<pre id="${id}">${code}<button class="copy-btn" onclick="copyToClipboard('${id}')">COPY</button></pre>`;
-            }).replace(/
-/g, '<br>');
+            }).replace(/\n/g, '<br>');
         }
 
         async function copyToClipboard(id) {
@@ -2053,11 +1932,11 @@ async function init() {
 
         
         function autoAuthorizeAll() {
-            if (confirm("NEOCRYPTZ AI requests automatic authorization for all 39 connected platforms to execute this autonomous task. Do you authorize?")) {
+            if (confirm("Neocryptz AI requests automatic authorization for all 39 connected platforms to execute this autonomous task. Do you authorize?")) {
                 oauthProviders.forEach(p => {
                     localStorage.setItem(`authToken_${p}`, "AUTO_AUTH_TOKEN_ACTIVE_" + Date.now());
                 });
-                alert("Success: Automatically authorized 39 OAuth platforms. NEOCRYPTZ AI has full cross-platform access.");
+                alert("Success: Automatically authorized 39 OAuth platforms. Neocryptz AI has full cross-platform access.");
                 if (document.getElementById('settings-modal').style.display === 'flex') {
                     renderOAuthList();
                 }
@@ -2118,32 +1997,15 @@ async function init() {
 
         async function banUser(userId) {
             let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
-            let foundUser = Object.keys(users).find(k => users[k].id === userId || users[k].username === userId);
-            if (foundUser) {
-                users[foundUser].banned = true;
+            let foundUserKey = Object.keys(users).find(k => users[k].id === userId || users[k].username === userId);
+            if (foundUserKey) {
+                users[foundUserKey].banned = true;
                 localStorage.setItem('localUsers', JSON.stringify(users));
-
-                // Sync to Supabase profiles table if authenticated
-                if (supabaseClient) {
-                    supabaseClient.auth.getSession().then(({ data: { session } }) => {
-                        if (session) {
-                            supabaseClient.from('profiles').upsert({
-                                id: session.user.id,
-                                username: username,
-                                full_name: fullName,
-                                email: validEmail,
-                                address: fullAddress,
-                                phone: phone,
-                                age: age
-                            }).then(() => console.log("Profile synced to Supabase")).catch(err => console.log("Profile sync error", err));
-                        }
-                    });
-                }
             }
 
             try {
-                await supabaseClient.from('users').update({ banned: true }).eq('id', userId);
-            } catch(e) {}
+                await supabaseClient.from('profiles').update({ banned: true }).eq('id', userId);
+            } catch(e) { console.log(e); }
 
             alert("User has been completely BANNED.");
             loadAdminData();
@@ -2151,67 +2013,39 @@ async function init() {
         }
 
         async function grantManualPlan(userId, planName, period = 'monthly') {
-            // Calculate duration
             const days = period === 'yearly' ? 365 : 30;
             let expDate = planName === 'Free' ? null : new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
             const grantedDate = planName === 'Free' ? null : new Date().toLocaleDateString();
             
-            if (userId.toLowerCase() === 'neocryptz') {
-                expDate = null; // Never expire for the main admin account
-            }
-
-            // Map UI plan names to internal plan names if necessary
+            if (userId.toLowerCase() === 'neocryptz') expDate = null;
             if (planName === 'Unlimited') planName = 'Unlimited Text';
 
-            // Update the user's plan, expiration, and status in Supabase
-            const { data, error } = await supabaseClient
-                .from('users')
-                .update({
+            try {
+                await supabaseClient.from('profiles').update({
                     plan: planName,
                     status: planName === 'Free' ? 'inactive' : 'active',
                     updated_at: new Date(),
                     plan_expires_at: expDate,
                     plan_granted_at: grantedDate
-                })
-                .eq('id', userId);
+                }).eq('id', userId);
+            } catch(e) { console.log(e); }
 
-            if (error) {
-                console.log('Supabase users table missing/failing. Falling back to local storage update.');
-                let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
-                let foundUser = Object.keys(users).find(k => users[k].id === userId || users[k].username === userId);
-                if (foundUser) {
-                    users[foundUser].plan = planName;
-                    users[foundUser].plan_expires_at = expDate;
-                    users[foundUser].plan_granted_at = grantedDate;
-
-                    const multiplier = period === 'yearly' ? 12 : 1;
-                    if (planName === 'Starter') users[foundUser].credits = 500 * multiplier;
-                    if (planName === 'Power') users[foundUser].credits = 6000 * multiplier;
-                    if (planName === 'Unlimited Text') users[foundUser].credits = 999999;
-                    if (planName === 'Free') users[foundUser].credits = 25;
-                    localStorage.setItem('localUsers', JSON.stringify(users));
-
-                // Sync to Supabase profiles table if authenticated
-                if (supabaseClient) {
-                    supabaseClient.auth.getSession().then(({ data: { session } }) => {
-                        if (session) {
-                            supabaseClient.from('profiles').upsert({
-                                id: session.user.id,
-                                username: username,
-                                full_name: fullName,
-                                email: validEmail,
-                                address: fullAddress,
-                                phone: phone,
-                                age: age
-                            }).then(() => console.log("Profile synced to Supabase")).catch(err => console.log("Profile sync error", err));
-                        }
-                    });
-                }
-                }
+            let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
+            let foundUser = Object.keys(users).find(k => users[k].id === userId || users[k].username === userId);
+            if (foundUser) {
+                users[foundUser].plan = planName;
+                users[foundUser].plan_expires_at = expDate;
+                users[foundUser].plan_granted_at = grantedDate;
+                const multiplier = period === 'yearly' ? 12 : 1;
+                if (planName === 'Starter') users[foundUser].credits = 500 * multiplier;
+                if (planName === 'Power') users[foundUser].credits = 6000 * multiplier;
+                if (planName === 'Unlimited Text') users[foundUser].credits = 999999;
+                if (planName === 'Free') users[foundUser].credits = 25;
+                localStorage.setItem('localUsers', JSON.stringify(users));
             }
 
             alert(planName === 'Free' ? 'User plan revoked.' : `Plan ${planName} (${period}) updated successfully!`);
-            loadAdminData(); // Refresh the admin table so the change shows
+            loadAdminData();
             loadUsersAndLogs();
         }
 
@@ -2333,14 +2167,8 @@ async function init() {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        prompt: "Provide 2 totally different style variations for the following prompt. Format exactly like this:
-
-[OPTION A]: (text)
-
-[OPTION B]: (text)
-
-Prompt: " + msg,
-                        keys: { PROVIDER_ORDER: "sambanova,groq,gemini" }
+                        prompt: "Provide 2 totally different style variations for the following prompt. Format exactly like this:\n\n[OPTION A]: (text)\n\n[OPTION B]: (text)\n\nPrompt: " + msg,
+                        keys: { PROVIDER_ORDER: "pollinations,sambanova,groq,gemini" }
                     })
                 });
                 const data = await res.json();
@@ -2370,7 +2198,6 @@ Prompt: " + msg,
                 win.scrollTop = win.scrollHeight;
                 
             } catch(e) {
-                appendMessage('assistant', "Split-View Error: " + e.message);
             }
         }
         
@@ -2388,14 +2215,8 @@ Prompt: " + msg,
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        prompt: "Provide 2 totally different style variations for the following prompt. Format exactly like this:
-
-[OPTION A]: (text)
-
-[OPTION B]: (text)
-
-Prompt: " + msg,
-                        keys: { PROVIDER_ORDER: "sambanova,groq,gemini" }
+                        prompt: "Provide 2 totally different style variations for the following prompt. Format exactly like this:\n\n[OPTION A]: (text)\n\n[OPTION B]: (text)\n\nPrompt: " + msg,
+                        keys: { PROVIDER_ORDER: "pollinations,sambanova,groq,gemini" }
                     })
                 });
                 const data = await res.json();
@@ -2425,7 +2246,6 @@ Prompt: " + msg,
                 win.scrollTop = win.scrollHeight;
                 
             } catch(e) {
-                appendMessage('assistant', "Split-View Error: " + e.message);
             }
         }
         function generateCanvas() {
@@ -2436,21 +2256,9 @@ Prompt: " + msg,
             
             const prompt = `${b1} aimed at ${b2}. ${b3}.`;
             document.getElementById('message-input').value = prompt;
-            document.getElementById('canvas-modal').style.display = 'none';
-            document.getElementById('message-input').focus();
+            closeModal('canvas-modal');
         }
         
-        function generateCanvas() {
-            const b1 = document.getElementById('canvas-1').value.trim();
-            const b2 = document.getElementById('canvas-2').value.trim();
-            const b3 = document.getElementById('canvas-3').value.trim();
-            if(!b1 || !b2 || !b3) return alert("Fill in all boxes!");
-            
-            const prompt = `${b1} aimed at ${b2}. ${b3}.`;
-            document.getElementById('message-input').value = prompt;
-            document.getElementById('canvas-modal').style.display = 'none';
-            document.getElementById('message-input').focus();
-        }
         async function runPolisher() {
             const input = document.getElementById('polish-input').value.trim();
             if(!input) return;
@@ -2462,7 +2270,7 @@ Prompt: " + msg,
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         prompt: "Fix all grammar errors and improve the vocabulary of this text: " + input,
-                        keys: { PROVIDER_ORDER: "sambanova,groq,gemini" }
+                        keys: { PROVIDER_ORDER: "pollinations,sambanova,groq,gemini" }
                     })
                 });
                 const data = await res.json();
@@ -2483,7 +2291,7 @@ Prompt: " + msg,
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         prompt: "Fix all grammar errors and improve the vocabulary of this text: " + input,
-                        keys: { PROVIDER_ORDER: "sambanova,groq,gemini" }
+                        keys: { PROVIDER_ORDER: "pollinations,sambanova,groq,gemini" }
                     })
                 });
                 const data = await res.json();
@@ -2492,7 +2300,7 @@ Prompt: " + msg,
                 document.getElementById('polish-output').innerText = "Network Error";
             }
         }
-                function checkMacros() {
+        function checkMacros() {
             const input = document.getElementById('message-input');
             let val = input.value;
             const lowVal = val.toLowerCase();
@@ -2629,7 +2437,6 @@ Prompt: " + msg,
                 
                 loadTikTokLinks();
             } catch(e) {
-                alert("Failed to save link: " + e.message);
             }
         }
 
@@ -2640,7 +2447,7 @@ Prompt: " + msg,
                 }
                 await supabaseClient.from('tiktok_recommendations').update({ is_active: makeActive }).eq('id', id);
                 loadTikTokLinks();
-            } catch(e) { alert("Failed to toggle: " + e.message); }
+            } catch(e) { console.log(e); }
         }
 
         async function deleteTikTokLink(id) {
@@ -2648,7 +2455,7 @@ Prompt: " + msg,
             try {
                 await supabaseClient.from('tiktok_recommendations').delete().eq('id', id);
                 loadTikTokLinks();
-            } catch(e) { alert("Failed to delete: " + e.message); }
+            } catch(e) { console.log(e); }
         }
 
         function showAdminTab(id) {
@@ -2839,7 +2646,6 @@ Prompt: " + msg,
                     alert("Failed to trigger Hook: " + err);
                 }
             } catch (e) {
-                alert("Error triggering Hook: " + e.message);
             }
         }
 
