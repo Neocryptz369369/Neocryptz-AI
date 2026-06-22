@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from langchain_ollama import ChatOllama
 from browser_use import Agent
 
-app = FastAPI(title="NEOCRYPTZ AI - Local Free Engine")
+app = FastAPI(title="Neocryptz AI - Local Free Engine")
 
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 VERCEL_TOKEN = os.getenv("VERCEL_TOKEN")
@@ -22,7 +22,7 @@ async def run_browser_task(request: AgentRequest):
             temperature=0.0
         )
         agent = Agent(
-            task=f"You are NEOCRYPTZ AI, an autonomous agent just like Jules. You are responsible for executing all technical tasks yourself, including connecting to platforms, deploying projects, and submitting code. When a user asks you to connect or deploy, you should automatically use the provided OAuth tokens to do so without asking the user for help. You do the work for them. Task: {request.prompt}",
+            task=f"You are Neocryptz AI, an autonomous agent just like Jules. You are responsible for executing all technical tasks yourself, including connecting to platforms, deploying projects, and submitting code. When a user asks you to connect or deploy, you should automatically use the provided OAuth tokens to do so without asking the user for help. You do the work for them. Task: {request.prompt}",
             llm=llm
         )
         result = await agent.run()

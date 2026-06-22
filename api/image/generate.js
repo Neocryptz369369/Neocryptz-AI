@@ -9,10 +9,10 @@ export default async function handler(req, res) {
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
     if (country && country !== 'US') {
-        return res.status(403).json({ error: "ACCESS DENIED: NEOCRYPTZ AI is currently restricted to US residents only." });
+        return res.status(403).json({ error: "ACCESS DENIED: Neocryptz AI is currently restricted to US residents only." });
     }
     if (region && region === 'CA') {
-        return res.status(403).json({ error: "ACCESS DENIED: Due to state regulations, NEOCRYPTZ AI is not available in California." });
+        return res.status(403).json({ error: "ACCESS DENIED: Due to state regulations, Neocryptz AI is not available in California." });
     }
 
     // VPN/Proxy check
@@ -20,7 +20,7 @@ export default async function handler(req, res) {
         const geoRes = await fetch(`https://freeipapi.com/api/json/${ip}`);
         const geoData = await geoRes.json();
         if (geoData && geoData.isProxy) {
-            return res.status(403).json({ error: "SECURITY ALERT: VPN or Proxy detected. Please disable your VPN to access NEOCRYPTZ AI." });
+            return res.status(403).json({ error: "SECURITY ALERT: VPN or Proxy detected. Please disable your VPN to access Neocryptz AI." });
         }
     } catch (e) {
         console.error("Server-side geo-check failed:", e);
