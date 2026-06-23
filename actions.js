@@ -1,5 +1,5 @@
-import { exec } from 'child_process';
-import fs from 'fs';
+const { exec } = require('child_process');
+const fs = require('fs');
 
 // System function to deploy code automatically to your platforms
 function deployProject(projectName, codeFiles) {
@@ -33,4 +33,4 @@ function deployProject(projectName, codeFiles) {
     });
 }
 
-export { deployProject };
+module.exports = { deployProject };
