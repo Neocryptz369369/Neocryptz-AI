@@ -92,18 +92,17 @@
 
                 const data = await response.json();
                 if (response.ok) {
-                    resEl.innerText = "SUCCESS! Fallback activated.
+                    resEl.innerText = `SUCCESS! Fallback activated.
 
-Response:
-" + data.result;
+Response: ${data.result}`;
                 } else {
-                    resEl.innerText = "FAILED.
+                    resEl.innerText = `FAILED.
 
-" + data.error;
+${data.error}`;
                 }
             } catch(e) {
-                resEl.innerText = "Network Error:
-" + e.message;
+                resEl.innerText = `Network Error:
+${e.message}`;
             }
         }
 
@@ -172,8 +171,7 @@ Response:
             const file = fileInput.files[0];
             const reader = new FileReader();
             reader.onload = async (e) => {
-                const lines = e.target.result.split('
-').filter(l => l.trim().length > 0);
+                const lines = e.target.result.split('\n').filter(l => l.trim().length > 0);
                 if (lines.length > 20) return alert("Batch limit is 20 rows max.");
                 
                 alert("Processing " + lines.length + " rows. This will take a moment...");
@@ -183,11 +181,6 @@ Response:
                     await sendMessage(); // Triggers the existing logic
                     await new Promise(r => setTimeout(r, 2500)); // Rate limit pause
                 }
-            };
-            reader.readAsText(file);
-        }
-        
-
             };
             reader.readAsText(file);
         }
@@ -201,12 +194,6 @@ Response:
             if (url) {
                 try {
                     await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ai_response: text }) });
-                } catch(e) { console.log('Webhook failed'); }
-            }
-        }
-        
-
-        , body: JSON.stringify({ ai_response: text }) });
                 } catch(e) { console.log('Webhook failed'); }
             }
         }
@@ -462,7 +449,7 @@ Response:
         pre { position: relative; background: #222; padding: 15px; overflow-x: auto; }
         .copy-btn { position: absolute; bottom: 5px; right: 5px; font-size: 10px; background: var(--primary); color: #000; border: none; padding: 2px 5px; cursor: pointer; }
 
-        #ad-sidebar { width: 200px; border-left: 1px solid var(--primary); padding: 10px; display: flex; flex-direction: column; box-shadow: -2px 0 10px rgba(255, 0, 255, 0.2); }
+        #ad-sidebar { width: 200px; border-right: 1px solid var(--primary); padding: 10px; display: flex; flex-direction: column; box-shadow: -2px 0 10px rgba(255, 0, 255, 0.2); }
         .ad-box { width: 180px; height: 180px; border: 1px solid #333; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; padding: 5px; transition: border-color 0.3s ease; }
         .ad-box:hover { border-color: var(--secondary); box-shadow: 0 0 5px rgba(0, 255, 255, 0.3); }
 
@@ -509,9 +496,9 @@ Response:
         // PASTE YOUR ADSTERRA POPUNDER CODE BELOW THIS LINE
 
         // PASTE YOUR ADSTERRA SOCIAL BAR CODE ABOVE THE CLOSING
-    <!-- ADSTERRA SOCIAL BAR -->
-    <!-- PASTE YOUR SOCIAL BAR SCRIPT HERE -->
-</body> TAG
+    // <!-- ADSTERRA SOCIAL BAR -->
+    // <!-- PASTE YOUR SOCIAL BAR SCRIPT HERE -->
+// </body> TAG
     </script>
 </head>
 <body>
@@ -605,6 +592,8 @@ Response:
         </div>
     </div>
 
+    <div id="ad-sidebar" class="neon-border">
+        <div class="ad-box neon-border" id="ad-1">Sponsored Content</div>
     <div id="sidebar" class="neon-border">
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 10px;">
             <h2 style="color: var(--primary); font-size: 1.2em; margin: 0;">Neocryptz AI</h2>
@@ -653,8 +642,7 @@ Response:
         </div>
     </div>
 
-    <div id="ad-sidebar" class="neon-border">
-        <div class="ad-box neon-border" id="ad-1">Sponsored Content</div>
+
         <div class="ad-box neon-border" id="ad-2">Sponsored Content</div>
         <div class="ad-box neon-border" id="ad-3">Sponsored Content</div>
         <div class="ad-box neon-border" id="ad-4">Sponsored Content</div>
@@ -704,13 +692,7 @@ Response:
                 <div style="margin-top: 10px; border: 1px solid #0f0; padding: 10px; background: rgba(0,255,0,0.1);">
                     <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; color: #0f0; font-weight: bold;">
                         
-                <div style="margin-top: 10px; border: 1px solid #f00; padding: 10px; background: rgba(255,0,0,0.1);">
-                    <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; color: #f00; font-weight: bold;">
-                        <span>SECURITY: AUTO-WIPE TIMER (5 MINS)</span>
-                        <input type="checkbox" id="autowipe-toggle" onchange="toggleAutoWipe()" style="width: 20px; height: 20px;">
-                    </label>
-                    <p style="font-size: 0.8em; color: #aaa; margin-top: 5px;">Automatically logs you out and wipes the screen clean if you are inactive for 5 minutes.</p>
-                </div>
+
                         
                 <div style="margin-top: 10px; border: 1px solid #f00; padding: 10px; background: rgba(255,0,0,0.1);">
                     <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; color: #f00; font-weight: bold;">
@@ -728,7 +710,7 @@ Response:
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
                     <button class="btn" style="font-size:0.7em;" onclick="useTemplate('Write a high-converting email subject line about [TOPIC]')">Email Subject</button>
                     <button class="btn" style="font-size:0.7em;" onclick="useTemplate('Find the bug in this code snippet: [CODE]')">Code Debugger</button>
-                    <button class="btn" style="font-size:0.7em;" onclick="useTemplate('Translate this text into Spanish: [TEXT]')">Translator</button>
+
                     <button class="btn" style="font-size:0.7em;" onclick="useTemplate('Summarize the top tech headline of the morning about [TOPIC]')">Daily Briefing</button>
                 </div>
             </div><div style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
@@ -1447,7 +1429,7 @@ async function init() {
                 }
 
                 // Always save to local storage as fallback and for Admin view
-                
+
                 const betaInput = document.getElementById('reg-beta-code') ? document.getElementById('reg-beta-code').value.trim() : '';
                 const activeBeta = localStorage.getItem('activeBetaCode') || 'NEO-BETA-2027';
                 let startingCredits = 25;
@@ -1509,7 +1491,7 @@ async function init() {
             location.reload();
         }
 
-        
+
         document.addEventListener('DOMContentLoaded', () => {
             const input = document.getElementById('message-input');
             if(input) {
@@ -2313,56 +2295,13 @@ async function init() {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        prompt: "Provide 2 totally different style variations for the following prompt. Format exactly like this:
+                        prompt: `Provide 2 totally different style variations for the following prompt. Format exactly like this:
 
 [OPTION A]: (text)
 
 [OPTION B]: (text)
 
-Prompt: " + msg,
-                        keys: { PROVIDER_ORDER: "pollinations,sambanova,gemini,openrouter" }
-                    })
-                });
-                const data = await res.json();
-                
-                const win = document.getElementById('chat-window');
-                const div = document.createElement('div');
-                div.className = `message assistant neon-border`;
-                div.style.display = 'flex';
-                div.style.gap = '10px';
-                
-                let text = data.result || '';
-                let parts = text.split('[OPTION B]:');
-                let optA = parts[0] ? parts[0].replace('[OPTION A]:', '').trim() : text;
-                let optB = parts[1] ? parts[1].trim() : '';
-                
-                div.innerHTML = `
-                    <div style="flex:1; border-right:1px dashed var(--primary); padding-right:10px;">
-                        <h4 style="color:var(--primary); margin-top:0;">OPTION A</h4>
-                        <p>${escapeHtml(optA)}</p>
-                    </div>
-                    <div style="flex:1; padding-left:10px;">
-                        <h4 style="color:var(--secondary); margin-top:0;">OPTION B</h4>
-                        <p>${escapeHtml(optB)}</p>
-                    </div>
-                `;
-                win.appendChild(div);
-                win.scrollTop = win.scrollHeight;
-                
-            } catch(e) {
-                appendMessage('assistant', "Split-View Error: " + e.message);
-            }
-        }
-        
-        ,
-                    body: JSON.stringify({ 
-                        prompt: "Provide 2 totally different style variations for the following prompt. Format exactly like this:
-
-[OPTION A]: (text)
-
-[OPTION B]: (text)
-
-Prompt: " + msg,
+Prompt: ${msg}`,
                         keys: { PROVIDER_ORDER: "pollinations,sambanova,gemini,openrouter" }
                     })
                 });
@@ -2416,19 +2355,6 @@ Prompt: " + msg,
                 const res = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        prompt: "Fix all grammar errors and improve the vocabulary of this text: " + input,
-                        keys: { PROVIDER_ORDER: "pollinations,sambanova,gemini,openrouter" }
-                    })
-                });
-                const data = await res.json();
-                document.getElementById('polish-output').innerText = data.result || "Error";
-            } catch(e) {
-                document.getElementById('polish-output').innerText = "Network Error";
-            }
-        }
-        
-        ,
                     body: JSON.stringify({ 
                         prompt: "Fix all grammar errors and improve the vocabulary of this text: " + input,
                         keys: { PROVIDER_ORDER: "pollinations,sambanova,gemini,openrouter" }
@@ -2829,7 +2755,7 @@ Prompt: " + msg,
 
         async function loadAdminData() {
             document.getElementById('lock-reg-checkbox').checked = localStorage.getItem('regLocked') === 'true';
-            document.getElementById('provider-order').value = localStorage.getItem('providerOrder') || 'sambanova,gemini,openrouter,pollinations';
+            document.getElementById('provider-order').value = localStorage.getItem('providerOrder') || 'pollinations,sambanova,gemini,openrouter';
             loadScrapes(); // Load scrapes
             if(document.getElementById('admin-beta-code')) document.getElementById('admin-beta-code').value = localStorage.getItem('activeBetaCode') || 'NEO-BETA-2027';
             if(document.getElementById('admin-base-guidelines')) document.getElementById('admin-base-guidelines').value = localStorage.getItem('adminBaseGuidelines') || '';
@@ -3312,7 +3238,7 @@ Prompt: " + msg,
     }, 3000);
 </script>
 
-    <!-- ADSTERRA SOCIAL BAR -->
-    <!-- PASTE YOUR SOCIAL BAR SCRIPT HERE -->
+    // <!-- ADSTERRA SOCIAL BAR -->
+    // <!-- PASTE YOUR SOCIAL BAR SCRIPT HERE -->
 </body>
 </html>

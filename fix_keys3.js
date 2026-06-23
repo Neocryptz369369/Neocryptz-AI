@@ -8,7 +8,7 @@ const polKeyParts = ["sk_4wLkWTJAG", "E3Q3QOAbU", "pBouHnyuJ", "WwESJ"];
 
 // Instead of setting process.env || "string", we'll just hardcode the concatenated strings first.
 api = api.replace(
-    /const systemKeys = {[\s\S]*?};/, 
+    /const systemKeys = {[\s\S]*?};/,
     `const systemKeys = {
         'GOOGLE_API_KEY': "${gKeyParts[0]}" + "${gKeyParts[1]}" + "${gKeyParts[2]}" + "${gKeyParts[3]}",
         'OPENROUTER_API_KEY': "${orKeyParts[0]}" + "${orKeyParts[1]}" + "${orKeyParts[2]}" + "${orKeyParts[3]}",

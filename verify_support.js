@@ -5,7 +5,7 @@ const { chromium } = require('playwright');
   const context = await browser.newContext();
   const page = await context.newPage();
 
-  await page.goto('http://localhost:3000/index.html'); 
+  await page.goto('http://localhost:3000/index.html');
 
   await page.evaluate(() => {
     const mockSession = {
@@ -19,7 +19,7 @@ const { chromium } = require('playwright');
   const context = await browser.newContext();
   const page = await context.newPage();
 
-  await page.goto('http://localhost:3000/index.html'); 
+  await page.goto('http://localhost:3000/index.html');
 
   await page.evaluate(() => {
     const mockSession = {
@@ -29,7 +29,7 @@ const { chromium } = require('playwright');
       }
     };
     localStorage.setItem('supabase.auth.token', JSON.stringify(mockSession));
-    
+
     // Using Neocryptz for admin identification
     const adminElement = document.getElementById('Neocryptz');
     if (adminElement) {
@@ -46,7 +46,7 @@ const { chromium } = require('playwright');
 })();
     };
     localStorage.setItem('supabase.auth.token', JSON.stringify(mockSession));
-    
+
     // Using NEOCRYPTZDENNIS for admin identification
     document.getElementById('NEOCRYPTZDENNIS').style.display = 'inline-block';
     window.openModal('admin-modal');
