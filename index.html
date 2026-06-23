@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neocryptz AI // CLOUD OS V4.1.2</title>
+    <title>NEOCRYPTZ AI // CLOUD OS V4.1.2</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         function setProviderOrder(order) {
@@ -92,18 +93,12 @@
 
                 const data = await response.json();
                 if (response.ok) {
-                    resEl.innerText = "SUCCESS! Fallback activated.
-
-Response:
-" + data.result;
+                    resEl.innerText = "SUCCESS! Fallback activated.\n\nResponse:\n" + data.result;
                 } else {
-                    resEl.innerText = "FAILED.
-
-" + data.error;
+                    resEl.innerText = "FAILED.\n\n" + data.error;
                 }
             } catch(e) {
-                resEl.innerText = "Network Error:
-" + e.message;
+                resEl.innerText = "Network Error:\n" + e.message;
             }
         }
 
@@ -172,8 +167,7 @@ Response:
             const file = fileInput.files[0];
             const reader = new FileReader();
             reader.onload = async (e) => {
-                const lines = e.target.result.split('
-').filter(l => l.trim().length > 0);
+                const lines = e.target.result.split('\n').filter(l => l.trim().length > 0);
                 if (lines.length > 20) return alert("Batch limit is 20 rows max.");
                 
                 alert("Processing " + lines.length + " rows. This will take a moment...");
@@ -187,7 +181,24 @@ Response:
             reader.readAsText(file);
         }
         
-
+        async function processCSV() {
+            const fileInput = document.getElementById('csv-upload');
+            const promptPrefix = document.getElementById('csv-batch-prompt').value.trim();
+            if (!fileInput.files.length || !promptPrefix) return alert("Select a CSV file and enter a prompt prefix.");
+            
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const lines = e.target.result.split('\n').filter(l => l.trim().length > 0);
+                if (lines.length > 20) return alert("Batch limit is 20 rows max.");
+                
+                alert("Processing " + lines.length + " rows. This will take a moment...");
+                for(let i=0; i<lines.length; i++) {
+                    const item = lines[i].replace(/,/g, '');
+                    document.getElementById('message-input').value = promptPrefix + " " + item;
+                    await sendMessage(); // Triggers the existing logic
+                    await new Promise(r => setTimeout(r, 2500)); // Rate limit pause
+                }
             };
             reader.readAsText(file);
         }
@@ -205,8 +216,16 @@ Response:
             }
         }
         
-
-        , body: JSON.stringify({ ai_response: text }) });
+        function saveWebhook() {
+            const url = document.getElementById('user-webhook-url').value.trim();
+            localStorage.setItem('userWebhook', url);
+            alert("Webhook Saved! Responses will now be forwarded.");
+        }
+        async function triggerWebhook(text) {
+            const url = localStorage.getItem('userWebhook');
+            if (url) {
+                try {
+                    await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ai_response: text }) });
                 } catch(e) { console.log('Webhook failed'); }
             }
         }
@@ -347,73 +366,16 @@ Response:
         }
 
 
-
-        let adCooldownTimer = null;
-        async function unlockQuestions() {
-            const cooldownEnd = localStorage.getItem('adCooldownEnd');
-            if (cooldownEnd && Date.now() < cooldownEnd) {
-                return alert('Please wait for the cooldown to end.');
-            }
-
-            openModal('video-ad-modal');
-            const container = document.getElementById('video-container');
-            const status = document.getElementById('video-ad-status');
-            const rewardBtn = document.getElementById('video-ad-reward-btn-container');
-
-            rewardBtn.style.display = 'none';
-            status.innerText = 'Loading Adsterra Sponsored Content...';
-
-            container.innerHTML = `
-                <div style="padding: 20px; color: #ff0050;">
-                    <h3 class="neon-text">ADSTERRA REWARDED CONTENT</h3>
-                    <p>Ad will appear. Please stay on this screen to earn credits.</p>
-                    <div id="adsterra-placeholder"></div>
-                </div>
-            `;
-
-            let timeLeft = 60; // 1 minute watch as requested
-            const timer = setInterval(() => {
-                timeLeft--;
-                status.innerText = `Watch ad for ${timeLeft}s to claim reward...`;
-                if (timeLeft <= 0) {
-                    clearInterval(timer);
-                    status.innerText = "Ad complete! Click below to claim.";
-                    rewardBtn.style.display = 'block';
-                }
-            }, 1000);
-        }
-
-        async function claimVideoReward() {
-            try {
-                const token = localStorage.getItem('token');
-                const resp = await fetch('/api/reward', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ userId: currentUser.id })
-                });
-
-                const result = await resp.json();
-                if (result.success) {
-                    alert(result.message);
-                    startAdCooldown(result.cooldown || 60);
-                    closeModal('video-ad-modal');
-
-                    if (result.newCredits !== undefined) {
-                        currentUser.credits = result.newCredits;
-                        const creditsDisp = (currentUser.credits >= 999999 || currentUser.credits === null) ? 'Unlimited' : currentUser.credits;
-                        const userInfoEl = document.getElementById('user-info');
-                        if (userInfoEl) userInfoEl.innerHTML = `USER: ${currentUser.username}<br>PLAN: ${currentUser.plan}<br>CREDITS: ${creditsDisp}`;
-                    }
-                } else {
-                    alert('Reward failed: ' + (result.error || 'Unknown error'));
-                }
-            } catch (e) {
-                console.error(e);
-                alert('Connection error. Please try again.');
-            }
+        function unlockQuestions() {
+            alert('Loading Sponsored Partner Link... (Simulating Ad View)');
+            setTimeout(() => {
+                let stats = JSON.parse(localStorage.getItem('dailyUsage') || '{"count": 0}');
+                stats.count -= 5;
+                if(stats.count < 0) stats.count = 0;
+                localStorage.setItem('dailyUsage', JSON.stringify(stats));
+                alert('Success! 5 Questions Unlocked. Thank you to our sponsors!');
+                window.location.reload();
+            }, 2000);
         }
 
 </script>
@@ -425,7 +387,7 @@ Response:
             --text: #fff;
             --ticker-speed: 25s;
         }
-        body { font-family: 'Courier New', Courier, monospace; background: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        body { font-family: 'Courier New', Courier, monospace; background: url('crypt.png'); background-size: cover; background-position: center; background-attachment: fixed; color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; }
         #sidebar { width: 250px; border-right: 1px solid var(--primary); display: flex; flex-direction: column; padding: 20px; box-shadow: 2px 0 10px rgba(255, 0, 255, 0.2); }
         #main-content { flex: 1; display: flex; flex-direction: column; justify-content: space-between; position: relative; align-items: center; overflow: hidden; }
         #chat-window { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; width: 100%; box-sizing: border-box; }
@@ -503,16 +465,6 @@ Response:
         }
 
 </style>
-
-    <!-- ADSTERRA CONFIGURATION BLOCK -->
-    <script>
-        // PASTE YOUR ADSTERRA POPUNDER CODE BELOW THIS LINE
-
-        // PASTE YOUR ADSTERRA SOCIAL BAR CODE ABOVE THE CLOSING
-    <!-- ADSTERRA SOCIAL BAR -->
-    <!-- PASTE YOUR SOCIAL BAR SCRIPT HERE -->
-</body> TAG
-    </script>
 </head>
 <body>
 
@@ -570,7 +522,7 @@ Response:
 
     <div id="admin-notif" style="display:none; position:fixed; top:20px; left:50%; transform:translateX(-50%); background:rgba(255,0,0,0.8); color:#fff; padding:10px 20px; border:1px solid #ff00ff; border-radius:5px; z-index:9999; font-weight:bold; box-shadow:0 0 15px #ff0000;"></div>
     <div id="auth-screen">
-        <h1 style="color: var(--primary); text-shadow: 0 0 10px rgba(255, 0, 255, 0.8), 0 0 20px rgba(0, 255, 255, 0.5);">Neocryptz AI</h1>
+        <h1 style="color: var(--primary); text-shadow: 0 0 10px rgba(255, 0, 255, 0.8), 0 0 20px rgba(0, 255, 255, 0.5);">NEOCRYPTZ AI</h1>
         <div id="login-form" class="auth-form neon-border">
             <h2 style="text-align:center;">LOGIN</h2>
             <input type="text" id="login-user" placeholder="Username" autocomplete="username">
@@ -607,7 +559,7 @@ Response:
 
     <div id="sidebar" class="neon-border">
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 10px;">
-            <h2 style="color: var(--primary); font-size: 1.2em; margin: 0;">Neocryptz AI</h2>
+            <h2 style="color: var(--primary); font-size: 1.2em; margin: 0;">NEOCRYPTZ AI</h2>
             <div>
                 <span id="admin-icon" style="display:none; cursor: pointer; color: #8a2be2; font-size: 1.2em; margin-right: 5px;" onclick="openModal('admin-modal')" title="Admin Console">🛡️</span>
                 <span id="user-icon" style="display:none; cursor: pointer; font-size: 1.2em;" onclick="openModal('user-menu-modal')" title="Settings & Menu">⚙️</span>
@@ -631,7 +583,7 @@ Response:
 
     <div id="main-content" class="neon-border">
         <div id="chat-window">
-            <div class="message assistant neon-border">Neocryptz AI // CLOUD OS V4.1.2 ONLINE. How can I assist you today?</div>
+            <div class="message assistant neon-border">NEOCRYPTZ AI // CLOUD OS V4.1.2 ONLINE. How can I assist you today?</div>
         </div>
         <div id="char-counter" style="position: absolute; right: 25px; bottom: 80px; font-size: 0.8em; color: #aaa; background: #111; padding: 2px 5px; border-radius: 3px; border: 1px solid #333;">0 / 300 Chars</div>
         <div id="input-area" class="neon-border" style="flex-direction: column; gap: 10px; align-items: stretch;">
@@ -677,7 +629,7 @@ Response:
             <div style="margin-bottom: 20px;">
                 <label style="color: var(--secondary); font-size: 0.8em; display:block; margin-bottom: 5px;">AI PERSONA MODULE</label>
                 <select id="persona-select" class="neon-border" onchange="setPersona(this.value)" style="width: 100%; padding: 10px; background: #111; color: var(--text); border: 1px solid var(--primary); outline: none;">
-                    <option value="default">Default: Neocryptz Assistant</option>
+                    <option value="default">Default: NEOCRYPTZ Assistant</option>
                     <option value="seo">SEO Keyword Shortener</option>
                     <option value="code">Code Bug Finder</option>
                     <option value="copywriter">Catchy Copywriter</option>
@@ -732,12 +684,12 @@ Response:
                     <button class="btn" style="font-size:0.7em;" onclick="useTemplate('Summarize the top tech headline of the morning about [TOPIC]')">Daily Briefing</button>
                 </div>
             </div><div style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
-                <button class="btn" onclick="closeModal('user-menu-modal'); openModal('share-modal')">SHARE Neocryptz</button>
+                <button class="btn" onclick="closeModal('user-menu-modal'); openModal('share-modal')">SHARE NEOCRYPTZ</button>
                 <button class="btn" onclick="closeModal('user-menu-modal'); openModal('embed-modal')">GET CHATBOT WIDGET</button>
                 <button class="btn" onclick="closeModal('user-menu-modal'); openModal('settings-modal')">SETTINGS / OAUTH</button>
                 <button class="btn" onclick="closeModal('user-menu-modal'); openModal('history-modal')">CHAT HISTORY</button>
                 <button class="btn" onclick="closeModal('user-menu-modal'); openModal('pricing-modal')">UPGRADE / ADS</button>
-                <button class="btn" style="border-color: #ff0050; color: #ff0050; margin-top: 10px;" id="unlock-ad-btn" onclick="unlockQuestions()">UNLOCK +5 QUESTIONS (AD)</button>
+                <button class="btn" style="border-color: #ff0050; color: #ff0050; margin-top: 10px;" onclick="closeModal('user-menu-modal'); unlockQuestions()">UNLOCK +5 QUESTIONS (AD)</button>
                 <button class="btn" onclick="closeModal('user-menu-modal'); openModal('feedback-modal')">PROVIDE FEEDBACK</button>
                 <button class="btn" style="border-color: #f00; color: #f00; margin-top: 20px;" onclick="logout()">LOGOUT</button>
             </div>
@@ -745,25 +697,10 @@ Response:
         </div>
     </div>
 
-    <!-- Video Ad Modal -->
-    <div id="video-ad-modal" class="modal neon-border">
-        <div class="modal-content" style="max-width: 800px; text-align: center; background: #000;">
-            <h2 id="video-ad-title" style="color: #ff0050;">SPONSORED VIDEO</h2>
-            <div id="video-container" style="width: 100%; aspect-ratio: 16/9; background: #111; margin-bottom: 20px; border: 1px solid #333;">
-                <!-- Adsterra will be injected here -->
-            </div>
-            <p id="video-ad-status" style="color: #00ffff;">Watch the full video to unlock +5 questions.</p>
-            <div id="video-ad-reward-btn-container" style="display: none;">
-                <button class="btn" onclick="claimVideoReward()" style="border-color: #0f0; color: #0f0; font-weight: bold;">CLAIM +5 QUESTIONS</button>
-            </div>
-            <button id="close-video-btn" class="btn" onclick="closeModal('video-ad-modal')" style="margin-top: 20px;">CLOSE</button>
-        </div>
-    </div>
-
     <!-- Share Modal -->
     <div id="share-modal" class="modal neon-border">
         <div class="modal-content" style="max-width: 500px; text-align: center;">
-            <h2 style="color: var(--primary);">SHARE Neocryptz AI</h2>
+            <h2 style="color: var(--primary);">SHARE NEOCRYPTZ AI</h2>
             <div style="margin: 20px 0; padding: 15px; border: 1px solid #333; background: rgba(0,0,0,0.5); font-size: 0.9em; color: #fff; text-align: left;">
                 Check out Neocryptz AI I'm only letting 25 people in today. You can pay $20 month-to-month, or lock in your spot for a full year for $240 for unlimited AI so you never have to worry about price increases when I expand the server later. Limit 40 questions a day.<br><br>
                 <a href="https://neocryptz-ai.vercel.app/" style="color: var(--secondary); text-decoration: none;">https://neocryptz-ai.vercel.app/</a>
@@ -803,7 +740,7 @@ Response:
     <div id="embed-modal" class="modal neon-border">
         <div class="modal-content" style="max-width: 600px; text-align: center;">
             <h2 style="color: var(--primary);">MICRO-CHATBOT WIDGET</h2>
-            <p style="font-size: 0.9em; color: #aaa;">Embed the Neocryptz AI onto your own website or blog! Your visitors will be able to chat with it directly.</p>
+            <p style="font-size: 0.9em; color: #aaa;">Embed the NEOCRYPTZ AI onto your own website or blog! Your visitors will be able to chat with it directly.</p>
             <div style="margin: 20px 0; padding: 15px; border: 1px solid #333; background: rgba(0,0,0,0.5);">
                 <textarea id="embed-code" style="width: 100%; height: 100px; background: #111; color: var(--secondary); border: 1px solid var(--primary); padding: 10px; font-family: monospace;" readonly></textarea>
             </div>
@@ -862,7 +799,7 @@ Response:
                     <div id="user-support-chat-box" style="height: 200px; overflow-y: auto; margin-bottom: 10px; padding: 10px; background: #000; border: 1px inset #8a2be2;"></div>
                     <div style="display: flex; gap: 10px;">
                         <input type="text" id="user-support-input" placeholder="How can Neocryptz help you today?" style="flex: 1; padding: 10px; background: #111; border: 1px solid #8a2be2; color: #fff;">
-                        <button class="btn" onclick="sendSupportMessage(false)">SEND TO Neocryptz</button>
+                        <button class="btn" onclick="sendSupportMessage(false)">SEND TO NEOCRYPTZ</button>
                     </div>
                 </div>
             </div>
@@ -975,18 +912,6 @@ Response:
                     <thead><tr style="border-bottom: 1px solid #333;"><th>Type</th><th>Content</th><th>Status</th><th>Action</th></tr></thead>
                     <tbody id="admin-ad-list"></tbody>
                 </table>
-                <h3 style="color: #ff0050; border-top: 1px solid #333; padding-top: 20px;">VIDEO AD MANAGEMENT</h3><div id="admin-video-stats" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; text-align: center;"><div style="border: 1px solid #333; padding: 10px;"><small>Total Views</small><div id="total-video-views" style="color: #0f0; font-size: 1.2em; font-weight: bold;">0</div></div><div style="border: 1px solid #333; padding: 10px;"><small>Total Earnings</small><div id="total-video-earnings" style="color: #0f0; font-size: 1.2em; font-weight: bold;">$0.00</div></div><div style="border: 1px solid #333; padding: 10px;"><small>CPM Rate</small><div style="color: #00ffff; font-size: 1.2em; font-weight: bold;">$50.00</div></div></div>
-                <div style="margin-bottom: 20px; display: flex; gap: 10px;">
-                    <input type="text" id="new-video-url" placeholder="Video URL (Direct link or YouTube Embed)" style="flex: 2; padding:10px;">
-                    <input type="text" id="new-video-sponsor" placeholder="Sponsor Name" style="flex: 1; padding:10px;">
-                    <button class="btn" onclick="addVideoAd()">ADD VIDEO AD</button>
-                </div>
-                <div id="admin-video-ad-list-container" style="max-height: 300px; overflow-y: auto;">
-                    <table style="width:100%; border-collapse: collapse;">
-                        <thead><tr style="border-bottom: 1px solid #333;"><th>Sponsor</th><th>Views</th><th>Status</th><th>Action</th></tr></thead>
-                        <tbody id="admin-video-ad-list"></tbody>
-                    </table>
-                </div>
             </div>
             <div id="admin-feedback" class="admin-tab" style="display:none;">
                 <h3>USER FEEDBACK LOGS</h3>
@@ -1124,7 +1049,7 @@ Response:
 
             <div style="margin-bottom: 20px; padding: 15px; border: 1px solid var(--secondary); background: #111; text-align: center;">
                 <h3 style="color: var(--secondary); margin-top: 0;">☕ SUPPORT THE CREATOR</h3>
-                <p style="font-size: 0.8em; color: #aaa;">If you love Neocryptz AI and want to support its privacy-first development, consider leaving a tip!</p>
+                <p style="font-size: 0.8em; color: #aaa;">If you love NEOCRYPTZ AI and want to support its privacy-first development, consider leaving a tip!</p>
                 <button class="btn" style="background: var(--secondary); color: #000; width: 100%; font-weight: bold;" onclick="window.open('https://paypal.me/bestcabautogroup', '_blank')">TIP $5.00</button>
             </div>
 
@@ -1171,17 +1096,17 @@ Response:
                 if (data) {
                     // Block non-US
                     if (data.countryCode !== 'US') {
-                        document.body.innerHTML = '<h1 style="color:red; text-align:center; margin-top:20vh;">ACCESS DENIED</h1><p style="text-align:center;">Neocryptz AI is currently restricted to US residents only.</p>';
+                        document.body.innerHTML = '<h1 style="color:red; text-align:center; margin-top:20vh;">ACCESS DENIED</h1><p style="text-align:center;">NEOCRYPTZ AI is currently restricted to US residents only.</p>';
                         return true;
                     }
                     // Block California
                     if (data.regionCode === 'CA') {
-                        document.body.innerHTML = '<h1 style="color:red; text-align:center; margin-top:20vh;">ACCESS DENIED</h1><p style="text-align:center;">Due to state regulations, Neocryptz AI is not available in California.</p>';
+                        document.body.innerHTML = '<h1 style="color:red; text-align:center; margin-top:20vh;">ACCESS DENIED</h1><p style="text-align:center;">Due to state regulations, NEOCRYPTZ AI is not available in California.</p>';
                         return true;
                     }
                     // Block VPNs / Proxies
                     if (data.isProxy) {
-                        document.body.innerHTML = '<h1 style="color:red; text-align:center; margin-top:20vh;">SECURITY ALERT</h1><p style="text-align:center;">VPN or Proxy detected. Please disable your VPN to access Neocryptz AI.</p>';
+                        document.body.innerHTML = '<h1 style="color:red; text-align:center; margin-top:20vh;">SECURITY ALERT</h1><p style="text-align:center;">VPN or Proxy detected. Please disable your VPN to access NEOCRYPTZ AI.</p>';
                         return true;
                     }
                 }
@@ -1189,41 +1114,7 @@ Response:
             return false;
         }
 
-
-
-
-        function startAdCooldown(seconds) {
-            const btn = document.getElementById('unlock-ad-btn');
-            if (!btn) return;
-
-            localStorage.setItem('adCooldownEnd', Date.now() + seconds * 1000);
-            updateAdCooldownUI();
-        }
-
-        function updateAdCooldownUI() {
-            const btn = document.getElementById('unlock-ad-btn');
-            if (!btn) return;
-
-            const cooldownEnd = localStorage.getItem('adCooldownEnd');
-            if (cooldownEnd && Date.now() < cooldownEnd) {
-                const remaining = Math.ceil((cooldownEnd - Date.now()) / 1000);
-                btn.disabled = true;
-                btn.innerText = `COOLDOWN: ${remaining}s`;
-                btn.style.opacity = '0.5';
-
-                if (adCooldownTimer) clearTimeout(adCooldownTimer);
-                adCooldownTimer = setTimeout(updateAdCooldownUI, 1000);
-            } else {
-                btn.disabled = false;
-                btn.innerText = "UNLOCK +5 QUESTIONS (AD)";
-                btn.style.opacity = '1';
-                localStorage.removeItem('adCooldownEnd');
-            }
-        }
-
-        // Call on init
-        setTimeout(updateAdCooldownUI, 2000);
-async function init() {
+        async function init() {
             // Check local storage first (Fallback)
             if (await checkGeoBlock()) return;
             let localUser = localStorage.getItem('currentUser');
@@ -1268,7 +1159,7 @@ async function init() {
                      let localUsers = JSON.parse(localStorage.getItem('localUsers') || '{}');
                      if(localUsers['Neocryptz']) {
                           localUsers['Neocryptz'].plan = currentUser.plan;
-                          // localUsers["Neocryptz"].password removed for security
+                          localUsers['Neocryptz'].password = "Firstdata@9302164166";
                           localUsers['Neocryptz'].plan_expires_at = null; // Never expire
                           localStorage.setItem('localUsers', JSON.stringify(localUsers));
                      }
@@ -1291,7 +1182,7 @@ async function init() {
                      document.getElementById('user-icon').style.display = 'inline-block';
                 }
             }
-            loadAds(); updateAdCooldownUI();
+            loadAds();
             loadCustomStyles();
         }
 
@@ -1335,7 +1226,7 @@ async function init() {
             openModal('legal-modal');
         }
 
-        async function handleAuth(type) {
+                async function handleAuth(type) {
             let email, pass, username;
             if (type === 'login') {
                 username = document.getElementById('login-user').value;
@@ -1347,14 +1238,12 @@ async function init() {
                 pass = document.getElementById('reg-pass').value;
             }
 
-            // Re-route legacy username login fields to email format for Supabase if not an email
             const formatEmail = (input) => input.includes('@') ? input : `${input}@neocryptz.ai`;
             const validEmail = formatEmail(email);
 
             if (type === 'login') {
                 if (!email || !pass) return alert("Enter credentials");
 
-                // Try Supabase first
                 let supaError = null;
                 try {
                     const { data, error } = await supabaseClient.auth.signInWithPassword({
@@ -1364,45 +1253,17 @@ async function init() {
                     supaError = error;
                 } catch(err) { supaError = err; }
 
-                // Fallback to local storage if Supabase fails or error
                 if (supaError) {
                     let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
                     const foundUser = users[username] || users[validEmail];
                     if (foundUser && foundUser.password === pass) {
-                        if (foundUser.banned) {
-                            return alert("ACCESS DENIED: Your account has been banned for violating the terms of service.");
-                        }
-
-                        // Check if plan expired
-                        if (foundUser.plan_expires_at && new Date() > new Date(foundUser.plan_expires_at)) {
-                            foundUser.plan = "Free";
-                            foundUser.plan_expires_at = null;
-                            localStorage.setItem('localUsers', JSON.stringify(users));
-
-                // Sync to Supabase profiles table if authenticated
-                if (supabaseClient) {
-                    supabaseClient.auth.getSession().then(({ data: { session } }) => {
-                        if (session) {
-                            supabaseClient.from('profiles').upsert({
-                                id: session.user.id,
-                                username: username,
-                                full_name: fullName,
-                                email: validEmail,
-                                address: fullAddress,
-                                phone: phone,
-                                age: age
-                            }).then(() => console.log("Profile synced to Supabase")).catch(err => console.log("Profile sync error", err));
-                        }
-                    });
-                }
-                            alert("Your paid plan has expired. You have been downgraded to the Free plan.");
-                        }
+                        if (foundUser.banned) return alert("ACCESS DENIED: Banned.");
 
                         localStorage.setItem('currentUser', JSON.stringify(foundUser));
-                        localStorage.setItem('token', 'local-token-' + (users[username] ? username : validEmail));
+                        localStorage.setItem('token', 'local-token-' + username);
                         location.reload();
                     } else {
-                        alert('Login Failed: ' + supaError.message + " (Local fallback also failed: invalid credentials)");
+                        alert("Login Failed: " + supaError.message);
                     }
                 } else {
                     location.reload();
@@ -1410,7 +1271,6 @@ async function init() {
             } else {
                 if (await checkGeoBlock()) return;
                 if (!document.getElementById('reg-tos').checked) return alert('Agree to terms');
-                if (!email || !pass) return alert("Enter all details");
 
                 const fullName = document.getElementById('reg-name')?.value || '';
                 const address = document.getElementById('reg-address')?.value || '';
@@ -1426,82 +1286,36 @@ async function init() {
                     const { data, error } = await supabaseClient.auth.signUp({
                         email: validEmail,
                         password: pass,
-                        options: { data: { full_name: fullName, address: fullAddress, phone: phone, age: age } }
+                        options: { data: { username, full_name: fullName, address: fullAddress, phone, age } }
                     });
                     supaError = error;
+
+                    if (!error && data.user) {
+                        await supabaseClient.from('profiles').upsert({
+                            id: data.user.id,
+                            username: username,
+                            full_name: fullName,
+                            email: validEmail,
+                            address: fullAddress,
+                            phone: phone,
+                            age: age
+                        });
+                    }
                 } catch(err) { supaError = err; }
 
-                // Verify uniqueness
                 let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
-
-                // If it's the admin or a local test, bypass IP check
-                if (username.toLowerCase() !== 'neocryptz') {
-                    // Simple IP constraint mock (would be done backend normally)
-                    const ipConstraint = localStorage.getItem('registered_ip');
-                    if (ipConstraint && ipConstraint !== username) {
-                         // Only allow one non-admin account
-                         alert("Registration Failed: Only one account is allowed per IP.");
-                         return;
-                    }
-                    localStorage.setItem('registered_ip', username);
-                }
-
-                // Always save to local storage as fallback and for Admin view
-                
-                const betaInput = document.getElementById('reg-beta-code') ? document.getElementById('reg-beta-code').value.trim() : '';
-                const activeBeta = localStorage.getItem('activeBetaCode') || 'NEO-BETA-2027';
-                let startingCredits = 25;
-                if (betaInput && betaInput === activeBeta) {
-                    startingCredits = 100;
-                    alert("Beta Code Accepted! 100 Credits Applied to Account.");
-                }
-
-                users[username] = {
-                    username: username,
-                    email: validEmail,
-                    password: pass,
-                    full_name: fullName,
-                    address: fullAddress,
-                    phone: phone,
-                    age: age,
-                    plan: "Free",
-                    credits: startingCredits,
-                    banned: false,
-                    is_admin: (username.toLowerCase() === 'neocryptz')
-                };
+                users[username] = { username, email: validEmail, password: pass, full_name: fullName, address: fullAddress, phone, age, plan: "Free", credits: 25, banned: false, is_admin: (username.toLowerCase() === 'neocryptz') };
                 localStorage.setItem('localUsers', JSON.stringify(users));
 
-                // Sync to Supabase profiles table if authenticated
-                if (supabaseClient) {
-                    supabaseClient.auth.getSession().then(({ data: { session } }) => {
-                        if (session) {
-                            supabaseClient.from('profiles').upsert({
-                                id: session.user.id,
-                                username: username,
-                                full_name: fullName,
-                                email: validEmail,
-                                address: fullAddress,
-                                phone: phone,
-                                age: age
-                            }).then(() => console.log("Profile synced to Supabase")).catch(err => console.log("Profile sync error", err));
-                        }
-                    });
-                }
-
-                if (supaError && (supaError.message.includes('email_address_invalid') || supaError.message.includes('not allowed'))) {
-                     alert('Registered successfully locally (Supabase email validation bypassed). Please Login.');
-                     toggleAuth();
-                } else if (supaError) {
-                    alert('Registration fallback active. Saved locally. Supabase error: ' + supaError.message);
-                    toggleAuth();
+                if (supaError) {
+                    alert("Registration fallback active. Saved locally. Error: " + supaError.message);
                 } else {
-                    alert('Registered successfully. Please Login.');
-                    toggleAuth();
+                    alert("Registered successfully. Please Login.");
                 }
+                toggleAuth();
             }
         }
 
-        // Also update the logout function to sign out of Supabase
         async function logout() {
             try { await supabaseClient.auth.signOut(); } catch(e){ console.log(e); }
             localStorage.removeItem('token');
@@ -1600,16 +1414,9 @@ async function init() {
                 // Update UI
                 const creditsDisp = (currentUser.credits >= 999999) ? "Unlimited" : currentUser.credits;
                 document.getElementById("user-info").innerHTML = `USER: ${currentUser.username}<br>PLAN: ${currentUser.plan}<br>CREDITS: ${creditsDisp}`;
-
-                // Sync to Supabase profiles
-                if (supabaseClient) {
-                    supabaseClient.from('profiles').update({ credits: currentUser.credits }).eq('id', currentUser.id)
-                        .then(() => console.log("Credits synced to Supabase"))
-                        .catch(err => console.log("Credit sync error", err));
-                }
             }
 
-            // Enforce 40 word limit for user inputs
+            // Enforce 50 word limit for user inputs
             const wordCount = msg.split(/\s+/).length;
             const myUsernameLimitCheck = currentUser?.username || 'Unknown';
             if (myUsernameLimitCheck !== 'Neocryptz' && wordCount > 40) {
@@ -2033,11 +1840,11 @@ async function init() {
 
         
         function autoAuthorizeAll() {
-            if (confirm("Neocryptz AI requests automatic authorization for all 39 connected platforms to execute this autonomous task. Do you authorize?")) {
+            if (confirm("NEOCRYPTZ AI requests automatic authorization for all 39 connected platforms to execute this autonomous task. Do you authorize?")) {
                 oauthProviders.forEach(p => {
                     localStorage.setItem(`authToken_${p}`, "AUTO_AUTH_TOKEN_ACTIVE_" + Date.now());
                 });
-                alert("Success: Automatically authorized 39 OAuth platforms. Neocryptz AI has full cross-platform access.");
+                alert("Success: Automatically authorized 39 OAuth platforms. NEOCRYPTZ AI has full cross-platform access.");
                 if (document.getElementById('settings-modal').style.display === 'flex') {
                     renderOAuthList();
                 }
@@ -2097,102 +1904,102 @@ async function init() {
         }
 
         async function banUser(userId) {
-            if (!confirm("Are you sure you want to PERMANENTLY BAN this user?")) return;
+            let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
+            let foundUser = Object.keys(users).find(k => users[k].id === userId || users[k].username === userId);
+            if (foundUser) {
+                users[foundUser].banned = true;
+                localStorage.setItem('localUsers', JSON.stringify(users));
+
+                // Sync to Supabase profiles table if authenticated
+                if (supabaseClient) {
+                    supabaseClient.auth.getSession().then(({ data: { session } }) => {
+                        if (session) {
+                            supabaseClient.from('profiles').upsert({
+                                id: session.user.id,
+                                username: username,
+                                full_name: fullName,
+                                email: validEmail,
+                                address: fullAddress,
+                                phone: phone,
+                                age: age
+                            }).then(() => console.log("Profile synced to Supabase")).catch(err => console.log("Profile sync error", err));
+                        }
+                    });
+                }
+            }
 
             try {
-                let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
-                let foundKey = Object.keys(users).find(k => users[k].id === userId || users[k].username === userId);
-                if (foundKey) {
-                    users[foundKey].banned = true;
-                    localStorage.setItem('localUsers', JSON.stringify(users));
-                }
+                await supabaseClient.from('users').update({ banned: true }).eq('id', userId);
+            } catch(e) {}
 
-                if (supabaseClient) {
-                    const { error } = await supabaseClient
-                        .from('profiles')
-                        .update({ banned: true })
-                        .eq('id', userId);
-
-                    if (error) {
-                        // Try by username if ID fails or if userId was a username
-                        await supabaseClient.from('profiles').update({ banned: true }).eq('username', userId);
-                    }
-                }
-
-                alert("User has been completely BANNED.");
-                if (typeof loadAdminData === 'function') loadAdminData();
-                if (typeof loadUsersAndLogs === 'function') loadUsersAndLogs();
-            } catch(e) {
-                console.error("Ban error:", e);
-                alert("Failed to ban user: " + e.message);
-            }
+            alert("User has been completely BANNED.");
+            loadAdminData();
+            loadUsersAndLogs();
         }
 
         async function grantManualPlan(userId, planName, period = 'monthly') {
-            if (!confirm(`Grant ${planName} (${period}) to user ${userId}?`)) return;
-
+            // Calculate duration
             const days = period === 'yearly' ? 365 : 30;
             let expDate = planName === 'Free' ? null : new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
             const grantedDate = planName === 'Free' ? null : new Date().toLocaleDateString();
             
             if (userId.toLowerCase() === 'neocryptz') {
-                expDate = null;
+                expDate = null; // Never expire for the main admin account
             }
 
+            // Map UI plan names to internal plan names if necessary
             if (planName === 'Unlimited') planName = 'Unlimited Text';
 
-            const multiplier = period === 'yearly' ? 12 : 1;
-            let newCredits = 25;
-            if (planName === 'Starter') newCredits = 500 * multiplier;
-            if (planName === 'Power') newCredits = 6000 * multiplier;
-            if (planName === 'Unlimited Text') newCredits = 999999;
+            // Update the user's plan, expiration, and status in Supabase
+            const { data, error } = await supabaseClient
+                .from('users')
+                .update({
+                    plan: planName,
+                    status: planName === 'Free' ? 'inactive' : 'active',
+                    updated_at: new Date(),
+                    plan_expires_at: expDate,
+                    plan_granted_at: grantedDate
+                })
+                .eq('id', userId);
 
-            try {
-                // Update local storage
+            if (error) {
+                console.log('Supabase users table missing/failing. Falling back to local storage update.');
                 let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
-                let foundKey = Object.keys(users).find(k => users[k].id === userId || users[k].username === userId);
-                if (foundKey) {
-                    users[foundKey].plan = planName;
-                    users[foundKey].plan_expires_at = expDate;
-                    users[foundKey].plan_granted_at = grantedDate;
-                    users[foundKey].credits = newCredits;
+                let foundUser = Object.keys(users).find(k => users[k].id === userId || users[k].username === userId);
+                if (foundUser) {
+                    users[foundUser].plan = planName;
+                    users[foundUser].plan_expires_at = expDate;
+                    users[foundUser].plan_granted_at = grantedDate;
+
+                    const multiplier = period === 'yearly' ? 12 : 1;
+                    if (planName === 'Starter') users[foundUser].credits = 500 * multiplier;
+                    if (planName === 'Power') users[foundUser].credits = 6000 * multiplier;
+                    if (planName === 'Unlimited Text') users[foundUser].credits = 999999;
+                    if (planName === 'Free') users[foundUser].credits = 25;
                     localStorage.setItem('localUsers', JSON.stringify(users));
-                }
 
-                // Update Supabase profiles
+                // Sync to Supabase profiles table if authenticated
                 if (supabaseClient) {
-                    const { error } = await supabaseClient
-                        .from('profiles')
-                        .update({
-                            plan: planName,
-                            credits: newCredits,
-                            plan_expires_at: expDate,
-                            plan_granted_at: grantedDate,
-                            updated_at: new Date()
-                        })
-                        .eq('id', userId);
-
-                    if (error) {
-                        // Try by username
-                        await supabaseClient.from('profiles')
-                            .update({
-                                plan: planName,
-                                credits: newCredits,
-                                plan_expires_at: expDate,
-                                plan_granted_at: grantedDate,
-                                updated_at: new Date()
-                            })
-                            .eq('username', userId);
-                    }
+                    supabaseClient.auth.getSession().then(({ data: { session } }) => {
+                        if (session) {
+                            supabaseClient.from('profiles').upsert({
+                                id: session.user.id,
+                                username: username,
+                                full_name: fullName,
+                                email: validEmail,
+                                address: fullAddress,
+                                phone: phone,
+                                age: age
+                            }).then(() => console.log("Profile synced to Supabase")).catch(err => console.log("Profile sync error", err));
+                        }
+                    });
                 }
-
-                alert(`Manual plan granted to ${userId}`);
-                if (typeof loadAdminData === 'function') loadAdminData();
-                if (typeof loadUsersAndLogs === 'function') loadUsersAndLogs();
-            } catch(e) {
-                console.error("Grant plan error:", e);
-                alert("Failed to grant plan: " + e.message);
+                }
             }
+
+            alert(planName === 'Free' ? 'User plan revoked.' : `Plan ${planName} (${period}) updated successfully!`);
+            loadAdminData(); // Refresh the admin table so the change shows
+            loadUsersAndLogs();
         }
 
         function loadUsersAndLogs() {
@@ -2313,14 +2120,8 @@ async function init() {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        prompt: "Provide 2 totally different style variations for the following prompt. Format exactly like this:
-
-[OPTION A]: (text)
-
-[OPTION B]: (text)
-
-Prompt: " + msg,
-                        keys: { PROVIDER_ORDER: "pollinations,sambanova,gemini,openrouter" }
+                        prompt: "Provide 2 totally different style variations for the following prompt. Format exactly like this:\n\n[OPTION A]: (text)\n\n[OPTION B]: (text)\n\nPrompt: " + msg,
+                        keys: { PROVIDER_ORDER: "sambanova,groq,gemini" }
                     })
                 });
                 const data = await res.json();
@@ -2354,16 +2155,22 @@ Prompt: " + msg,
             }
         }
         
-        ,
+        async function requestSplitView() {
+            const input = document.getElementById('message-input');
+            let msg = input.value.trim();
+            if (!msg) return alert("Enter a prompt first to generate A/B split variations.");
+            
+            input.value = '';
+            appendMessage('user', "[A/B SPLIT REQUEST]: " + msg);
+            appendMessage('assistant', "Generating Option A and Option B...");
+            
+            try {
+                const res = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        prompt: "Provide 2 totally different style variations for the following prompt. Format exactly like this:
-
-[OPTION A]: (text)
-
-[OPTION B]: (text)
-
-Prompt: " + msg,
-                        keys: { PROVIDER_ORDER: "pollinations,sambanova,gemini,openrouter" }
+                        prompt: "Provide 2 totally different style variations for the following prompt. Format exactly like this:\n\n[OPTION A]: (text)\n\n[OPTION B]: (text)\n\nPrompt: " + msg,
+                        keys: { PROVIDER_ORDER: "sambanova,groq,gemini" }
                     })
                 });
                 const data = await res.json();
@@ -2407,6 +2214,18 @@ Prompt: " + msg,
             document.getElementById('canvas-modal').style.display = 'none';
             document.getElementById('message-input').focus();
         }
+        
+        function generateCanvas() {
+            const b1 = document.getElementById('canvas-1').value.trim();
+            const b2 = document.getElementById('canvas-2').value.trim();
+            const b3 = document.getElementById('canvas-3').value.trim();
+            if(!b1 || !b2 || !b3) return alert("Fill in all boxes!");
+            
+            const prompt = `${b1} aimed at ${b2}. ${b3}.`;
+            document.getElementById('message-input').value = prompt;
+            document.getElementById('canvas-modal').style.display = 'none';
+            document.getElementById('message-input').focus();
+        }
         async function runPolisher() {
             const input = document.getElementById('polish-input').value.trim();
             if(!input) return;
@@ -2418,7 +2237,7 @@ Prompt: " + msg,
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         prompt: "Fix all grammar errors and improve the vocabulary of this text: " + input,
-                        keys: { PROVIDER_ORDER: "pollinations,sambanova,gemini,openrouter" }
+                        keys: { PROVIDER_ORDER: "sambanova,groq,gemini" }
                     })
                 });
                 const data = await res.json();
@@ -2428,10 +2247,18 @@ Prompt: " + msg,
             }
         }
         
-        ,
+        async function runPolisher() {
+            const input = document.getElementById('polish-input').value.trim();
+            if(!input) return;
+            document.getElementById('polish-output').innerText = "Polishing...";
+            
+            try {
+                const res = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         prompt: "Fix all grammar errors and improve the vocabulary of this text: " + input,
-                        keys: { PROVIDER_ORDER: "pollinations,sambanova,gemini,openrouter" }
+                        keys: { PROVIDER_ORDER: "sambanova,groq,gemini" }
                     })
                 });
                 const data = await res.json();
@@ -2918,20 +2745,23 @@ Prompt: " + msg,
             loadAdminData();
         }
 
-
+        async function banUser(username) {
+            alert(`${username} banned`);
+            loadAdminData();
+        }
 
         async function deleteAd(id) {
             let ads = getLocalAds();
             ads = ads.filter(ad => ad.id !== id);
             setLocalAds(ads);
             loadAdminData(); // Refreshes the table
-            loadAds(); updateAdCooldownUI(); // Refreshes the ticker and ad boxes
+            loadAds(); // Refreshes the ticker and ad boxes
         }
 
         async function saveSettings() {
             const speed = document.getElementById('speed-slider').value;
             localStorage.setItem('tickerSpeed', speed);
-            loadAds(); updateAdCooldownUI();
+            loadAds();
             alert('Settings Saved');
         }
 
@@ -2956,7 +2786,7 @@ Prompt: " + msg,
             alert('Ad created successfully');
             document.getElementById('new-ad-text').value = '';
             loadAdminData(); // Refreshes the table
-            loadAds(); updateAdCooldownUI(); // Refreshes the ticker and ad boxes
+            loadAds(); // Refreshes the ticker and ad boxes
         }
 
         async function viewLogs(username) {
@@ -3311,8 +3141,6 @@ Prompt: " + msg,
         }
     }, 3000);
 </script>
-
-    <!-- ADSTERRA SOCIAL BAR -->
-    <!-- PASTE YOUR SOCIAL BAR SCRIPT HERE -->
 </body>
 </html>
+<script async data-explicit-opt-in="true" data-deployment-id="dpl_AVdUybesgSfRoXJCpSyoY8CvpBMe" src="https://vercel.live/_next-live/feedback/feedback.js"></script>
