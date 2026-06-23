@@ -449,7 +449,7 @@ ${e.message}`;
         pre { position: relative; background: #222; padding: 15px; overflow-x: auto; }
         .copy-btn { position: absolute; bottom: 5px; right: 5px; font-size: 10px; background: var(--primary); color: #000; border: none; padding: 2px 5px; cursor: pointer; }
 
-        #ad-sidebar { width: 200px; border-left: 1px solid var(--primary); padding: 10px; display: flex; flex-direction: column; box-shadow: -2px 0 10px rgba(255, 0, 255, 0.2); }
+        #ad-sidebar { width: 200px; border-right: 1px solid var(--primary); padding: 10px; display: flex; flex-direction: column; box-shadow: -2px 0 10px rgba(255, 0, 255, 0.2); }
         .ad-box { width: 180px; height: 180px; border: 1px solid #333; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; padding: 5px; transition: border-color 0.3s ease; }
         .ad-box:hover { border-color: var(--secondary); box-shadow: 0 0 5px rgba(0, 255, 255, 0.3); }
 
@@ -592,6 +592,12 @@ ${e.message}`;
         </div>
     </div>
 
+    <div id="ad-sidebar" class="neon-border">
+        <div class="ad-box neon-border" id="ad-1">Sponsored Content</div>
+        <div class="ad-box neon-border" id="ad-2">Sponsored Content</div>
+        <div class="ad-box neon-border" id="ad-3">Sponsored Content</div>
+        <div class="ad-box neon-border" id="ad-4">Sponsored Content</div>
+    </div>
     <div id="sidebar" class="neon-border">
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 10px;">
             <h2 style="color: var(--primary); font-size: 1.2em; margin: 0;">Neocryptz AI</h2>
@@ -640,12 +646,6 @@ ${e.message}`;
         </div>
     </div>
 
-    <div id="ad-sidebar" class="neon-border">
-        <div class="ad-box neon-border" id="ad-1">Sponsored Content</div>
-        <div class="ad-box neon-border" id="ad-2">Sponsored Content</div>
-        <div class="ad-box neon-border" id="ad-3">Sponsored Content</div>
-        <div class="ad-box neon-border" id="ad-4">Sponsored Content</div>
-    </div>
 
     <!-- Modals -->
     <div id="history-modal" class="modal neon-border">
@@ -691,13 +691,7 @@ ${e.message}`;
                 <div style="margin-top: 10px; border: 1px solid #0f0; padding: 10px; background: rgba(0,255,0,0.1);">
                     <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; color: #0f0; font-weight: bold;">
                         
-                <div style="margin-top: 10px; border: 1px solid #f00; padding: 10px; background: rgba(255,0,0,0.1);">
-                    <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; color: #f00; font-weight: bold;">
-                        <span>SECURITY: AUTO-WIPE TIMER (5 MINS)</span>
-                        <input type="checkbox" id="autowipe-toggle" onchange="toggleAutoWipe()" style="width: 20px; height: 20px;">
-                    </label>
-                    <p style="font-size: 0.8em; color: #aaa; margin-top: 5px;">Automatically logs you out and wipes the screen clean if you are inactive for 5 minutes.</p>
-                </div>
+
                         
                 <div style="margin-top: 10px; border: 1px solid #f00; padding: 10px; background: rgba(255,0,0,0.1);">
                     <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; color: #f00; font-weight: bold;">
@@ -715,7 +709,6 @@ ${e.message}`;
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
                     <button class="btn" style="font-size:0.7em;" onclick="useTemplate('Write a high-converting email subject line about [TOPIC]')">Email Subject</button>
                     <button class="btn" style="font-size:0.7em;" onclick="useTemplate('Find the bug in this code snippet: [CODE]')">Code Debugger</button>
-                    <button class="btn" style="font-size:0.7em;" onclick="useTemplate('Translate this text into Spanish: [TEXT]')">Translator</button>
                     <button class="btn" style="font-size:0.7em;" onclick="useTemplate('Summarize the top tech headline of the morning about [TOPIC]')">Daily Briefing</button>
                 </div>
             </div><div style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
@@ -836,7 +829,7 @@ ${e.message}`;
                     <div id="oauth-list" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-height: 400px; overflow-y: auto; margin-bottom: 20px;"></div>
                 </div>
 
-                <div style="flex: 1; border-left: 1px solid var(--primary); padding-left: 20px;">
+                <div style="flex: 1; border-right: 1px solid var(--primary); padding-left: 20px;">
                     <h3 style="color: var(--secondary);">AUTH TOKEN (TOKEN REQUEST)</h3>
                     <p style="font-size: 0.8em; color: #aaa;">Trade your approval for an actual token manually.</p>
                     <div id="auth-token-list" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-height: 400px; overflow-y: auto; margin-bottom: 20px;"></div>
