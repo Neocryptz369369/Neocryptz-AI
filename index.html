@@ -880,6 +880,7 @@
                 <button class="btn" style="border-color:#ff0050; color:#ff0050;" onclick="showAdminTab('admin-tiktok'); loadTikTokLinks()">TIKTOK LINKS</button>
                 <button class="btn" onclick="showAdminTab('admin-feedback'); loadAdminData()">FEEDBACK</button>
                 <button class="btn" onclick="showAdminTab('admin-settings')">SETTINGS</button>
+                <button class="btn" style="border-color:#f59e0b; color:#f59e0b;" onclick="showAdminTab('admin-gift-codes'); loadGiftCodes()">🎁 GIFT CODES</button>
                 <button class="btn" style="border-color:#8a2be2; color:#8a2be2;" onclick="showAdminTab('admin-support'); loadSupportUsers()">SUPPORT</button>
                 <button class="btn" style="border-color:#00ffff; color:#00ffff;" onclick="showAdminTab('admin-deployment'); loadVercelProjects()">DEPLOYMENT</button>
                 <div style="border-left: 1px solid #333; margin: 0 10px;"></div>
@@ -1015,6 +1016,15 @@
                     <p style="color: #aaa; text-align: center;">Click "DEPLOYMENT" tab again to refresh projects.</p>
                 </div>
             </div>
+            <div id="admin-gift-codes" class="admin-tab" style="display:none;">
+                <h3 style="color:#f59e0b;">🎁 GIFT SUBSCRIPTION RECORDS</h3>
+                <p style="font-size:0.85em; color:#aaa; margin-bottom:15px;">Every gift voucher purchase appears here — buyer details on the left, redeemer details on the right. Use this to send thank-you emails and track who received each gift.</p>
+                <button class="btn" style="border-color:#f59e0b; color:#f59e0b; margin-bottom:15px;" onclick="loadGiftCodes()">↻ REFRESH</button>
+                <div id="admin-gift-codes-list" style="overflow-x:auto;">
+                    <p style="color:#aaa; text-align:center;">Loading gift code records...</p>
+                </div>
+            </div>
+
             <div id="admin-settings" class="admin-tab" style="display:none;">
                 <h3>SYSTEM CONFIGURATION</h3>
 
@@ -2535,6 +2545,94 @@
             if (id === "admin-deployment") loadVercelProjects();
             document.querySelectorAll('.admin-tab').forEach(t => t.style.display = 'none');
             document.getElementById(id).style.display = 'block';
+        }
+
+        async function loadGiftCodes() {
+            const container = document.getElementById('admin-gift-codes-list');
+            container.innerHTML = '<p style="color:#aaa; text-align:center;">Loading...</p>';
+
+            let records = [];
+
+            // Try Supabase first
+            try {
+                const { data, error } = await supabaseClient
+                    .from('gift_codes')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                if (!error && data) records = data;
+            } catch(e) { console.log('gift_codes supabase fetch:', e.message); }
+
+            // Merge in any localStorage fallback codes not in Supabase
+            const localCodes = JSON.parse(localStorage.getItem('giftCodes') || '{}');
+            for (const [code, info] of Object.entries(localCodes)) {
+                if (!records.find(r => r.code === code)) {
+                    records.push({ code, buyer_name: info.buyer_name, buyer_email: info.buyer_email, status: info.status, used_by: info.used_by, created_at: info.created_at });
+                }
+            }
+
+            if (records.length === 0) {
+                container.innerHTML = '<p style="color:#aaa; text-align:center;">No gift codes purchased yet.</p>';
+                return;
+            }
+
+            // For each used code, try to fetch the redeemer profile from Supabase
+            const redeemerProfiles = {};
+            const usedCodes = records.filter(r => r.used_by);
+            for (const r of usedCodes) {
+                try {
+                    const { data: profile } = await supabaseClient
+                        .from('profiles')
+                        .select('username, full_name, email, phone, address, age')
+                        .eq('username', r.used_by)
+                        .single();
+                    if (profile) redeemerProfiles[r.used_by] = profile;
+                } catch(e) {}
+            }
+
+            let html = `
+            <table style="width:100%; border-collapse:collapse; font-size:0.85em;">
+                <thead>
+                    <tr style="border-bottom:2px solid #f59e0b; color:#f59e0b; text-align:left;">
+                        <th style="padding:10px 8px;">CODE</th>
+                        <th style="padding:10px 8px;">STATUS</th>
+                        <th style="padding:10px 8px; border-left:1px solid #333;">BUYER (Gift Purchaser)</th>
+                        <th style="padding:10px 8px; border-left:1px solid #333;">REDEEMER (Signed Up With Code)</th>
+                        <th style="padding:10px 8px;">DATE</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+            for (const r of records) {
+                const redeemer = r.used_by ? (redeemerProfiles[r.used_by] || null) : null;
+                const statusColor = r.status === 'used' ? '#0f0' : '#f59e0b';
+
+                html += `<tr style="border-bottom:1px solid #222; vertical-align:top;">
+                    <td style="padding:10px 8px; font-family:monospace; color:#00ffff; font-weight:bold; white-space:nowrap;">${escapeHtml(r.code)}</td>
+                    <td style="padding:10px 8px;">
+                        <span style="color:${statusColor}; font-weight:bold; font-size:0.9em;">${r.status === 'used' ? '✅ REDEEMED' : '⏳ PENDING'}</span>
+                    </td>
+                    <td style="padding:10px 8px; border-left:1px solid #222;">
+                        <div style="color:#fff; font-weight:bold;">${escapeHtml(r.buyer_name || '—')}</div>
+                        <div style="color:#aaa; font-size:0.85em;">${escapeHtml(r.buyer_email || '—')}</div>
+                        <a href="mailto:${escapeHtml(r.buyer_email || '')}?subject=Thank You for Your Neocryptz AI Gift Purchase!&body=Hi ${escapeHtml(r.buyer_name || 'there')},%0A%0AThank you so much for purchasing a Neocryptz AI Gift Subscription! Your generosity means the world to us.%0A%0A— Neocryptz"
+                           style="color:#f59e0b; font-size:0.8em; text-decoration:none;" target="_blank">✉ Send Thank-You Email</a>
+                    </td>
+                    <td style="padding:10px 8px; border-left:1px solid #222;">
+                        ${r.used_by ? `
+                        <div style="color:#fff; font-weight:bold;">${escapeHtml(redeemer?.username || r.used_by)}</div>
+                        <div style="color:#aaa; font-size:0.85em;">${escapeHtml(redeemer?.full_name || '—')}</div>
+                        <div style="color:#aaa; font-size:0.85em;">${escapeHtml(redeemer?.email || '—')}</div>
+                        <div style="color:#aaa; font-size:0.85em;">${escapeHtml(redeemer?.phone || '—')}</div>
+                        <div style="color:#aaa; font-size:0.85em;">${escapeHtml(redeemer?.address || '—')}</div>
+                        <div style="color:#aaa; font-size:0.85em;">Age: ${escapeHtml(String(redeemer?.age || '—'))}</div>
+                        ` : '<span style="color:#555; font-style:italic;">Not yet redeemed</span>'}
+                    </td>
+                    <td style="padding:10px 8px; color:#555; font-size:0.8em; white-space:nowrap;">${r.created_at ? new Date(r.created_at).toLocaleDateString() : '—'}</td>
+                </tr>`;
+            }
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
         }
 
         function shareTo(platform) {
