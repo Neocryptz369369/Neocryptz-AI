@@ -353,18 +353,72 @@
             document.getElementById('referral-link').value = refLink;
         }
 
-        function buyGiftSubscription() {
-            const confirmed = confirm(
-                "IMPORTANT — NO REFUND POLICY\n\n" +
-                "By clicking OK, you confirm that you have read and agree to the following:\n\n" +
-                "• Neocryptz AI does not issue refunds for gift voucher purchases.\n" +
-                "• All sales are final.\n" +
-                "• You are agreeing to this policy as a condition of purchase.\n\n" +
-                "Do you agree and wish to continue to Stripe checkout?"
-            );
-            if (confirmed) {
-                window.open(STRIPE_LINKS['Gift'], '_blank');
+        function openGiftModal() {
+            document.getElementById('gift-buyer-name').value = '';
+            document.getElementById('gift-buyer-email').value = '';
+            document.getElementById('gift-modal-status').style.display = 'none';
+            openModal('gift-modal');
+        }
+
+        function buyGiftSubscription() { openGiftModal(); }
+
+        async function processGiftPurchase() {
+            const buyerName  = document.getElementById('gift-buyer-name').value.trim();
+            const buyerEmail = document.getElementById('gift-buyer-email').value.trim();
+
+            if (!buyerName)  return alert('Please enter your name.');
+            if (!buyerEmail || !buyerEmail.includes('@')) return alert('Please enter a valid email address.');
+
+            const btn = document.querySelector('#gift-modal .btn');
+            if (btn) btn.disabled = true;
+
+            // Generate unique code
+            const rand = () => Math.random().toString(36).substring(2, 6).toUpperCase();
+            const code = `NEO-GIFT-${rand()}${rand()}`;
+
+            // Save to Supabase gift_codes table
+            try {
+                await supabaseClient.from('gift_codes').insert([{
+                    code: code,
+                    buyer_name: buyerName,
+                    buyer_email: buyerEmail,
+                    status: 'active'
+                }]);
+            } catch(e) {
+                console.log('Supabase gift_codes insert note:', e.message);
+                // Save locally as fallback
+                let giftCodes = JSON.parse(localStorage.getItem('giftCodes') || '{}');
+                giftCodes[code] = { buyer_name: buyerName, buyer_email: buyerEmail, status: 'active', created_at: new Date().toISOString() };
+                localStorage.setItem('giftCodes', JSON.stringify(giftCodes));
             }
+
+            // Show code on screen
+            const statusEl = document.getElementById('gift-modal-status');
+            statusEl.innerHTML = `YOUR GIFT CODE:<br><span style="font-size:1.4em; color:#00ffff;">${code}</span><br><span style="font-size:0.7em; color:#aaa; font-weight:normal;">Save this! It's also being sent to ${buyerEmail}</span>`;
+            statusEl.style.display = 'block';
+
+            // Open email client pre-filled with the code
+            const subject = encodeURIComponent('Your Neocryptz AI Gift Subscription Code 🎁');
+            const body = encodeURIComponent(
+                `Hi,\n\nYou received a Neocryptz AI Gift Subscription!\n\n` +
+                `Your unique gift code is:\n\n  ${code}\n\n` +
+                `To redeem it:\n` +
+                `1. Go to https://neocryptz-ai.vercel.app\n` +
+                `2. Click REGISTER\n` +
+                `3. Fill in your details\n` +
+                `4. Enter the code in the "Gift Subscription Code" field\n` +
+                `5. Create your account — your 1-Year Unlimited plan will be activated!\n\n` +
+                `This code can only be used once.\n\n` +
+                `— Neocryptz AI`
+            );
+            window.open(`mailto:${buyerEmail}?subject=${subject}&body=${body}`, '_blank');
+
+            // Open Stripe checkout
+            setTimeout(() => {
+                window.open(`${STRIPE_LINKS['Gift']}?client_reference_id=${encodeURIComponent(code)}`, '_blank');
+            }, 800);
+
+            if (btn) btn.disabled = false;
         }
 
 
@@ -551,6 +605,7 @@
                 <input type="number" id="reg-age" placeholder="Age" style="flex: 1;" min="18">
             </div>
             <input type="text" id="reg-beta-code" placeholder="Beta Invite Code (Optional)" style="margin-bottom: 10px; padding: 10px; background: #111; border: 1px solid var(--secondary); color: #0f0;">
+            <input type="text" id="reg-gift-code" placeholder="🎁 Gift Subscription Code (Optional)" style="margin-bottom: 10px; padding: 10px; background: #111; border: 1px solid #8a2be2; color: #c084fc; letter-spacing: 2px; text-transform: uppercase;" oninput="this.value = this.value.toUpperCase()">
             <label style="font-size: 0.7em; display:flex; align-items:center; gap:10px; margin-bottom:10px;">
                 <input type="checkbox" id="reg-tos"> I agree to the Terms of Service & Privacy Policy
             </label>
@@ -750,6 +805,20 @@
             <h2 id="legal-title" style="color: var(--primary); text-align: center;">LEGAL</h2>
             <div id="legal-content" style="text-align: left; max-height: 60vh; overflow-y: auto; padding: 20px; border: 1px solid #333; background: #050505; color: #ccc; font-size: 0.9em; line-height: 1.5;"></div>
             <button class="btn" onclick="closeModal('legal-modal')" style="margin-top: 20px; width: 100%;">CLOSE</button>
+        </div>
+    </div>
+
+    <!-- Gift Purchase Modal -->
+    <div id="gift-modal" class="modal neon-border" style="display:none;">
+        <div class="modal-content neon-border" style="max-width: 480px; text-align: center;">
+            <h2 style="color: var(--primary);">🎁 GIFT A SUBSCRIPTION</h2>
+            <p style="font-size: 0.9em; color: #aaa; margin-bottom: 20px;">Fill in your details below. A unique gift code will be generated and sent to your email right away. The recipient enters it when they register.</p>
+            <input type="text" id="gift-buyer-name" placeholder="Your Name" style="width:100%; padding:10px; background:#111; border:1px solid var(--primary); color:#fff; margin-bottom:10px; box-sizing:border-box;">
+            <input type="email" id="gift-buyer-email" placeholder="Your Email (the code will be sent here)" style="width:100%; padding:10px; background:#111; border:1px solid var(--primary); color:#fff; margin-bottom:20px; box-sizing:border-box;">
+            <div id="gift-modal-status" style="display:none; padding:15px; margin-bottom:15px; border:2px dashed #8a2be2; background:rgba(138,43,226,0.1); color:#c084fc; font-weight:bold; font-size:1.1em; letter-spacing:2px;"></div>
+            <button class="btn" style="width:100%; margin-bottom:10px; background:linear-gradient(135deg,#8a2be2,#00ffff20); border-color:#8a2be2; color:#fff; font-weight:bold; padding:15px;" onclick="processGiftPurchase()">GENERATE CODE &amp; GO TO CHECKOUT →</button>
+            <button class="btn" style="width:100%; background:transparent; border-color:#555; color:#aaa;" onclick="closeModal('gift-modal')">CANCEL</button>
+            <p style="font-size: 0.7em; color: #555; margin-top:15px;">⚠ IMPORTANT — NO REFUND POLICY: All gift voucher sales are final. By proceeding you agree no refunds will be issued.</p>
         </div>
     </div>
 
@@ -1037,7 +1106,7 @@
             <div style="margin-top:40px; text-align: center; border-top: 1px solid #333; padding-top: 20px;">
                 <h2 style="color: var(--secondary);">GIFT A SUBSCRIPTION</h2>
                 <p style="font-size: 0.9em; color: #aaa;">Buy a 1-Year Unlimited AI Voucher to give to a friend or colleague.</p>
-                <button class="btn" style="padding: 15px 30px; font-size: 1.1em;" onclick="buyGiftSubscription()">PURCHASE GIFT VOUCHER ($240)</button>
+                <button class="btn" style="padding: 15px 30px; font-size: 1.1em;" onclick="openGiftModal()">PURCHASE GIFT VOUCHER ($240)</button>
                 <div id="gift-code-output" style="display:none; margin-top: 15px; padding: 10px; background: #222; border: 1px dashed #0f0; color: #0f0; font-weight: bold;"></div>
             </div>
 
@@ -1297,12 +1366,54 @@
                     }
                 } catch(err) { supaError = err; }
 
+                // Check for gift code
+                const giftCode = (document.getElementById('reg-gift-code')?.value || '').trim().toUpperCase();
+                let giftPlanUpgrade = null;
+
+                if (giftCode) {
+                    // Try Supabase first
+                    let codeValid = false;
+                    try {
+                        const { data: codeRow, error: codeErr } = await supabaseClient
+                            .from('gift_codes')
+                            .select('*')
+                            .eq('code', giftCode)
+                            .eq('status', 'active')
+                            .single();
+
+                        if (!codeErr && codeRow) {
+                            await supabaseClient
+                                .from('gift_codes')
+                                .update({ status: 'used', used_by: username })
+                                .eq('code', giftCode);
+                            codeValid = true;
+                        }
+                    } catch(e) {
+                        // Fallback: check localStorage
+                        let giftCodes = JSON.parse(localStorage.getItem('giftCodes') || '{}');
+                        if (giftCodes[giftCode] && giftCodes[giftCode].status === 'active') {
+                            giftCodes[giftCode].status = 'used';
+                            giftCodes[giftCode].used_by = username;
+                            localStorage.setItem('giftCodes', JSON.stringify(giftCodes));
+                            codeValid = true;
+                        }
+                    }
+
+                    if (codeValid) {
+                        giftPlanUpgrade = 'Gift - 1 Year Unlimited';
+                    } else {
+                        return alert('Invalid or already-used gift code. Please check the code and try again.');
+                    }
+                }
+
                 let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
-                users[username] = { username, email: validEmail, password: pass, full_name: fullName, address: fullAddress, phone, age, plan: "Free", credits: 25, banned: false, is_admin: (username.toLowerCase() === 'neocryptz') };
+                users[username] = { username, email: validEmail, password: pass, full_name: fullName, address: fullAddress, phone, age, plan: giftPlanUpgrade || "Free", credits: giftPlanUpgrade ? 99999 : 25, banned: false, is_admin: (username.toLowerCase() === 'neocryptz') };
                 localStorage.setItem('localUsers', JSON.stringify(users));
 
                 if (supaError) {
                     alert("Registration fallback active. Saved locally. Error: " + supaError.message);
+                } else if (giftPlanUpgrade) {
+                    alert(`🎁 Gift code accepted! Welcome to Neocryptz AI.\n\nYour account has been upgraded to: ${giftPlanUpgrade}\n\nPlease log in to get started!`);
                 } else {
                     alert("Registered successfully. Please Login.");
                 }
