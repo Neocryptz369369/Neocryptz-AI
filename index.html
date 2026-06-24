@@ -3297,6 +3297,24 @@
         chatBox.scrollTop = chatBox.scrollHeight;
     }
 
+    // Generate a proper UUID v4
+    function generateUUID() {
+        return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+            (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
+    }
+
+    // Returns true only if the string is a valid UUID format
+    function isValidUUID(str) {
+        return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+    }
+
+    // Auto-clean any bad (non-UUID) support IDs on load
+    (function cleanBadSupportUids() {
+        Object.keys(localStorage).filter(k => k.startsWith('support_uid_')).forEach(k => {
+            if (!isValidUUID(localStorage.getItem(k))) localStorage.removeItem(k);
+        });
+    })();
+
     // Get a stable support user ID — Supabase session if available, else a stored local UUID
     async function getSupportUid() {
         try {
@@ -3306,9 +3324,8 @@
         // Fallback: stable UUID stored per username in localStorage
         const storageKey = 'support_uid_' + (currentUser?.username || 'anon');
         let uid = localStorage.getItem(storageKey);
-        if (!uid) {
-            uid = ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
-                (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
+        if (!uid || !isValidUUID(uid)) {
+            uid = generateUUID();
             localStorage.setItem(storageKey, uid);
         }
         return uid;
