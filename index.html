@@ -3240,8 +3240,13 @@
         }
 
         for (const uid of uniqueUserIds) {
-            const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', uid).single();
+            // Get the username from the message's sender_name (non-admin messages)
+            const userMsg = data.find(m => m.user_id === uid && m.sender_name !== 'Neocryptz');
             const lastMsg = data.find(m => m.user_id === uid);
+            const username = userMsg?.sender_name || lastMsg?.sender_name || 'Unknown User';
+
+            // Look up full profile by username rather than by Supabase auth ID
+            const { data: profile } = await supabaseClient.from('profiles').select('*').eq('username', username).single();
 
             const div = document.createElement('div');
             div.className = 'neon-border';
@@ -3249,24 +3254,34 @@
             div.style.marginBottom = '10px';
             div.style.cursor = 'pointer';
             div.style.background = selectedSupportUserId === uid ? 'rgba(138, 43, 226, 0.2)' : '#111';
-            div.innerHTML = `<strong>${profile?.username || 'Unknown User'}</strong><br><small style="color: #666;">${new Date(lastMsg.created_at).toLocaleString()}</small>`;
-            div.onclick = () => selectSupportUser(uid, profile);
+            div.innerHTML = `<strong>${username}</strong><br><small style="color: #666;">${new Date(lastMsg.created_at).toLocaleString()}</small>`;
+            div.onclick = () => selectSupportUser(uid, profile || { username });
             userList.appendChild(div);
         }
     }
 
     async function selectSupportUser(uid, profile) {
         selectedSupportUserId = uid;
+
+        // If profile was not found by username lookup, try fetching it now
+        if (!profile || !profile.full_name) {
+            const username = profile?.username;
+            if (username) {
+                const { data: fetched } = await supabaseClient.from('profiles').select('*').eq('username', username).single();
+                if (fetched) profile = fetched;
+            }
+        }
+
         document.getElementById("support-user-details").innerHTML = `
             <div style="background: rgba(138, 43, 226, 0.1); padding: 10px; border: 1px solid #8a2be2; border-radius: 5px;">
                 <h4 style="margin: 0 0 10px 0; color: #fff; text-transform: uppercase; letter-spacing: 1px;">User Registration Details</h4>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <div><strong>Username:</strong> ${profile.username || "N/A"}</div>
-                    <div><strong>Full Name:</strong> ${profile.full_name || "N/A"}</div>
-                    <div><strong>Email:</strong> ${profile.email || "N/A"}</div>
-                    <div><strong>Phone:</strong> ${profile.phone || "N/A"}</div>
-                    <div><strong>Address:</strong> ${profile.address || "N/A"}</div>
-                    <div><strong>Age:</strong> ${profile.age || "N/A"}</div>
+                    <div><strong>Username:</strong> ${profile?.username || "N/A"}</div>
+                    <div><strong>Full Name:</strong> ${profile?.full_name || "N/A"}</div>
+                    <div><strong>Email:</strong> ${profile?.email || "N/A"}</div>
+                    <div><strong>Phone:</strong> ${profile?.phone || "N/A"}</div>
+                    <div><strong>Address:</strong> ${profile?.address || "N/A"}</div>
+                    <div><strong>Age:</strong> ${profile?.age || "N/A"}</div>
                 </div>
             </div>
         `;
