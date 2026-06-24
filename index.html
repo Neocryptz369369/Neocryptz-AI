@@ -3297,23 +3297,25 @@
         chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    // Generate a proper UUID v4
+    // Generate a proper UUID v4 — tries native API first, falls back to Math.random
     function generateUUID() {
-        return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
-            (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
+        try { return crypto.randomUUID(); } catch(e) {}
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+            const r = Math.random() * 16 | 0;
+            return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+        });
     }
 
-    // Returns true only if the string is a valid UUID format
     function isValidUUID(str) {
-        return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+        return typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
     }
 
-    // Auto-clean any bad (non-UUID) support IDs on load
-    (function cleanBadSupportUids() {
+    // Clean any bad (non-UUID) support IDs on load — wrapped so it never crashes the page
+    try {
         Object.keys(localStorage).filter(k => k.startsWith('support_uid_')).forEach(k => {
             if (!isValidUUID(localStorage.getItem(k))) localStorage.removeItem(k);
         });
-    })();
+    } catch(e) {}
 
     // Get a stable support user ID — Supabase session if available, else a stored local UUID
     async function getSupportUid() {
@@ -3321,14 +3323,16 @@
             const { data } = await supabaseClient.auth.getSession();
             if (data?.session?.user?.id) return data.session.user.id;
         } catch(e) {}
-        // Fallback: stable UUID stored per username in localStorage
-        const storageKey = 'support_uid_' + (currentUser?.username || 'anon');
-        let uid = localStorage.getItem(storageKey);
-        if (!uid || !isValidUUID(uid)) {
-            uid = generateUUID();
-            localStorage.setItem(storageKey, uid);
-        }
-        return uid;
+        try {
+            const storageKey = 'support_uid_' + (currentUser?.username || 'anon');
+            let uid = localStorage.getItem(storageKey);
+            if (!isValidUUID(uid)) {
+                uid = generateUUID();
+                localStorage.setItem(storageKey, uid);
+            }
+            return uid;
+        } catch(e) {}
+        return generateUUID(); // absolute last resort — still a valid UUID
     }
 
     async function sendSupportMessage(isAdmin) {
@@ -3341,9 +3345,9 @@
             uid = selectedSupportUserId;
         } else {
             if (!currentUser) return alert("Please log in to use support chat.");
-            uid = await getSupportUid();
+            try { uid = await getSupportUid(); } catch(e) { uid = generateUUID(); }
         }
-        if (!uid) return alert("Could not identify user. Please log in and try again.");
+        if (!uid) uid = generateUUID();
 
         const senderName = isAdmin ? 'Neocryptz' : (currentUser?.username || 'User');
 
