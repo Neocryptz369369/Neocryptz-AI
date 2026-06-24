@@ -3,7 +3,10 @@ const express = require('express');
 const { deployProject } = require('./actions');
 const app = express();
 app.use(express.json());
-
+const path = require('path');
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
 app.post('/run-task', async (req, res) => {
   try {
     // Enforcing fully visible windowed browser execution
