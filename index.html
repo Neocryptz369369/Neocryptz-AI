@@ -354,14 +354,16 @@
         }
 
         function buyGiftSubscription() {
-            const confirmed = confirm("You are about to purchase a gift voucher for $240. Proceed to PayPal?");
+            const confirmed = confirm(
+                "IMPORTANT — NO REFUND POLICY\n\n" +
+                "By clicking OK, you confirm that you have read and agree to the following:\n\n" +
+                "• Neocryptz AI does not issue refunds for gift voucher purchases.\n" +
+                "• All sales are final.\n" +
+                "• You are agreeing to this policy as a condition of purchase.\n\n" +
+                "Do you agree and wish to continue to Stripe checkout?"
+            );
             if (confirmed) {
-                // Simulate checkout return -> generating a code
-                const code = "NEO-" + Math.random().toString(36).substring(2, 10).toUpperCase();
-                const out = document.getElementById('gift-code-output');
-                out.innerText = "Simulated Payment Success! Gift Code: " + code;
-                out.style.display = 'block';
-                // Note: In reality this opens PayPal and Webhook returns the code
+                window.open(STRIPE_LINKS['Gift'], '_blank');
             }
         }
 
@@ -653,24 +655,16 @@
             
             <div style="margin-bottom: 20px;">
                 
-                <div style="margin-top: 10px; border: 1px solid #0f0; padding: 10px; background: rgba(0,255,0,0.1);">
+                <div style="margin-top: 10px; border: 1px solid #f00; padding: 10px; background: rgba(255,0,0,0.1);">
+                    <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; color: #f00; font-weight: bold;">
+                        <span>SECURITY: AUTO-WIPE TIMER (5 MINS)</span>
+                        <input type="checkbox" id="autowipe-toggle" onchange="toggleAutoWipe()" style="width: 20px; height: 20px;">
+                    </label>
+                    <p style="font-size: 0.8em; color: #aaa; margin-top: 5px;">Automatically logs you out and wipes the screen clean if you are inactive for 5 minutes.</p>
+                </div>
+                        
+                <div style="margin-top: 10px; border: 1px solid #f00; padding: 10px; background: rgba(255,0,0,0.1);">
                     <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; color: #0f0; font-weight: bold;">
-                        
-                <div style="margin-top: 10px; border: 1px solid #f00; padding: 10px; background: rgba(255,0,0,0.1);">
-                    <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; color: #f00; font-weight: bold;">
-                        <span>SECURITY: AUTO-WIPE TIMER (5 MINS)</span>
-                        <input type="checkbox" id="autowipe-toggle" onchange="toggleAutoWipe()" style="width: 20px; height: 20px;">
-                    </label>
-                    <p style="font-size: 0.8em; color: #aaa; margin-top: 5px;">Automatically logs you out and wipes the screen clean if you are inactive for 5 minutes.</p>
-                </div>
-                        
-                <div style="margin-top: 10px; border: 1px solid #f00; padding: 10px; background: rgba(255,0,0,0.1);">
-                    <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; color: #f00; font-weight: bold;">
-                        <span>SECURITY: AUTO-WIPE TIMER (5 MINS)</span>
-                        <input type="checkbox" id="autowipe-toggle" onchange="toggleAutoWipe()" style="width: 20px; height: 20px;">
-                    </label>
-                    <p style="font-size: 0.8em; color: #aaa; margin-top: 5px;">Automatically logs you out and wipes the screen clean if you are inactive for 5 minutes.</p>
-                </div>
                         <span>SHIELD: STRICT ANONYMIZER MODE</span>
                         <input type="checkbox" id="anonymizer-toggle" onchange="toggleAnonymizer()" style="width: 20px; height: 20px;">
                     </label>
@@ -1050,7 +1044,7 @@
             <div style="margin-bottom: 20px; padding: 15px; border: 1px solid var(--secondary); background: #111; text-align: center;">
                 <h3 style="color: var(--secondary); margin-top: 0;">☕ SUPPORT THE CREATOR</h3>
                 <p style="font-size: 0.8em; color: #aaa;">If you love NEOCRYPTZ AI and want to support its privacy-first development, consider leaving a tip!</p>
-                <button class="btn" style="background: var(--secondary); color: #000; width: 100%; font-weight: bold;" onclick="window.open('https://paypal.me/bestcabautogroup', '_blank')">TIP $5.00</button>
+                <button class="btn" style="background: var(--secondary); color: #000; width: 100%; font-weight: bold;" onclick="window.open('https://buy.stripe.com/aFa00kbaqegOdYd4eocQU0a', '_blank')">TIP $5.00</button>
             </div>
 
             <h2 style="margin-top:40px;">ADVERTISING SERVICES</h2>
@@ -2823,31 +2817,53 @@
             logWin.document.body.innerHTML = logHtml;
         }
 
+        const STRIPE_LINKS = {
+            'Starter_monthly':        'https://buy.stripe.com/7sY4gAdiy6Om4nD7qAcQU09',
+            'Starter_yearly':         'https://buy.stripe.com/14AbJ26Ua4Ge8DT26gcQU08',
+            'Unlimited Text_monthly': 'https://buy.stripe.com/8x25kE3HYc8G2fv6mwcQU05',
+            'Unlimited Text_yearly':  'https://buy.stripe.com/eVq4gAfqGb4CcU912ccQU04',
+            'Power_monthly':          'https://buy.stripe.com/7sY28s7Ye1u21br3akcQU07',
+            'Power_yearly':           'https://buy.stripe.com/28E4gA2DU0pY8DT3akcQU06',
+            'Corporate Team':         'https://buy.stripe.com/bJe14odiy8Wu2fv9yIcQU01',
+            'Gift':                   'https://buy.stripe.com/28EcN6fqGgoWbQ55iscQU00',
+            'Ad_monthly':             'https://buy.stripe.com/7sY28s0vMgoW6vL6mwcQU03',
+            'Ad_yearly':              'https://buy.stripe.com/8x27sMfqG8WuaM15iscQU02',
+            'Tip':                    'https://buy.stripe.com/aFa00kbaqegOdYd4eocQU0a'
+        };
+
         function buyPlan(plan, period = 'monthly') {
-            const email = encodeURIComponent('bestcabautogroup@yahoo.com');
-            const confirmed = confirm("By proceeding, you agree that there are no refunds for this plan. Do you wish to continue?");
+            const confirmed = confirm(
+                "IMPORTANT — NO REFUND POLICY\n\n" +
+                "By clicking OK, you confirm that you have read and agree to the following:\n\n" +
+                "• Neocryptz AI does not issue refunds for any plan purchases.\n" +
+                "• All sales are final.\n" +
+                "• You are agreeing to this policy as a condition of purchase.\n\n" +
+                "Do you agree and wish to continue?"
+            );
             if (!confirmed) return;
 
-            let price = 0;
-            if (plan === 'Corporate Team') {
-                price = 999;
-            } else if (period === 'yearly') {
-                price = { "Starter": 120, "Unlimited Text": 240, "Power": 960 }[plan];
-            } else {
-                price = { "Starter": 10, "Unlimited Text": 20, "Power": 80 }[plan];
-            }
+            const key = plan === 'Corporate Team' ? 'Corporate Team' : `${plan}_${period}`;
+            const url = STRIPE_LINKS[key];
+            if (!url) { alert('Payment link not found. Please contact support.'); return; }
 
-            const userId = currentUser?.username || currentUser?.id || 'guest';
-            const itemName = (period === 'yearly' && plan !== 'Corporate Team') ? `${plan}_Yearly` : plan;
-            window.location.href = `https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=${email}&item_name=${encodeURIComponent(itemName)}&amount=${price}&custom=${encodeURIComponent(userId)}&currency_code=USD`;
+            const userId = encodeURIComponent(currentUser?.username || currentUser?.id || 'guest');
+            window.open(`${url}?client_reference_id=${userId}`, '_blank');
         }
 
         function buyAd(plan) {
-            const email = encodeURIComponent('bestcabautogroup@yahoo.com');
-            const confirmed = confirm("By proceeding, you agree that there are no refunds for ticker plans. Do you wish to continue?");
+            const confirmed = confirm(
+                "IMPORTANT — NO REFUND POLICY\n\n" +
+                "By clicking OK, you confirm that you have read and agree to the following:\n\n" +
+                "• Neocryptz AI does not issue refunds for any advertising purchases.\n" +
+                "• All sales are final.\n" +
+                "• You are agreeing to this policy as a condition of purchase.\n\n" +
+                "Do you agree and wish to continue?"
+            );
             if (!confirmed) return;
-            const price = plan === "monthly" ? 20 : 240;
-            window.location.href = `https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=${email}&item_name=Ad_${plan}&amount=${price}&currency_code=USD`;
+
+            const url = STRIPE_LINKS[`Ad_${plan}`];
+            if (!url) { alert('Payment link not found. Please contact support.'); return; }
+            window.open(url, '_blank');
         }
 
         init();
