@@ -1872,6 +1872,25 @@
             if (resp.ok) {
                 aiText = data.result || 'Task execution initiated.';
 
+                // ── Browser Permission Request ─────────────────────────────
+                const bpMatch = aiText.match(/<<<BROWSER_PERMISSION>>>([\s\S]*?)<<<END_BROWSER_PERMISSION>>>/);
+                if (bpMatch) {
+                    let bpReq; try { bpReq = JSON.parse(bpMatch[1].trim()); } catch(e) { bpReq = null; }
+                    if (bpReq) {
+                        const bpVisible = aiText.replace(/<<<BROWSER_PERMISSION>>>[\s\S]*?<<<END_BROWSER_PERMISSION>>>/g,'').trim();
+                        if (bpVisible) appendMessage('assistant', bpVisible);
+                        const allowed = await _showBrowserPermPopup(bpReq.description || 'Open a browser to complete this task');
+                        if (allowed) {
+                            await _runBrowserSlideshow(bpReq);
+                        } else {
+                            appendMessage('assistant', "No problem — I won't open a browser. Just let me know if you'd like to proceed another way.");
+                        }
+                        const sb = document.getElementById('send-btn');
+                        if (sb) { sb.disabled = false; sb.textContent = 'EXECUTE'; }
+                        return;
+                    }
+                }
+
                 // ── Autonomous Execution Engine v2 — Step-by-step pipeline ──
                 const execMatch = aiText.match(/<<<EXEC>>>([\s\S]*?)<<<END_EXEC>>>/);
                 if (execMatch) {
@@ -4443,6 +4462,89 @@
         } catch(e) {}
     }
 
+    // ========== BROWSER PERMISSION + LIVE SLIDESHOW ==========
+    function _showBrowserPermPopup(description) {
+        return new Promise(resolve => {
+            document.getElementById('browser-perm-desc').textContent = description;
+            document.getElementById('browser-perm-popup').style.display = 'flex';
+            window._browserPermResolve = resolve;
+        });
+    }
+    function handleBrowserPermResponse(allowed) {
+        document.getElementById('browser-perm-popup').style.display = 'none';
+        if (window._browserPermResolve) { window._browserPermResolve(allowed); window._browserPermResolve = null; }
+    }
+
+    async function _runBrowserSlideshow(req) {
+        const chat = document.getElementById('chat-window');
+        const wid = 'brow-' + Date.now();
+        const wrap = document.createElement('div');
+        wrap.id = wid;
+        wrap.style.cssText = 'border:2px solid #a855f7;border-radius:10px;overflow:hidden;margin:8px 0;background:#0a001a;';
+        wrap.innerHTML = `<div style="background:#120020;padding:7px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #a855f733;"><span style="color:#a855f7;font-weight:bold;font-size:0.82em;letter-spacing:1px;">🌐 NEOCRYPTZ AI BROWSER</span><span id="${wid}-status" style="color:#555;font-size:0.75em;flex:1;">Opening...</span><span style="background:#ff4444;border-radius:50%;width:8px;height:8px;display:inline-block;animation:badgePulse 0.6s infinite alternate;"></span></div><div id="${wid}-content" style="min-height:200px;display:flex;align-items:center;justify-content:center;color:#a855f7;font-size:0.88em;padding:20px;">⠹ Launching browser, this takes a few seconds...</div>`;
+        chat.appendChild(wrap);
+        chat.scrollTop = chat.scrollHeight;
+
+        window._browserFrames = window._browserFrames || {};
+        const token = typeof currentToken !== 'undefined' ? currentToken : '';
+
+        try {
+            const r = await fetch('/api/browser', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify({ url: req.url, actions: req.actions || [] })
+            });
+            const d = await r.json();
+            const ct = document.getElementById(wid + '-content');
+            const st = document.getElementById(wid + '-status');
+            if (!d.ok || !d.frames || !d.frames.length) {
+                if (ct) ct.innerHTML = '<div style="color:#f44;padding:20px;font-size:0.85em;">⚠️ ' + escapeHtml(d.error || 'Browser returned no screenshots') + '</div>';
+                if (st) st.textContent = 'Error';
+                return;
+            }
+            window._browserFrames[wid] = d.frames;
+            if (ct) ct.style.cssText = 'position:relative;';
+            if (st) st.textContent = d.frames.length + ' steps captured';
+
+            // Animate through frames
+            for (let i = 0; i < d.frames.length; i++) {
+                _showBrowserFrame(wid, i);
+                if (i < d.frames.length - 1) await new Promise(r => setTimeout(r, 1800));
+            }
+
+            // Navigation dots
+            if (d.frames.length > 1) {
+                const dots = document.createElement('div');
+                dots.id = wid + '-dots';
+                dots.style.cssText = 'display:flex;justify-content:center;gap:7px;padding:10px;background:#0a001a;border-top:1px solid #a855f722;';
+                dots.innerHTML = d.frames.map((_, i) => `<button onclick="_showBrowserFrame('${wid}',${i})" title="Step ${i+1}" style="width:9px;height:9px;border-radius:50%;background:${i===d.frames.length-1?'#a855f7':'#333'};border:none;cursor:pointer;padding:0;transition:background 0.2s;"></button>`).join('');
+                wrap.appendChild(dots);
+            }
+        } catch(e) {
+            const ct = document.getElementById(wid + '-content');
+            if (ct) ct.innerHTML = '<div style="color:#f44;padding:20px;font-size:0.85em;">Failed: ' + escapeHtml(e.message) + '</div>';
+        }
+    }
+
+    function _showBrowserFrame(wid, idx) {
+        const frames = (window._browserFrames || {})[wid];
+        if (!frames || !frames[idx]) return;
+        const frame = frames[idx];
+        const ct = document.getElementById(wid + '-content');
+        if (!ct) return;
+        const isLast = idx === frames.length - 1;
+        ct.innerHTML = `<div style="position:relative;">
+            <img src="data:image/jpeg;base64,${frame.image}" style="width:100%;display:block;max-height:500px;object-fit:contain;" />
+            <!-- Film overlay: user can see but not interact while AI is working -->
+            <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,0.035) 0px,rgba(0,0,0,0.035) 1px,transparent 1px,transparent 3px);pointer-events:all;cursor:default;"></div>
+            ${!isLast ? `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;"><div style="background:rgba(168,85,247,0.88);color:#fff;padding:9px 22px;border-radius:22px;font-size:0.84em;font-weight:bold;letter-spacing:1px;box-shadow:0 4px 20px rgba(168,85,247,0.4);">⚡ Working...</div></div>` : `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;"><div style="background:rgba(0,255,136,0.8);color:#000;padding:9px 22px;border-radius:22px;font-size:0.84em;font-weight:bold;letter-spacing:1px;">✓ Done</div></div>`}
+            <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.82);color:#a855f7;font-size:0.74em;padding:5px 10px;font-family:monospace;">${escapeHtml(frame.label || '')} · Step ${idx+1} of ${frames.length} · ${escapeHtml(frame.url || '')}</div>
+        </div>`;
+        const dotsEl = document.getElementById(wid + '-dots');
+        if (dotsEl) dotsEl.querySelectorAll('button').forEach((b, i) => b.style.background = i === idx ? '#a855f7' : '#333');
+        document.getElementById('chat-window').scrollTop = document.getElementById('chat-window').scrollHeight;
+    }
+
     function startWatchRequestPolling() {
         if (_watchReqPollId) clearInterval(_watchReqPollId);
         _watchReqPollId = setInterval(_pollForWatchRequests, 8000);
@@ -4609,6 +4711,21 @@
         startWatchRequestPolling();
     }, 3000);
 </script>
+
+<!-- ── Browser Permission Popup ───────────────────────────────────── -->
+<div id="browser-perm-popup" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.82); z-index:9500; align-items:center; justify-content:center;">
+    <div style="background:#0a001a; border:2px solid #a855f7; border-radius:14px; padding:30px 34px; max-width:460px; width:92%; text-align:center; box-shadow:0 0 70px rgba(168,85,247,0.4);">
+        <div style="font-size:2.4em; margin-bottom:12px;">🌐</div>
+        <h3 style="color:#a855f7; margin:0 0 12px; letter-spacing:1px; font-size:1.1em;">BROWSER REQUEST</h3>
+        <p style="color:#aaa; font-size:0.86em; margin:0 0 8px;">Neocryptz AI wants to open a live browser to:</p>
+        <div id="browser-perm-desc" style="color:#fff; font-size:0.92em; font-weight:bold; margin:0 0 14px; padding:10px 14px; background:#180028; border:1px solid #a855f744; border-radius:8px; font-style:italic;"></div>
+        <p style="color:#555; font-size:0.77em; margin-bottom:22px;">You'll watch a live screenshot feed as it works. <strong style="color:#a855f7;">No limits. No credits deducted.</strong> You can deny at any time.</p>
+        <div style="display:flex; gap:12px; justify-content:center;">
+            <button class="btn" style="border-color:#a855f7; color:#a855f7; padding:10px 30px; font-size:0.95em; font-weight:bold;" onclick="handleBrowserPermResponse(true)">✅ ALLOW</button>
+            <button class="btn" style="border-color:#555; color:#666; padding:10px 30px; font-size:0.95em;" onclick="handleBrowserPermResponse(false)">DENY</button>
+        </div>
+    </div>
+</div>
 
 <!-- ── Watch Permission Popup ─────────────────────────────────────── -->
 <div id="watch-perm-popup" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:9000; align-items:center; justify-content:center;">
