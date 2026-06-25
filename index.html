@@ -3512,7 +3512,7 @@
                 const newMsg = payload.new;
 
                 if (currentUser?.is_admin && newMsg.sender_name !== 'Neocryptz' && newMsg.sender_name !== '__profile__') {
-                    playSupportAlert();
+                    playSupportAlert('New message from a user!');
                     if (selectedSupportUserId === newMsg.user_id) {
                         loadSupportMessages(newMsg.user_id, true);
                     }
@@ -3520,7 +3520,7 @@
                 } else if (!currentUser?.is_admin && newMsg.sender_name === 'Neocryptz') {
                     const myUid = await getSupportUid();
                     if (myUid === newMsg.user_id) {
-                        playSupportAlert();
+                        playSupportAlert('Neocryptz replied to your message!');
                         loadSupportMessages(myUid, false);
                     }
                 }
@@ -3546,7 +3546,7 @@
         document.removeEventListener('click', unlockAudio);
     }, { once: true });
 
-    function playSupportAlert() {
+    function playSupportAlert(notifBody) {
         // 1. Web Audio API — uses pre-unlocked persistent context
         try {
             const ctx = getAudioCtx();
@@ -3570,7 +3570,7 @@
         // 2. Browser notification (fires even if user is on a different tab/window)
         if (Notification.permission === 'granted') {
             new Notification('⚡ Neocryptz Support', {
-                body: 'New message from a user!',
+                body: notifBody || 'New message!',
                 icon: '/favicon.ico'
             });
         }
@@ -3606,6 +3606,7 @@
     // Initialize support realtime after login/init
     setTimeout(async () => {
         setupSupportRealtime();
+        requestNotificationPermission(); // Ask all users (admin and regular) for notification permission
         if (currentUser && !currentUser.is_admin) {
             const uid = await getSupportUid();
             if (uid) loadSupportMessages(uid, false);
