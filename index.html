@@ -2180,7 +2180,13 @@
             backdrop.classList.toggle('visible', !isOpen);
         }
 
+        function closeMobileSidebar() {
+            document.getElementById('sidebar').classList.remove('mobile-open');
+            document.getElementById('sidebar-backdrop').classList.remove('visible');
+        }
+
         function openModal(id) {
+            closeMobileSidebar();
             document.getElementById(id).style.display = 'flex';
             if (id === 'admin-modal') {
                 loadAdminData();
