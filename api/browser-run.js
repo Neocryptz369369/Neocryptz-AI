@@ -16,7 +16,6 @@ export default async function handler(req, res) {
 
     const bbHeaders = {
         'x-bb-api-key': apiKey,
-        'Authorization': 'Bearer ' + apiKey,
         'Content-Type': 'application/json'
     };
 
