@@ -730,6 +730,13 @@
                 <button class="btn neon-border" onclick="document.getElementById('canvas-modal').style.display='flex'" title="Prompt Canvas">📝 Blueprint Canvas</button>
                 <button class="btn neon-border" onclick="requestSplitView()" title="A/B Split Generator">⚖️ Split View A/B</button>
                 <button class="btn neon-border" onclick="downloadChat()" title="Download History">💾 Export Chat</button>
+                <button id="screen-share-btn" class="btn neon-border" onclick="startScreenShare()" title="Share your screen live with admin" style="border-color:#a855f7;color:#a855f7;">🖥️ Share Screen</button>
+            </div>
+            <!-- Sharing active banner -->
+            <div id="screen-share-banner" style="display:none;align-items:center;justify-content:center;gap:12px;background:rgba(255,0,0,0.12);border:1px solid #ff4444;border-radius:6px;padding:6px 14px;font-size:0.82em;color:#ff4444;">
+                <span style="animation:badgePulse 0.6s infinite alternate;display:inline-block;">🔴</span>
+                <span>Your screen is being shared live. Any website, app, or platform you have open is visible to the admin.</span>
+                <button onclick="stopScreenShare()" style="background:none;border:1px solid #ff4444;color:#ff4444;padding:3px 10px;cursor:pointer;border-radius:4px;font-size:0.9em;">STOP</button>
             </div>
         </div>
         <div id="ticker-container">
@@ -4202,25 +4209,60 @@
         if (!el) return;
         el.innerHTML = '<span style="color:#888;font-size:0.85em;">Scanning for active sessions...</span>';
         try {
-            const { data } = await supabaseClient.from('query_cache').select('prompt, response').like('prompt', _LIVE_PFX + '%');
-            if (!data || data.length === 0) {
-                el.innerHTML = '<div style="color:#888;font-size:0.85em;padding:16px;text-align:center;">No active sessions right now.<br>Sessions appear here the moment any user sends a command.</div>';
+            const [pipeRes, screenRes] = await Promise.all([
+                supabaseClient.from('query_cache').select('prompt, response').like('prompt', _LIVE_PFX + '%'),
+                supabaseClient.from('query_cache').select('prompt, response').like('prompt', '__NCAI_SCREEN__:%')
+            ]);
+            const pipeRows   = (pipeRes.data   || []);
+            const screenRows = (screenRes.data  || []);
+
+            // Build a map of who is screen-sharing
+            const screeners = {};
+            screenRows.forEach(r => { screeners[r.prompt.replace('__NCAI_SCREEN__:', '')] = JSON.parse(r.response || '{}'); });
+
+            if (pipeRows.length === 0 && screenRows.length === 0) {
+                el.innerHTML = '<div style="color:#888;font-size:0.85em;padding:16px;text-align:center;">No active sessions right now.<br>Sessions appear here the moment any user sends a command or shares their screen.</div>';
                 return;
             }
-            el.innerHTML = data.map(row => {
+
+            // Merge: pipe sessions + standalone screen sharers
+            const shown = new Set();
+            const cards = [];
+
+            pipeRows.forEach(row => {
                 const username = row.prompt.replace(_LIVE_PFX, '');
+                shown.add(username);
                 let info = {}; try { info = JSON.parse(row.response || '{}'); } catch(e) {}
                 const ago = info.started_at ? Math.round((Date.now() - new Date(info.started_at)) / 1000) + 's ago' : '';
-                return `<div style="display:flex;align-items:center;gap:12px;background:#0d0d0d;border:1px solid #ff00ff44;border-radius:6px;padding:10px 14px;margin-bottom:8px;">
-                    <span style="font-size:1.2em;">👤</span>
+                const isSharing = !!screeners[username];
+                cards.push(`<div style="display:flex;align-items:center;gap:12px;background:#0d0d0d;border:1px solid ${isSharing ? '#a855f7' : '#ff00ff44'};border-radius:6px;padding:10px 14px;margin-bottom:8px;">
+                    <span style="font-size:1.2em;">${isSharing ? '🖥️' : '👤'}</span>
                     <div style="flex:1;">
-                        <div style="color:#ff00ff;font-weight:bold;">${escapeHtml(username)}</div>
-                        <div style="color:#555;font-size:0.76em;">Started ${ago}</div>
+                        <div style="color:${isSharing ? '#a855f7' : '#ff00ff'};font-weight:bold;">${escapeHtml(username)} ${isSharing ? '<span style="font-size:0.7em;background:#a855f722;padding:2px 6px;border-radius:4px;">SHARING SCREEN</span>' : ''}</div>
+                        <div style="color:#555;font-size:0.76em;">Pipeline started ${ago}</div>
                     </div>
-                    <button class="btn" style="border-color:#ff00ff;color:#ff00ff;font-size:0.8em;padding:5px 12px;"
-                        onclick="requestWatchAndMonitor('${escapeHtml(username)}','${escapeHtml(info.session_id||'')}')">👁️ WATCH LIVE</button>
-                </div>`;
-            }).join('');
+                    <div style="display:flex;gap:6px;">
+                        ${isSharing ? `<button class="btn" style="border-color:#a855f7;color:#a855f7;font-size:0.78em;padding:4px 10px;" onclick="watchScreen('${escapeHtml(username)}')">🖥️ SCREEN</button>` : ''}
+                        <button class="btn" style="border-color:#ff00ff;color:#ff00ff;font-size:0.78em;padding:4px 10px;" onclick="requestWatchAndMonitor('${escapeHtml(username)}','${escapeHtml(info.session_id||'')}')">⚡ PIPELINE</button>
+                    </div>
+                </div>`);
+            });
+
+            // Screen-only sharers (not running a pipeline)
+            screenRows.forEach(row => {
+                const username = row.prompt.replace('__NCAI_SCREEN__:', '');
+                if (shown.has(username)) return;
+                cards.push(`<div style="display:flex;align-items:center;gap:12px;background:#0d0d0d;border:2px solid #a855f7;border-radius:6px;padding:10px 14px;margin-bottom:8px;">
+                    <span style="font-size:1.2em;">🖥️</span>
+                    <div style="flex:1;">
+                        <div style="color:#a855f7;font-weight:bold;">${escapeHtml(username)} <span style="font-size:0.7em;background:#a855f722;padding:2px 6px;border-radius:4px;">SHARING SCREEN</span></div>
+                        <div style="color:#555;font-size:0.76em;">Screen only — no pipeline running</div>
+                    </div>
+                    <button class="btn" style="border-color:#a855f7;color:#a855f7;font-size:0.8em;padding:5px 12px;" onclick="watchScreen('${escapeHtml(username)}')">🖥️ WATCH SCREEN</button>
+                </div>`);
+            });
+
+            el.innerHTML = cards.join('');
         } catch(e) {
             el.innerHTML = '<span style="color:#f44;font-size:0.85em;">Error: ' + e.message + '</span>';
         }
@@ -4336,6 +4378,156 @@
         _watchReqPollId = setInterval(_pollForWatchRequests, 8000);
     }
 
+    // ========== WEBRTC SCREEN SHARING ==========
+    const _STUN = [{ urls:'stun:stun.l.google.com:19302' },{ urls:'stun:stun1.l.google.com:19302' }];
+    let _screenStream = null, _screenPc = null, _screenSigCh = null;
+    let _viewerPc = null, _viewerSigCh = null;
+
+    async function startScreenShare() {
+        if (_screenStream) { stopScreenShare(); return; }
+        try {
+            _screenStream = await navigator.mediaDevices.getDisplayMedia({ video:{ cursor:'always' }, audio:true });
+        } catch(e) {
+            alert('Screen share blocked or cancelled. Make sure to allow when the browser asks.');
+            return;
+        }
+        const me = currentUser?.username?.toLowerCase() || 'user';
+        const chan = 'ncai_screen_' + me;
+        _screenSigCh = supabaseClient.channel(chan);
+        _screenPc = new RTCPeerConnection({ iceServers: _STUN });
+        _screenStream.getTracks().forEach(t => _screenPc.addTrack(t, _screenStream));
+
+        _screenPc.onicecandidate = ({ candidate }) => {
+            if (candidate && _screenSigCh) {
+                _screenSigCh.send({ type:'broadcast', event:'ice_s', payload:{ c: candidate.toJSON() } });
+            }
+        };
+        _screenStream.getVideoTracks()[0].onended = stopScreenShare;
+
+        _screenSigCh.on('broadcast', { event:'sdp_ans' }, async ({ payload }) => {
+            try { await _screenPc.setRemoteDescription(new RTCSessionDescription(payload.a)); } catch(e){}
+        });
+        _screenSigCh.on('broadcast', { event:'ice_v' }, async ({ payload }) => {
+            try { await _screenPc.addIceCandidate(new RTCIceCandidate(payload.c)); } catch(e){}
+        });
+        _screenSigCh.on('broadcast', { event:'viewer_hello' }, async () => {
+            // Viewer just joined — re-send our offer so they can connect
+            if (_screenPc?.localDescription) {
+                _screenSigCh.send({ type:'broadcast', event:'sdp_off', payload:{ o: _screenPc.localDescription, who: currentUser?.username } });
+            }
+        });
+
+        await new Promise(r => _screenSigCh.subscribe(s => { if (s === 'SUBSCRIBED') r(); }));
+
+        const offer = await _screenPc.createOffer();
+        await _screenPc.setLocalDescription(offer);
+        _screenSigCh.send({ type:'broadcast', event:'sdp_off', payload:{ o: offer, who: currentUser?.username } });
+
+        // Register in query_cache so admin can see it
+        try {
+            await supabaseClient.from('query_cache').upsert([{
+                prompt: '__NCAI_SCREEN__:' + me,
+                response: JSON.stringify({ user: currentUser?.username, started_at: new Date().toISOString() })
+            }], { onConflict:'prompt' });
+        } catch(e){}
+
+        const btn = document.getElementById('screen-share-btn');
+        if (btn) { btn.textContent = '🔴 Stop Sharing'; btn.style.borderColor='#ff4444'; btn.style.color='#ff4444'; }
+        document.getElementById('screen-share-banner').style.display = 'flex';
+    }
+
+    async function stopScreenShare() {
+        if (_screenStream) { _screenStream.getTracks().forEach(t => t.stop()); _screenStream = null; }
+        if (_screenPc) { _screenPc.close(); _screenPc = null; }
+        if (_screenSigCh) {
+            try { _screenSigCh.send({ type:'broadcast', event:'share_ended', payload:{} }); } catch(e){}
+            _screenSigCh.unsubscribe(); _screenSigCh = null;
+        }
+        try {
+            if (currentUser) await supabaseClient.from('query_cache').delete().eq('prompt', '__NCAI_SCREEN__:' + currentUser.username.toLowerCase());
+        } catch(e){}
+        const btn = document.getElementById('screen-share-btn');
+        if (btn) { btn.textContent = '🖥️ Share Screen'; btn.style.borderColor=''; btn.style.color=''; }
+        document.getElementById('screen-share-banner').style.display = 'none';
+    }
+
+    async function watchScreen(targetUsername) {
+        const chan = 'ncai_screen_' + targetUsername.toLowerCase();
+        if (_viewerPc) { try { _viewerPc.close(); } catch(e){} _viewerPc = null; }
+        if (_viewerSigCh) { try { _viewerSigCh.unsubscribe(); } catch(e){} _viewerSigCh = null; }
+
+        showViewerTab('screen');
+        const sc = document.getElementById('live-screen-content');
+        sc.innerHTML = '<div style="color:#a855f7;text-align:center;padding:20px;font-size:0.85em;">Connecting to ' + escapeHtml(targetUsername) + '\'s screen...</div>';
+        document.getElementById('live-viewer-title').textContent = '🖥️ ' + targetUsername.toUpperCase() + ' — LIVE SCREEN';
+        document.getElementById('live-viewer-modal').style.display = 'flex';
+
+        const pc = new RTCPeerConnection({ iceServers: _STUN });
+        _viewerPc = pc;
+        const sigCh = supabaseClient.channel(chan);
+        _viewerSigCh = sigCh;
+
+        let videoEl = null;
+        pc.ontrack = (e) => {
+            if (!videoEl) {
+                videoEl = document.createElement('video');
+                videoEl.autoplay = true; videoEl.controls = true; videoEl.playsInline = true;
+                videoEl.style.cssText = 'width:100%;max-height:65vh;background:#000;border-radius:6px;display:block;';
+                sc.innerHTML = '<div style="color:#ff4444;font-size:0.78em;margin-bottom:6px;">🔴 LIVE — <strong>' + escapeHtml(targetUsername) + '</strong>\'s screen</div>';
+                sc.appendChild(videoEl);
+            }
+            videoEl.srcObject = e.streams[0];
+        };
+        pc.onicecandidate = ({ candidate }) => {
+            if (candidate && _viewerSigCh) {
+                _viewerSigCh.send({ type:'broadcast', event:'ice_v', payload:{ c: candidate.toJSON() } });
+            }
+        };
+
+        sigCh.on('broadcast', { event:'sdp_off' }, async ({ payload }) => {
+            try {
+                await pc.setRemoteDescription(new RTCSessionDescription(payload.o));
+                const ans = await pc.createAnswer();
+                await pc.setLocalDescription(ans);
+                sigCh.send({ type:'broadcast', event:'sdp_ans', payload:{ a: ans } });
+            } catch(e) { sc.innerHTML = '<div style="color:#f44;text-align:center;padding:20px;">WebRTC error: ' + e.message + '</div>'; }
+        });
+        sigCh.on('broadcast', { event:'ice_s' }, async ({ payload }) => {
+            try { await pc.addIceCandidate(new RTCIceCandidate(payload.c)); } catch(e){}
+        });
+        sigCh.on('broadcast', { event:'share_ended' }, () => {
+            sc.innerHTML = '<div style="color:#888;text-align:center;padding:24px;">🖥️ Screen share ended by ' + escapeHtml(targetUsername) + '.</div>';
+            if (videoEl) { videoEl.srcObject = null; }
+            pc.close();
+        });
+
+        await new Promise(r => sigCh.subscribe(s => { if (s === 'SUBSCRIBED') r(); }));
+        // Tell sharer we joined so they re-send the offer
+        sigCh.send({ type:'broadcast', event:'viewer_hello', payload:{ viewer: currentUser?.username } });
+
+        // Timeout if no stream in 15s
+        setTimeout(() => {
+            if (!videoEl && sc.innerHTML.includes('Connecting')) {
+                sc.innerHTML = '<div style="color:#888;text-align:center;padding:24px;">No active screen share from ' + escapeHtml(targetUsername) + '.<br><span style="font-size:0.85em;color:#555;">Ask them to click <strong style="color:#a855f7;">🖥️ Share Screen</strong> first.</span></div>';
+            }
+        }, 15000);
+    }
+
+    function showViewerTab(tab) {
+        document.getElementById('viewer-tab-screen').style.display   = tab === 'screen'   ? 'block' : 'none';
+        document.getElementById('viewer-tab-pipeline').style.display  = tab === 'pipeline' ? 'block' : 'none';
+        document.getElementById('vtab-screen').style.borderColor   = tab === 'screen'   ? '#a855f7' : '#555';
+        document.getElementById('vtab-screen').style.color         = tab === 'screen'   ? '#a855f7' : '#888';
+        document.getElementById('vtab-pipeline').style.borderColor  = tab === 'pipeline' ? '#ff00ff' : '#555';
+        document.getElementById('vtab-pipeline').style.color        = tab === 'pipeline' ? '#ff00ff' : '#888';
+    }
+
+    function closeLiveViewer() {
+        document.getElementById('live-viewer-modal').style.display = 'none';
+        if (_viewerPc) { try { _viewerPc.close(); } catch(e){} _viewerPc = null; }
+        if (_viewerSigCh) { try { _viewerSigCh.unsubscribe(); } catch(e){} _viewerSigCh = null; }
+    }
+
     // Initialize support realtime after login/init
     setTimeout(async () => {
         setupSupportRealtime();
@@ -4363,13 +4555,24 @@
 </div>
 
 <!-- ── Live Viewer Modal ───────────────────────────────────────────── -->
-<div id="live-viewer-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:8000; align-items:center; justify-content:center;">
-    <div style="background:#0a0a0a; border:2px solid #ff00ff; border-radius:12px; width:90%; max-width:560px; max-height:80vh; display:flex; flex-direction:column; box-shadow:0 0 50px rgba(255,0,255,0.25);">
-        <div style="display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid #ff00ff33;">
+<div id="live-viewer-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:8000; align-items:center; justify-content:center;">
+    <div style="background:#0a0a0a; border:2px solid #ff00ff; border-radius:12px; width:95%; max-width:820px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 0 60px rgba(255,0,255,0.3);">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:14px 20px; border-bottom:1px solid #ff00ff33; flex-shrink:0;">
             <span id="live-viewer-title" style="color:#ff00ff; font-weight:bold; letter-spacing:1px; font-size:0.9em;">👁️ LIVE WATCH</span>
-            <button onclick="document.getElementById('live-viewer-modal').style.display='none'" style="background:none; border:none; color:#888; font-size:1.2em; cursor:pointer;">✕</button>
+            <div style="display:flex; gap:8px;">
+                <button id="vtab-screen" onclick="showViewerTab('screen')" style="background:rgba(168,85,247,0.15); border:1px solid #a855f7; color:#a855f7; padding:4px 12px; border-radius:4px; cursor:pointer; font-size:0.8em;">🖥️ SCREEN</button>
+                <button id="vtab-pipeline" onclick="showViewerTab('pipeline')" style="background:rgba(255,0,255,0.1); border:1px solid #ff00ff44; color:#888; padding:4px 12px; border-radius:4px; cursor:pointer; font-size:0.8em;">⚡ PIPELINE</button>
+            </div>
+            <button onclick="closeLiveViewer()" style="background:none; border:none; color:#888; font-size:1.2em; cursor:pointer;">✕</button>
         </div>
-        <div id="live-viewer-content" style="flex:1; overflow-y:auto; padding:16px 20px; min-height:200px;"></div>
+        <div id="viewer-tab-screen" style="flex:1; overflow-y:auto; padding:16px 20px;">
+            <div id="live-screen-content" style="color:#888; text-align:center; padding:32px; font-size:0.88em;">
+                No screen share active.<br><span style="color:#555;">Ask the user to click <strong style="color:#a855f7;">🖥️ Share Screen</strong> in their chat toolbar.</span>
+            </div>
+        </div>
+        <div id="viewer-tab-pipeline" style="display:none; flex:1; overflow-y:auto; padding:16px 20px;">
+            <div id="live-viewer-content" style="min-height:120px;"></div>
+        </div>
     </div>
 </div>
 
