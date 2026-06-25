@@ -1680,8 +1680,16 @@
 
         async function logout() {
             try { await supabaseClient.auth.signOut(); } catch(e){ console.log(e); }
+            // Clear app keys
             localStorage.removeItem('token');
             localStorage.removeItem('currentUser');
+            localStorage.removeItem('rememberedUsername');
+            // Clear Supabase's own session key so getSession() returns null on reload
+            const supabaseRef = 'bxzvxgjnlvbexeuocbey';
+            localStorage.removeItem('sb-' + supabaseRef + '-auth-token');
+            localStorage.removeItem('sb-' + supabaseRef + '-auth-token-code-verifier');
+            // Belt-and-suspenders: wipe any remaining sb-* keys
+            Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
             location.reload();
         }
 
