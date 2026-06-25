@@ -4,8 +4,10 @@
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
-    const { url, task } = req.body || {};
-    if (!url) return res.status(400).json({ error: 'url required' });
+    const { url: rawUrl, task } = req.body || {};
+    if (!rawUrl) return res.status(400).json({ error: 'url required' });
+    // Ensure full URL — Playwright requires a protocol
+    const url = rawUrl.match(/^https?:\/\//) ? rawUrl : 'https://' + rawUrl;
 
     const apiKey = process.env.BROWSERBASE_API_KEY;
     if (!apiKey) return res.status(500).json({ error: 'BROWSERBASE_API_KEY not configured' });
