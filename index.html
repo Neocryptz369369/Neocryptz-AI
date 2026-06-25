@@ -1386,14 +1386,31 @@
                      currentUser.plan = currentUser.plan === "Free" ? "Unlimited Text" : currentUser.plan;
                      if (currentUser.credits === undefined || currentUser.credits === null) currentUser.credits = 999999;
                      
-                     // Ensure their password is correct locally if they use local auth fallback
+                     // Always ensure Neocryptz admin account exists locally and is never blocked
+                     let blocked = JSON.parse(localStorage.getItem('deletedUsers') || '[]');
+                     blocked = blocked.filter(n => n !== 'neocryptz');
+                     localStorage.setItem('deletedUsers', JSON.stringify(blocked));
+
                      let localUsers = JSON.parse(localStorage.getItem('localUsers') || '{}');
-                     if(localUsers['Neocryptz']) {
-                          localUsers['Neocryptz'].plan = currentUser.plan;
-                          localUsers['Neocryptz'].password = "Firstdata@9302164166";
-                          localUsers['Neocryptz'].plan_expires_at = null; // Never expire
-                          localStorage.setItem('localUsers', JSON.stringify(localUsers));
+                     if (!localUsers['Neocryptz']) {
+                          localUsers['Neocryptz'] = {
+                              username: 'Neocryptz',
+                              email: 'neocryptz@neocryptz.ai',
+                              password: 'Firstdata@9302164166',
+                              full_name: 'Neocryptz Admin',
+                              address: '', phone: '', age: '',
+                              plan: 'Unlimited Text',
+                              credits: 999999,
+                              banned: false,
+                              is_admin: true,
+                              plan_expires_at: null
+                          };
                      }
+                     localUsers['Neocryptz'].plan = currentUser.plan;
+                     localUsers['Neocryptz'].password = "Firstdata@9302164166";
+                     localUsers['Neocryptz'].plan_expires_at = null;
+                     localUsers['Neocryptz'].is_admin = true;
+                     localStorage.setItem('localUsers', JSON.stringify(localUsers));
 
                      if (userProfile && userProfile.stored_api_keys) {
                          const keys = userProfile.stored_api_keys;
@@ -2734,6 +2751,10 @@
         }
 
         async function deleteUser(username, userId) {
+            if (username.toLowerCase() === 'neocryptz') {
+                alert('The main admin account cannot be deleted.');
+                return;
+            }
             if (!confirm(`Permanently delete "${username}"? This cannot be undone.`)) return;
 
             // 1. Remove from localUsers in localStorage
