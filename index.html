@@ -874,7 +874,7 @@
                 <div id="user-support-chat-container" class="neon-border" style="padding: 15px; background: #050505;">
                     <div id="user-support-chat-box" style="height: 200px; overflow-y: auto; margin-bottom: 10px; padding: 10px; background: #000; border: 1px inset #8a2be2;"></div>
                     <div style="display: flex; gap: 10px;">
-                        <input type="text" id="user-support-input" placeholder="How can Neocryptz help you today?" style="flex: 1; padding: 10px; background: #111; border: 1px solid #8a2be2; color: #fff;">
+                        <input type="text" id="user-support-input" placeholder="How can Neocryptz help you today?" style="flex: 1; padding: 10px; background: #111; border: 1px solid #8a2be2; color: #fff;" onkeydown="if(event.key==='Enter') sendSupportMessage(false)">
                         <button class="btn" onclick="sendSupportMessage(false)">SEND TO NEOCRYPTZ</button>
                     </div>
                 </div>
@@ -1006,7 +1006,7 @@
                         </div>
                         <div id="admin-support-chat-box" style="flex: 1; overflow-y: auto; margin-bottom: 10px; padding: 10px; background: #000; border: 1px inset #8a2be2;"></div>
                         <div style="display: flex; gap: 10px;">
-                            <input type="text" id="admin-support-input" placeholder="Type a message..." style="flex: 1; padding: 10px; background: #111; border: 1px solid #8a2be2; color: #fff;">
+                            <input type="text" id="admin-support-input" placeholder="Type a message..." style="flex: 1; padding: 10px; background: #111; border: 1px solid #8a2be2; color: #fff;" onkeydown="if(event.key==='Enter') sendSupportMessage(true)">
                             <button class="btn" onclick="sendSupportMessage(true)">SEND</button>
                         </div>
                     </div>
