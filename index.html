@@ -372,53 +372,69 @@
             const btn = document.querySelector('#gift-modal .btn');
             if (btn) btn.disabled = true;
 
-            // Generate unique code
-            const rand = () => Math.random().toString(36).substring(2, 6).toUpperCase();
-            const code = `NEO-GIFT-${rand()}${rand()}`;
+            // Generate a reference ID (NOT the gift code — code only issued after payment confirmed)
+            const refId = 'PENDING-' + Date.now();
 
-            // Save to Supabase gift_codes table
+            // Save to Supabase as PENDING — no code yet
             try {
                 await supabaseClient.from('gift_codes').insert([{
-                    code: code,
+                    code: refId,
                     buyer_name: buyerName,
                     buyer_email: buyerEmail,
-                    status: 'active'
+                    status: 'pending'
                 }]);
             } catch(e) {
-                console.log('Supabase gift_codes insert note:', e.message);
                 // Save locally as fallback
                 let giftCodes = JSON.parse(localStorage.getItem('giftCodes') || '{}');
-                giftCodes[code] = { buyer_name: buyerName, buyer_email: buyerEmail, status: 'active', created_at: new Date().toISOString() };
+                giftCodes[refId] = { buyer_name: buyerName, buyer_email: buyerEmail, status: 'pending', created_at: new Date().toISOString() };
                 localStorage.setItem('giftCodes', JSON.stringify(giftCodes));
             }
 
-            // Show code on screen
+            // Show holding message — no code shown yet
             const statusEl = document.getElementById('gift-modal-status');
-            statusEl.innerHTML = `YOUR GIFT CODE:<br><span style="font-size:1.4em; color:#00ffff;">${code}</span><br><span style="font-size:0.7em; color:#aaa; font-weight:normal;">Save this! It's also being sent to ${buyerEmail}</span>`;
+            statusEl.style.borderColor = '#00ff88';
+            statusEl.style.color = '#00ff88';
+            statusEl.innerHTML = `✅ Your details have been saved.<br><span style="font-size:0.8em; color:#aaa; font-weight:normal;">Complete your payment on the next page. Your unique gift code will be emailed to <strong style="color:#fff;">${buyerEmail}</strong> once payment is confirmed.</span>`;
             statusEl.style.display = 'block';
 
-            // Open email client pre-filled with the code
+            // Send to Stripe checkout with reference
+            setTimeout(() => {
+                window.open(`${STRIPE_LINKS['Gift']}?client_reference_id=${encodeURIComponent(refId)}`, '_blank');
+                if (btn) btn.disabled = false;
+            }, 800);
+        }
+
+        function adminSendGiftCode(supabaseId, localRefId, buyerName, buyerEmail) {
+            if (!confirm(`Confirm payment received from ${buyerName} (${buyerEmail})?\n\nThis will generate their gift code and open your email to send it.`)) return;
+
+            const rand = () => Math.random().toString(36).substring(2, 6).toUpperCase();
+            const code = `NEO-GIFT-${rand()}${rand()}`;
+
+            // Update Supabase record: set real code + status active
+            if (supabaseId) {
+                supabaseClient.from('gift_codes').update({ code: code, status: 'active' }).eq('id', supabaseId).then(() => loadGiftCodes());
+            } else if (localRefId) {
+                let giftCodes = JSON.parse(localStorage.getItem('giftCodes') || '{}');
+                delete giftCodes[localRefId];
+                giftCodes[code] = { buyer_name: buyerName, buyer_email: buyerEmail, status: 'active', created_at: new Date().toISOString() };
+                localStorage.setItem('giftCodes', JSON.stringify(giftCodes));
+                loadGiftCodes();
+            }
+
+            // Open email pre-filled with the real code
             const subject = encodeURIComponent('Your Neocryptz AI Gift Subscription Code 🎁');
             const body = encodeURIComponent(
-                `Hi,\n\nYou received a Neocryptz AI Gift Subscription!\n\n` +
-                `Your unique gift code is:\n\n  ${code}\n\n` +
+                `Hi ${buyerName},\n\nThank you for your purchase! Here is your Neocryptz AI Gift Subscription code:\n\n  ${code}\n\n` +
                 `To redeem it:\n` +
                 `1. Go to https://neocryptz-ai.vercel.app\n` +
                 `2. Click REGISTER\n` +
-                `3. Fill in your details\n` +
-                `4. Enter the code in the "Gift Subscription Code" field\n` +
-                `5. Create your account — your 1-Year Unlimited plan will be activated!\n\n` +
-                `This code can only be used once.\n\n` +
-                `— Neocryptz AI`
+                `3. Fill in your details and enter the code in the "Gift Subscription Code" field\n` +
+                `4. Your 1-Year Unlimited plan will be activated immediately!\n\n` +
+                `This code can only be used once.\n\n— Neocryptz AI`
             );
             window.open(`mailto:${buyerEmail}?subject=${subject}&body=${body}`, '_blank');
 
-            // Open Stripe checkout
-            setTimeout(() => {
-                window.open(`${STRIPE_LINKS['Gift']}?client_reference_id=${encodeURIComponent(code)}`, '_blank');
-            }, 800);
-
-            if (btn) btn.disabled = false;
+            alert(`✅ Gift code ${code} generated and email opened for ${buyerEmail}`);
         }
 
 
@@ -826,11 +842,11 @@
     <div id="gift-modal" class="modal neon-border" style="display:none;">
         <div class="modal-content neon-border" style="max-width: 480px; text-align: center;">
             <h2 style="color: var(--primary);">🎁 GIFT A SUBSCRIPTION</h2>
-            <p style="font-size: 0.9em; color: #aaa; margin-bottom: 20px;">Fill in your details below. A unique gift code will be generated and sent to your email right away. The recipient enters it when they register.</p>
+            <p style="font-size: 0.9em; color: #aaa; margin-bottom: 20px;">Enter your details and pay via Stripe. Your unique gift code will be emailed to you <strong style="color:#00ff88;">after payment is confirmed</strong> — the recipient enters it when they register.</p>
             <input type="text" id="gift-buyer-name" placeholder="Your Name" style="width:100%; padding:10px; background:#111; border:1px solid var(--primary); color:#fff; margin-bottom:10px; box-sizing:border-box;">
-            <input type="email" id="gift-buyer-email" placeholder="Your Email (the code will be sent here)" style="width:100%; padding:10px; background:#111; border:1px solid var(--primary); color:#fff; margin-bottom:20px; box-sizing:border-box;">
-            <div id="gift-modal-status" style="display:none; padding:15px; margin-bottom:15px; border:2px dashed #8a2be2; background:rgba(138,43,226,0.1); color:#c084fc; font-weight:bold; font-size:1.1em; letter-spacing:2px;"></div>
-            <button class="btn" style="width:100%; margin-bottom:10px; background:linear-gradient(135deg,#8a2be2,#00ffff20); border-color:#8a2be2; color:#fff; font-weight:bold; padding:15px;" onclick="processGiftPurchase()">GENERATE CODE &amp; GO TO CHECKOUT →</button>
+            <input type="email" id="gift-buyer-email" placeholder="Your Email (code will be sent here after payment)" style="width:100%; padding:10px; background:#111; border:1px solid var(--primary); color:#fff; margin-bottom:20px; box-sizing:border-box;">
+            <div id="gift-modal-status" style="display:none; padding:15px; margin-bottom:15px; border:2px dashed #00ff88; background:rgba(0,255,136,0.05); color:#00ff88; font-weight:bold; font-size:1em;"></div>
+            <button class="btn" style="width:100%; margin-bottom:10px; background:linear-gradient(135deg,#8a2be2,#00ffff20); border-color:#8a2be2; color:#fff; font-weight:bold; padding:15px;" onclick="processGiftPurchase()">SAVE DETAILS &amp; GO TO PAYMENT →</button>
             <button class="btn" style="width:100%; background:transparent; border-color:#555; color:#aaa;" onclick="closeModal('gift-modal')">CANCEL</button>
             <p style="font-size: 0.7em; color: #555; margin-top:15px;">⚠ IMPORTANT — NO REFUND POLICY: All gift voucher sales are final. By proceeding you agree no refunds will be issued.</p>
         </div>
@@ -2770,10 +2786,15 @@
                 const redeemer = r.used_by ? (redeemerProfiles[r.used_by] || null) : null;
                 const statusColor = r.status === 'used' ? '#0f0' : '#f59e0b';
 
-                html += `<tr style="border-bottom:1px solid #222; vertical-align:top;">
-                    <td style="padding:10px 8px; font-family:monospace; color:#00ffff; font-weight:bold; white-space:nowrap;">${escapeHtml(r.code)}</td>
+                const isPending = r.status === 'pending' || (r.code && r.code.startsWith('PENDING-'));
+                const statusLabel = r.status === 'used' ? '✅ REDEEMED' : isPending ? '💳 AWAITING PAYMENT' : '⏳ ACTIVE (NOT YET USED)';
+                const rowBg = isPending ? 'background:rgba(245,158,11,0.05);' : '';
+
+                html += `<tr style="border-bottom:1px solid #222; vertical-align:top; ${rowBg}">
+                    <td style="padding:10px 8px; font-family:monospace; color:${isPending ? '#f59e0b' : '#00ffff'}; font-weight:bold; white-space:nowrap;">${isPending ? '⏳ Pending' : escapeHtml(r.code)}</td>
                     <td style="padding:10px 8px;">
-                        <span style="color:${statusColor}; font-weight:bold; font-size:0.9em;">${r.status === 'used' ? '✅ REDEEMED' : '⏳ PENDING'}</span>
+                        <span style="color:${r.status === 'used' ? '#0f0' : isPending ? '#f59e0b' : '#00ffff'}; font-weight:bold; font-size:0.9em;">${statusLabel}</span>
+                        ${isPending ? `<br><button onclick="adminSendGiftCode('${r.id || ''}', '${escapeHtml(r.code)}', '${escapeHtml(r.buyer_name || '')}', '${escapeHtml(r.buyer_email || '')}')" style="margin-top:6px; padding:5px 10px; background:#00ff88; color:#000; border:none; font-weight:bold; cursor:pointer; border-radius:3px; font-size:0.8em;">✅ CONFIRM PAYMENT & SEND CODE</button>` : ''}
                     </td>
                     <td style="padding:10px 8px; border-left:1px solid #222;">
                         <div style="color:#fff; font-weight:bold;">${escapeHtml(r.buyer_name || '—')}</div>
