@@ -1754,38 +1754,82 @@
         let recognition;
         function toggleVoiceInput() {
             if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-                alert("Voice input is not supported in this browser. Try Chrome or Edge.");
+                alert("Voice input is not supported in this browser. Please use Chrome or Edge.");
                 return;
             }
+
+            const micBtn = document.getElementById('mic-btn');
+            const input = document.getElementById('message-input');
+
+            // If already listening, stop
             if (recognition) {
                 recognition.stop();
                 recognition = null;
-                document.getElementById('mic-btn').style.color = 'var(--primary)';
+                micBtn.style.color = 'var(--primary)';
+                micBtn.title = 'Voice Input';
+                input.placeholder = "Enter command or question...";
                 return;
             }
 
             const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
             recognition = new SpeechRec();
+            recognition.lang = 'en-US';
             recognition.continuous = false;
-            recognition.interimResults = false;
+            recognition.interimResults = true;
 
             recognition.onstart = function() {
-                document.getElementById('mic-btn').style.color = '#ff0000'; // Recording red
-                document.getElementById('message-input').placeholder = "Listening...";
+                micBtn.style.color = '#ff0000';
+                micBtn.title = 'Recording... click to stop';
+                input.placeholder = "🎤 Listening — speak now...";
             };
 
             recognition.onresult = function(event) {
-                const transcript = event.results[0][0].transcript;
-                document.getElementById('message-input').value += (document.getElementById('message-input').value ? ' ' : '') + transcript;
+                let interim = '';
+                let final = '';
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    if (event.results[i].isFinal) {
+                        final += event.results[i][0].transcript;
+                    } else {
+                        interim += event.results[i][0].transcript;
+                    }
+                }
+                // Show interim result as placeholder, append final to input
+                if (interim) input.placeholder = '🎤 ' + interim;
+                if (final) {
+                    input.value += (input.value ? ' ' : '') + final.trim();
+                    input.placeholder = "Enter command or question...";
+                }
+            };
+
+            recognition.onerror = function(event) {
+                micBtn.style.color = 'var(--primary)';
+                micBtn.title = 'Voice Input';
+                input.placeholder = "Enter command or question...";
+                recognition = null;
+                const msgs = {
+                    'not-allowed': '🎤 Microphone access denied. Please allow microphone in your browser settings.',
+                    'no-speech':   '🎤 No speech detected. Try again.',
+                    'network':     '🎤 Network error with speech service. Try again.',
+                    'aborted':     null
+                };
+                const msg = msgs[event.error];
+                if (msg) input.placeholder = msg;
             };
 
             recognition.onend = function() {
-                document.getElementById('mic-btn').style.color = 'var(--primary)';
-                document.getElementById('message-input').placeholder = "Enter command or question...";
+                micBtn.style.color = 'var(--primary)';
+                micBtn.title = 'Voice Input';
+                input.placeholder = "Enter command or question...";
                 recognition = null;
             };
 
-            recognition.start();
+            try {
+                recognition.start();
+            } catch(e) {
+                recognition = null;
+                micBtn.style.color = 'var(--primary)';
+                input.placeholder = "🎤 Could not start microphone. Try again.";
+            }
         }
 
         async function sendMessage() {
