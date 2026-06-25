@@ -4617,70 +4617,53 @@
         const dot = document.getElementById(wid + '-dot');
 
         try {
-            // ── Phase 1: Create Browserbase session (fast) ────────────────
-            const sessRes = await fetch('/api/browser-session', {
+            // ── Single call: create session + navigate + click all buttons + screenshots ──
+            st.textContent = '⠹ Connecting browser and navigating...';
+            const runRes = await fetch('/api/browser-run', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify({ url: req.url, task: req.task || '' })
             });
-            const sess = await sessRes.json();
+            const d = await runRes.json();
 
-            if (!sess.sessionId || !sess.liveViewUrl) {
-                ct.innerHTML = '<div style="color:#f44;padding:20px;font-size:0.85em;">⚠️ ' + escapeHtml(sess.error || 'Could not create browser session. Check BROWSERBASE_API_KEY in Vercel.') + '</div>';
+            dot.style.animation = 'none';
+
+            if (!d.ok || !d.frames || !d.frames.length) {
+                ct.innerHTML = '<div style="color:#f44;padding:20px;font-size:0.85em;">⚠️ ' + escapeHtml(d.error || 'Browser returned no screenshots. Check BROWSERBASE_API_KEY in Vercel.') + '</div>';
                 st.textContent = 'Error';
+                dot.style.background = '#ff4444';
                 return;
             }
 
-            // ── Phase 2: Show live iframe immediately — user watches now ──
-            ct.style.cssText = 'position:relative;padding:0;';
-            ct.innerHTML = `
-                <iframe
-                    src="${sess.liveViewUrl}"
-                    style="width:100%;height:520px;border:none;display:block;background:#000;"
-                    allow="clipboard-read; clipboard-write"
-                    sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
-                ></iframe>
-                <div style="position:absolute;top:10px;right:10px;background:rgba(255,0,0,0.85);color:#fff;padding:4px 12px;border-radius:20px;font-size:0.72em;font-weight:bold;letter-spacing:1px;pointer-events:none;">
-                    🔴 LIVE
+            dot.style.background = '#00ff88';
+            st.textContent = d.summary || (d.frames.length + ' steps captured');
+            ct.style.cssText = 'position:relative;';
+
+            // ── Animate through real screenshots rapidly ───────────────────
+            for (let i = 0; i < d.frames.length; i++) {
+                const frame = d.frames[i];
+                const isLast = i === d.frames.length - 1;
+                ct.innerHTML = `<div style="position:relative;">
+                    <img src="data:image/jpeg;base64,${frame.image}" style="width:100%;display:block;max-height:520px;object-fit:contain;background:#000;" />
+                    <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.85);color:${frame.label?.startsWith('✅')?'#0f0':frame.label?.startsWith('⚠️')?'#fa0':'#a855f7'};font-size:0.76em;padding:6px 12px;font-family:monospace;">
+                        ${escapeHtml(frame.label || '')} · Step ${i+1}/${d.frames.length}
+                    </div>
+                    ${!isLast ? '' : '<div style="position:absolute;top:10px;right:10px;background:rgba(0,200,100,0.9);color:#000;padding:4px 14px;border-radius:20px;font-size:0.78em;font-weight:bold;">✓ Done</div>'}
                 </div>`;
-            st.textContent = '🔴 Live — watching ' + req.url;
-            dot.style.background = '#ff4444';
+                if (i < d.frames.length - 1) await new Promise(r => setTimeout(r, 600));
+            }
 
-            // ── Phase 3: Run actions in background (user watches them happen live) ──
-            fetch('/api/browser-run', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                body: JSON.stringify({ sessionId: sess.sessionId, url: req.url, actions: req.actions || [] })
-            }).then(async r => {
-                const d = await r.json();
-                dot.style.animation = 'none';
-                dot.style.background = d.ok ? '#00ff88' : '#ff4444';
-
-                if (d.ok) {
-                    st.textContent = '✓ Done — ' + (d.summary || 'Completed');
-                    // Show action log below the live view
-                    if (d.log && d.log.length) {
-                        const logDiv = document.createElement('div');
-                        logDiv.style.cssText = 'background:#0a001a;border-top:1px solid #a855f722;padding:10px 14px;font-size:0.74em;font-family:monospace;color:#888;max-height:160px;overflow-y:auto;';
-                        logDiv.innerHTML = d.log.map((l, i) =>
-                            `<div style="padding:2px 0;color:${l.step==='error'?'#f44':l.step==='skip'?'#fa0':'#a855f7'};">${i+1}. ${escapeHtml(l.label)}${l.url && l.url !== req.url ? ' <span style="color:#555;">→ '+escapeHtml(l.url)+'</span>' : ''}</div>`
-                        ).join('');
-                        wrap.appendChild(logDiv);
-                    }
-                    // Report broken links if found
-                    if (d.links && d.links.length) {
-                        const linksDiv = document.createElement('div');
-                        linksDiv.style.cssText = 'background:#120020;border-top:1px solid #a855f733;padding:10px 14px;font-size:0.76em;color:#ccc;';
-                        linksDiv.innerHTML = '<div style="color:#a855f7;font-weight:bold;margin-bottom:6px;">🔗 Clickable elements found:</div>' +
-                            d.links.map(l => `<div style="padding:2px 0;">• ${escapeHtml(l.label)} ${l.href ? '<span style="color:#555;">('+escapeHtml(l.href)+')</span>' : '<span style="color:#fa0;">[no link — JS only]</span>'}</div>`).join('');
-                        wrap.appendChild(linksDiv);
-                    }
-                } else {
-                    st.textContent = '⚠️ Error: ' + (d.error || 'unknown');
-                }
-                chat.scrollTop = chat.scrollHeight;
-            }).catch(e => {
-                st.textContent = '⚠️ Run failed: ' + e.message;
-            });
+            // ── Summary report ────────────────────────────────────────────
+            if (d.report && d.report.length) {
+                const rep = document.createElement('div');
+                rep.style.cssText = 'background:#0a001a;border-top:1px solid #a855f733;padding:10px 14px;font-size:0.76em;font-family:monospace;max-height:180px;overflow-y:auto;';
+                rep.innerHTML = '<div style="color:#a855f7;font-weight:bold;margin-bottom:6px;">🔍 Button Report:</div>' +
+                    d.report.map(r => `<div style="padding:2px 0;color:${r.navigated?'#0f0':r.error?'#f44':'#fa0'};">
+                        ${r.navigated?'✅':r.error?'❌':'⚠️'} "${escapeHtml(r.element)}" — ${r.navigated?'goes to '+escapeHtml(r.destination):r.error||'no destination'}
+                    </div>`).join('');
+                wrap.appendChild(rep);
+            }
+            chat.scrollTop = chat.scrollHeight;
 
         } catch(e) {
             if (ct) ct.innerHTML = '<div style="color:#f44;padding:20px;font-size:0.85em;">Failed: ' + escapeHtml(e.message) + '</div>';
