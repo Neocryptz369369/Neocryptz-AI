@@ -10,9 +10,14 @@ export default async function handler(req, res) {
     try {
         // Get the first project ID (required by Browserbase API)
         let projectId = null;
+        const bbHeaders = {
+            'x-bb-api-key': apiKey,
+            'Authorization': 'Bearer ' + apiKey,
+            'Content-Type': 'application/json'
+        };
         try {
             const projRes = await fetch('https://www.browserbase.com/v1/projects', {
-                headers: { 'x-bb-api-key': apiKey }
+                headers: bbHeaders
             });
             if (projRes.ok) {
                 const projData = await projRes.json();
@@ -25,7 +30,7 @@ export default async function handler(req, res) {
         const body = projectId ? { projectId } : {};
         const sessRes = await fetch('https://www.browserbase.com/v1/sessions', {
             method: 'POST',
-            headers: { 'x-bb-api-key': apiKey, 'Content-Type': 'application/json' },
+            headers: bbHeaders,
             body: JSON.stringify(body)
         });
 
