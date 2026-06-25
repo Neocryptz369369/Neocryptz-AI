@@ -1303,6 +1303,19 @@
                 console.log("Supabase getSession failed, falling back to local storage.", err);
             }
 
+            // Auto-restore from remembered login if currentUser was cleared (e.g. iOS Safari wipe)
+            if (!localUser) {
+                const rememberedUser = localStorage.getItem('rememberedUsername');
+                if (rememberedUser) {
+                    const localUsers = JSON.parse(localStorage.getItem('localUsers') || '{}');
+                    const found = localUsers[rememberedUser];
+                    if (found) {
+                        localUser = JSON.stringify(found);
+                        localStorage.setItem('currentUser', localUser);
+                    }
+                }
+            }
+
             if (session || localUser) {
                 if (session) {
                     currentUser = userProfile || {
@@ -1434,11 +1447,14 @@
 
                         localStorage.setItem('currentUser', JSON.stringify(foundUser));
                         localStorage.setItem('token', 'local-token-' + username);
+                        localStorage.setItem('rememberedUsername', foundUser.username || username);
                         location.reload();
                     } else {
                         alert("Login Failed: " + supaError.message);
                     }
                 } else {
+                    // Supabase login success — remember the username for auto-restore
+                    localStorage.setItem('rememberedUsername', username);
                     location.reload();
                 }
             } else {
