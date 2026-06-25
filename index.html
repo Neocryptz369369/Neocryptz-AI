@@ -4942,8 +4942,12 @@ let adCooldownTimer = null;
 
 async function watchAdForCredits() {
     const authToken = localStorage.getItem('token');
-    if (!currentUser || !authToken) {
-        alert('Please log in first to earn credits.');
+    if (!currentUser) {
+        showAdMessage('⚠️ Please log in to earn credits.', '#ffaa00');
+        return;
+    }
+    if (!authToken) {
+        showAdMessage('⚠️ To earn credits via ads, please log out and log back in with your email and password.', '#ffaa00');
         return;
     }
 
@@ -5021,12 +5025,24 @@ async function claimAdReward(authToken, btn) {
 
         } else {
             btn.disabled = false;
-            alert(data.error || 'Something went wrong. Try again.');
+            const msg = data.error === 'Invalid token'
+                ? '⚠️ Session expired — please log out and log back in with your email and password to earn credits.'
+                : '⚠️ ' + (data.error || 'Something went wrong. Try again.');
+            showAdMessage(msg, '#ffaa00');
         }
     } catch (e) {
         btn.disabled = false;
-        alert('Network error. Please try again.');
+        showAdMessage('⚠️ Network error. Please try again.', '#ff4444');
     }
+}
+
+function showAdMessage(text, color) {
+    const msg = document.createElement('div');
+    msg.className = 'message assistant neon-border';
+    msg.style.cssText = 'border-color:' + (color || '#ffaa00') + ';color:' + (color || '#ffaa00') + ';';
+    msg.textContent = text;
+    const cw = document.getElementById('chat-window');
+    if (cw) { cw.appendChild(msg); cw.scrollTop = cw.scrollHeight; }
 }
 
 function startAdCooldown(seconds, btn) {
