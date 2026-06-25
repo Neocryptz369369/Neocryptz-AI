@@ -3270,13 +3270,28 @@
     async function selectSupportUser(uid, profile) {
         selectedSupportUserId = uid;
 
-        // If profile was not found, try fetching from profiles table by username
+        // If Supabase profile is missing data, check localStorage (covers locally-created accounts)
         if (!profile || !profile.full_name) {
             const username = profile?.username;
             if (username) {
+                // Try Supabase again with case-insensitive match
                 const { data: fetched } = await supabaseClient.from('profiles').select('username,full_name,email,phone,address,age,plan').ilike('username', username).single();
                 if (fetched) profile = fetched;
             }
+        }
+        if (!profile || !profile.full_name) {
+            try {
+                const localUsers = JSON.parse(localStorage.getItem('localUsers') || '{}');
+                const username = profile?.username;
+                if (username) {
+                    // Case-insensitive localStorage lookup
+                    const key = Object.keys(localUsers).find(k => k.toLowerCase() === username.toLowerCase());
+                    if (key) {
+                        const u = localUsers[key];
+                        profile = { ...profile, username: u.username, full_name: u.full_name, email: u.email, phone: u.phone, address: u.address, age: u.age, plan: u.plan };
+                    }
+                }
+            } catch(e) {}
         }
 
         document.getElementById("support-user-details").innerHTML = `
