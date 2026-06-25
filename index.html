@@ -605,6 +605,12 @@
             100% { filter: drop-shadow(0 0 4px #00ff44) drop-shadow(0 0 8px #00cc33); transform: scale(1); }
         }
         .shield-green { animation: shieldGreen 0.6s ease-in-out infinite; }
+        @keyframes shieldPink {
+            0%   { filter: drop-shadow(0 0 4px #ff69b4) drop-shadow(0 0 8px #ff1493); transform: scale(1); }
+            50%  { filter: drop-shadow(0 0 16px #ff69b4) drop-shadow(0 0 32px #ff1493); transform: scale(1.18); }
+            100% { filter: drop-shadow(0 0 4px #ff69b4) drop-shadow(0 0 8px #ff1493); transform: scale(1); }
+        }
+        .shield-pink { animation: shieldPink 0.6s ease-in-out infinite; }
         @keyframes ncThink {
             0%,80%,100% { transform: scale(0.45); opacity: 0.25; }
             40% { transform: scale(1); opacity: 1; }
@@ -1037,6 +1043,7 @@
                 <span style="border-left:1px solid #444; margin:0 4px;"></span>
                 <button class="btn" style="font-size:0.7em; border-color:#aaa; color:#aaa;" onclick="testPlanLights('police')">🚨 TEST POLICE</button>
                 <button class="btn" style="font-size:0.7em; border-color:#00ff44; color:#00ff44;" onclick="testPlanLights('green')">🟢 TEST GREEN</button>
+                <button class="btn" style="font-size:0.7em; border-color:#ff69b4; color:#ff69b4;" onclick="testPlanLights('pink')">🩷 TEST PINK</button>
                 <button class="btn" style="font-size:0.7em; border-color:#ffd700; color:#ffd700;" onclick="testPlanLights('newuser')">🌟 TEST NEW USER</button>
                 <button class="btn" onclick="showAdminTab('admin-feedback'); loadAdminData()">FEEDBACK</button>
                 <button class="btn" onclick="showAdminTab('admin-settings')">SETTINGS</button>
@@ -4632,12 +4639,13 @@
     function testPlanLights(mode) {
         const shield = document.getElementById('admin-icon');
         if (!shield) return;
-        shield.classList.remove('shield-police', 'shield-green', 'shield-new-user', 'shield-alerting');
+        shield.classList.remove('shield-police', 'shield-green', 'shield-pink', 'shield-new-user', 'shield-alerting');
         if (mode === 'police')  shield.classList.add('shield-police');
         if (mode === 'green')   shield.classList.add('shield-green');
+        if (mode === 'pink')    shield.classList.add('shield-pink');
         if (mode === 'newuser') shield.classList.add('shield-new-user');
         setTimeout(() => {
-            shield.classList.remove('shield-police', 'shield-green', 'shield-new-user');
+            shield.classList.remove('shield-police', 'shield-green', 'shield-pink', 'shield-new-user');
             checkNewUserNotifications();
         }, 60000);
     }
@@ -4647,11 +4655,13 @@
         if (!shield) return;
         const isPolice = (planName === 'Unlimited Text' && period === 'yearly') || planName === 'Corporate Team';
         const isGreen  = (planName === 'Unlimited Text' && period === 'monthly');
-        if (!isPolice && !isGreen) return;
-        shield.classList.remove('shield-police', 'shield-green', 'shield-new-user', 'shield-alerting');
-        shield.classList.add(isPolice ? 'shield-police' : 'shield-green');
+        const isPink   = planName === 'Starter' || planName === 'Power';
+        if (!isPolice && !isGreen && !isPink) return;
+        const cls = isPolice ? 'shield-police' : isGreen ? 'shield-green' : 'shield-pink';
+        shield.classList.remove('shield-police', 'shield-green', 'shield-pink', 'shield-new-user', 'shield-alerting');
+        shield.classList.add(cls);
         setTimeout(() => {
-            shield.classList.remove('shield-police', 'shield-green');
+            shield.classList.remove('shield-police', 'shield-green', 'shield-pink');
             checkNewUserNotifications();
         }, 60000);
     }
