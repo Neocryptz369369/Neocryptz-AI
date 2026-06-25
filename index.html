@@ -3227,7 +3227,7 @@
         if (!currentUser || !currentUser.is_admin) return;
         const { data, error } = await supabaseClient
             .from('support_messages')
-            .select('user_id, sender_name, created_at')
+            .select('user_id, sender_name, message, created_at')
             .order('created_at', { ascending: false });
 
         if (error) {
@@ -3246,14 +3246,26 @@
             return;
         }
 
-        for (const uid of uniqueUserIds) {
-            // Get the username from the message's sender_name (non-admin messages)
-            const userMsg = data.find(m => m.user_id === uid && m.sender_name !== 'Neocryptz');
-            const lastMsg = data.find(m => m.user_id === uid);
-            const username = userMsg?.sender_name || lastMsg?.sender_name || 'Unknown User';
+        // Only count real users (not admin/system messages)
+        const realUserIds = [...new Set(data.filter(m => m.user_id && m.sender_name !== 'Neocryptz' && m.sender_name !== '__profile__').map(m => m.user_id))];
 
-            // Look up full profile by username (case-insensitive) from profiles table
-            const { data: profile } = await supabaseClient.from('profiles').select('username,full_name,email,phone,address,age,plan').ilike('username', username).single();
+        for (const uid of realUserIds) {
+            // Get username from a real chat message
+            const userMsg = data.find(m => m.user_id === uid && m.sender_name !== 'Neocryptz' && m.sender_name !== '__profile__');
+            const lastRealMsg = data.find(m => m.user_id === uid && m.sender_name !== '__profile__');
+            const username = userMsg?.sender_name || 'Unknown User';
+
+            // Extract profile from hidden __profile__ message (sent alongside chat messages)
+            const profileMsg = data.find(m => m.user_id === uid && m.sender_name === '__profile__');
+            let profile = null;
+            if (profileMsg) {
+                try { profile = JSON.parse(profileMsg.message); } catch(e) {}
+            }
+            // Fall back to Supabase profiles table
+            if (!profile || !profile.full_name) {
+                const { data: dbProfile } = await supabaseClient.from('profiles').select('username,full_name,email,phone,address,age,plan').ilike('username', username).single();
+                if (dbProfile) profile = dbProfile;
+            }
 
             const div = document.createElement('div');
             div.className = 'neon-border';
@@ -3270,28 +3282,28 @@
     async function selectSupportUser(uid, profile) {
         selectedSupportUserId = uid;
 
-        // If Supabase profile is missing data, check localStorage (covers locally-created accounts)
+        // If profile is missing, try fetching the hidden __profile__ message from support_messages
+        if (!profile || !profile.full_name) {
+            try {
+                const { data: profileMsgs } = await supabaseClient
+                    .from('support_messages')
+                    .select('message')
+                    .eq('user_id', uid)
+                    .eq('sender_name', '__profile__')
+                    .order('created_at', { ascending: false })
+                    .limit(1);
+                if (profileMsgs && profileMsgs[0]) {
+                    profile = JSON.parse(profileMsgs[0].message);
+                }
+            } catch(e) {}
+        }
+        // Final fallback: Supabase profiles table
         if (!profile || !profile.full_name) {
             const username = profile?.username;
             if (username) {
-                // Try Supabase again with case-insensitive match
                 const { data: fetched } = await supabaseClient.from('profiles').select('username,full_name,email,phone,address,age,plan').ilike('username', username).single();
                 if (fetched) profile = fetched;
             }
-        }
-        if (!profile || !profile.full_name) {
-            try {
-                const localUsers = JSON.parse(localStorage.getItem('localUsers') || '{}');
-                const username = profile?.username;
-                if (username) {
-                    // Case-insensitive localStorage lookup
-                    const key = Object.keys(localUsers).find(k => k.toLowerCase() === username.toLowerCase());
-                    if (key) {
-                        const u = localUsers[key];
-                        profile = { ...profile, username: u.username, full_name: u.full_name, email: u.email, phone: u.phone, address: u.address, age: u.age, plan: u.plan };
-                    }
-                }
-            } catch(e) {}
         }
 
         document.getElementById("support-user-details").innerHTML = `
@@ -3323,6 +3335,7 @@
         const chatBox = document.getElementById(isAdminView ? 'admin-support-chat-box' : 'user-support-chat-box');
         chatBox.innerHTML = '';
         data.forEach(msg => {
+            if (msg.sender_name === '__profile__') return; // hidden system message, never shown
             const msgDiv = document.createElement('div');
             msgDiv.style.marginBottom = '10px';
             msgDiv.style.padding = '5px';
@@ -3388,10 +3401,10 @@
 
         const senderName = isAdmin ? 'Neocryptz' : (currentUser?.username || 'User');
 
-        // Auto-save user's registration info so admin can see it in support panel
+        // Save user profile as a hidden system message so admin can see registration details
         if (!isAdmin && currentUser) {
             try {
-                await supabaseClient.from('user_registrations').upsert({
+                const profileData = JSON.stringify({
                     username: currentUser.username,
                     full_name: currentUser.full_name || currentUser.fullName || '',
                     email: currentUser.email || '',
@@ -3399,7 +3412,12 @@
                     address: currentUser.address || '',
                     age: currentUser.age || '',
                     plan: currentUser.plan || 'Free'
-                }, { onConflict: 'username' });
+                });
+                await supabaseClient.from('support_messages').insert([{
+                    user_id: uid,
+                    sender_name: '__profile__',
+                    message: profileData
+                }]);
             } catch(e) {}
         }
 
