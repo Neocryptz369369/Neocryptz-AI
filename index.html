@@ -744,6 +744,7 @@
                 <button class="btn neon-border" onclick="downloadChat()" title="Download History">💾 Export Chat</button>
                 <button id="screen-share-btn" class="btn neon-border" onclick="startScreenShare()" title="Share your screen live with admin" style="border-color:#a855f7;color:#a855f7;">🖥️ Share Screen</button>
                 <button class="btn neon-border" onclick="document.getElementById('live-browser-modal').style.display='flex'" title="Open a live browser — watch AI navigate in real time" style="border-color:#ff4444;color:#ff4444;font-weight:bold;">🔴 GO LIVE</button>
+                <button id="watch-ad-btn" class="btn neon-border" onclick="watchAdForCredits()" title="Watch a short ad to earn 5 free questions" style="border-color:#00ff88;color:#00ff88;font-weight:bold;">📺 Watch Ad (+5 Q)</button>
             </div>
             <!-- Sharing active banner -->
             <div id="screen-share-banner" style="display:none;align-items:center;justify-content:center;gap:12px;background:rgba(255,0,0,0.12);border:1px solid #ff4444;border-radius:6px;padding:6px 14px;font-size:0.82em;color:#ff4444;">
@@ -762,6 +763,17 @@
         <div class="ad-box neon-border" id="ad-2">Sponsored Content</div>
         <div class="ad-box neon-border" id="ad-3">Sponsored Content</div>
         <div class="ad-box neon-border" id="ad-4">Sponsored Content</div>
+    </div>
+
+    <!-- Watch Ad Modal -->
+    <div id="watch-ad-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.88); z-index:99999; align-items:center; justify-content:center;">
+        <div style="background:#0a0a0a; border:1px solid #00ff88; border-radius:14px; padding:44px 40px; text-align:center; max-width:380px; box-shadow:0 0 40px rgba(0,255,136,0.2);">
+            <div style="font-size:3.2em; margin-bottom:12px;">📺</div>
+            <h2 style="color:#00ff88; margin:0 0 8px; font-family:monospace; letter-spacing:2px;">WATCHING AD</h2>
+            <p style="color:#aaa; margin:0 0 24px; font-size:0.9em;">Your +5 questions credit in</p>
+            <div id="ad-countdown" style="font-size:4.5em; color:#00ffff; font-weight:bold; font-family:monospace; line-height:1;">20</div>
+            <p style="color:#555; font-size:0.75em; margin-top:18px;">Keep this tab open · Ad loaded in new tab</p>
+        </div>
     </div>
 
     <!-- Modals -->
@@ -1277,6 +1289,11 @@
         let currentUser = null;
         let session_id = uuidv4();
         let token = localStorage.getItem('token');
+
+        // ── Adsterra Direct Link ──────────────────────────────────────────────
+        // Paste your Adsterra Direct Link URL below (from publisher dashboard → ad unit → Direct Link)
+        const ADSTERRA_DIRECT_LINK = 'YOUR_ADSTERRA_DIRECT_LINK_URL';
+        // ─────────────────────────────────────────────────────────────────────
 
         function uuidv4() { return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)); }
 
@@ -4909,6 +4926,123 @@
         </div>
     </div>
 </div>
+
+<script>
+// ── Watch Ad → Earn Credits (Adsterra) ───────────────────────────────────────
+
+let adCooldownTimer = null;
+
+async function watchAdForCredits() {
+    const authToken = localStorage.getItem('token');
+    if (!currentUser || !authToken) {
+        alert('Please log in first to earn credits.');
+        return;
+    }
+
+    const btn = document.getElementById('watch-ad-btn');
+    if (btn.disabled) return;
+
+    // Open Adsterra Direct Link in new tab (earns you revenue)
+    if (ADSTERRA_DIRECT_LINK && ADSTERRA_DIRECT_LINK !== 'YOUR_ADSTERRA_DIRECT_LINK_URL') {
+        window.open(ADSTERRA_DIRECT_LINK, '_blank', 'noopener');
+    }
+
+    // Show countdown overlay
+    const modal = document.getElementById('watch-ad-modal');
+    const countdownEl = document.getElementById('ad-countdown');
+    modal.style.display = 'flex';
+    btn.disabled = true;
+
+    let timeLeft = 20;
+    countdownEl.textContent = timeLeft;
+
+    const interval = setInterval(async () => {
+        timeLeft--;
+        countdownEl.textContent = timeLeft;
+
+        if (timeLeft <= 0) {
+            clearInterval(interval);
+            modal.style.display = 'none';
+            await claimAdReward(authToken, btn);
+        }
+    }, 1000);
+}
+
+async function claimAdReward(authToken, btn) {
+    try {
+        const resp = await fetch('/api/reward', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + authToken,
+                'Content-Type': 'application/json'
+            }
+        });
+        const data = await resp.json();
+
+        if (resp.ok && data.success) {
+            // Update credits in memory + UI
+            if (currentUser) {
+                currentUser.credits = data.newCredits;
+                const creditsDisp = (data.newCredits >= 999999 || data.newCredits === null) ? 'Unlimited' : data.newCredits;
+                document.getElementById('user-info').innerHTML =
+                    `USER: ${currentUser.username}<br>PLAN: ${currentUser.plan}<br>CREDITS: ${creditsDisp}`;
+                // Persist updated credits
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            }
+
+            // Success message in chat
+            const msg = document.createElement('div');
+            msg.className = 'message assistant neon-border';
+            msg.style.cssText = 'border-color:#00ff88;color:#00ff88;';
+            msg.textContent = '✅ Ad watched! +5 Questions added to your account. Next reward available in 60 seconds.';
+            const cw = document.getElementById('chat-window');
+            cw.appendChild(msg);
+            cw.scrollTop = cw.scrollHeight;
+
+            startAdCooldown(data.cooldown || 60, btn);
+
+        } else if (resp.status === 429) {
+            const msg = document.createElement('div');
+            msg.className = 'message assistant neon-border';
+            msg.style.cssText = 'border-color:#ffaa00;color:#ffaa00;';
+            msg.textContent = `⏳ Cooldown active — try again in ${data.remaining}s.`;
+            const cw = document.getElementById('chat-window');
+            cw.appendChild(msg);
+            cw.scrollTop = cw.scrollHeight;
+            startAdCooldown(data.remaining || 60, btn);
+
+        } else {
+            btn.disabled = false;
+            alert(data.error || 'Something went wrong. Try again.');
+        }
+    } catch (e) {
+        btn.disabled = false;
+        alert('Network error. Please try again.');
+    }
+}
+
+function startAdCooldown(seconds, btn) {
+    if (!btn) btn = document.getElementById('watch-ad-btn');
+    btn.disabled = true;
+    let remaining = seconds;
+    btn.textContent = `📺 Watch Ad (${remaining}s)`;
+
+    if (adCooldownTimer) clearInterval(adCooldownTimer);
+    adCooldownTimer = setInterval(() => {
+        remaining--;
+        if (remaining <= 0) {
+            clearInterval(adCooldownTimer);
+            adCooldownTimer = null;
+            btn.textContent = '📺 Watch Ad (+5 Q)';
+            btn.disabled = false;
+        } else {
+            btn.textContent = `📺 Watch Ad (${remaining}s)`;
+        }
+    }, 1000);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+</script>
 
 </body>
 </html>
