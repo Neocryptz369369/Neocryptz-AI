@@ -4044,9 +4044,6 @@
             if (!url) { alert('Payment link not found. Please contact support.'); return; }
 
             const userId = encodeURIComponent(currentUser?.username || currentUser?.id || 'guest');
-            // Fire shield lights for the plan being purchased
-            const lightPlan = plan === 'Corporate Team' ? 'Corporate Team' : (plan === 'Unlimited Text' || plan === 'Unlimited' ? 'Unlimited Text' : plan);
-            triggerPlanLights(lightPlan, period);
             window.open(`${url}?client_reference_id=${userId}`, '_blank');
         }
 
@@ -4608,6 +4605,29 @@
     setInterval(() => {
         if (currentUser && currentUser.is_admin) checkNewUserNotifications();
     }, 60000);
+
+    // Poll every 30s for confirmed Stripe purchases
+    setInterval(async () => {
+        if (!currentUser || !currentUser.is_admin) return;
+        try {
+            const resp = await fetch('/api/purchase-poll');
+            if (!resp.ok) return;
+            const { purchases } = await resp.json();
+            if (!purchases || purchases.length === 0) return;
+            // Fire lights for the most significant plan bought
+            const priority = ['Corporate Team', 'Unlimited Text'];
+            let top = purchases.find(p => p.plan === 'Corporate Team') ||
+                      purchases.find(p => p.plan === 'Unlimited Text' && p.period === 'yearly') ||
+                      purchases.find(p => p.plan === 'Unlimited Text') ||
+                      purchases[0];
+            triggerPlanLights(top.plan, top.period);
+            // Toast showing who bought
+            purchases.forEach(p => {
+                const msg = `💳 ${p.username || 'Someone'} just bought ${p.plan} (${p.period})!`;
+                if (typeof showToast === 'function') showToast(msg, 5000);
+            });
+        } catch(e) {}
+    }, 30000);
 
     function testPlanLights(mode) {
         const shield = document.getElementById('admin-icon');
