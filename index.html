@@ -1419,7 +1419,11 @@
                          }
                      }
                 } else {
-                     currentUser.is_admin = false;
+                     // Check if this user was promoted to co-admin by Neocryptz
+                     const promotedAdmins = JSON.parse(localStorage.getItem('promotedAdmins') || '[]');
+                     const uname = (currentUser.username || '').toLowerCase();
+                     currentUser.is_admin = promotedAdmins.includes(uname);
+                     currentUser.is_co_admin = currentUser.is_admin; // flag: co-admin, not owner
                 }
 
                 if (currentUser.is_admin) {
@@ -2750,9 +2754,38 @@
             loadUsersAndLogs();
         }
 
+        function toggleAdminPromotion(username) {
+            if (username.toLowerCase() === 'neocryptz') return;
+            let promoted = JSON.parse(localStorage.getItem('promotedAdmins') || '[]');
+            const uname = username.toLowerCase();
+            if (promoted.includes(uname)) {
+                promoted = promoted.filter(n => n !== uname);
+                // Also clear is_admin from localUsers entry
+                let localUsers = JSON.parse(localStorage.getItem('localUsers') || '{}');
+                const key = Object.keys(localUsers).find(k => k.toLowerCase() === uname);
+                if (key) { localUsers[key].is_admin = false; localStorage.setItem('localUsers', JSON.stringify(localUsers)); }
+                alert(`"${username}" is no longer a co-admin.`);
+            } else {
+                promoted.push(uname);
+                // Also set is_admin in localUsers entry
+                let localUsers = JSON.parse(localStorage.getItem('localUsers') || '{}');
+                const key = Object.keys(localUsers).find(k => k.toLowerCase() === uname);
+                if (key) { localUsers[key].is_admin = true; localStorage.setItem('localUsers', JSON.stringify(localUsers)); }
+                alert(`"${username}" is now a co-admin. They can access the admin panel and answer support chats.`);
+            }
+            localStorage.setItem('promotedAdmins', JSON.stringify(promoted));
+            loadUsersAndLogs();
+        }
+
         async function deleteUser(username, userId) {
             if (username.toLowerCase() === 'neocryptz') {
                 alert('The main admin account cannot be deleted.');
+                return;
+            }
+            // Block deleting any promoted co-admin too
+            const promoted = JSON.parse(localStorage.getItem('promotedAdmins') || '[]');
+            if (promoted.includes(username.toLowerCase())) {
+                alert(`"${username}" is a co-admin. Remove their admin status first before deleting.`);
                 return;
             }
             if (!confirm(`Permanently delete "${username}"? This cannot be undone.`)) return;
@@ -2911,6 +2944,12 @@
             // Merge: local first, then remote users not already in local
             const allUsers = { ...localUsers, ...remoteUsers };
 
+            // Tag promoted co-admins so the table renders the right button state
+            const promotedAdmins = JSON.parse(localStorage.getItem('promotedAdmins') || '[]');
+            for (const k in allUsers) {
+                if (promotedAdmins.includes(k.toLowerCase())) allUsers[k].is_admin = true;
+            }
+
             logsContainer.innerHTML = '';
 
             // Render User Registry
@@ -2940,6 +2979,7 @@
                         <button onclick="grantManualPlan('${passingId}', 'Free')" style="font-size:0.8em; padding:2px; background:#ff8c00; border-color:#ff8c00; color:#fff;">REVOKE</button>
                         <button onclick="banUser('${passingId}')" style="font-size:0.8em; padding:2px; background:#ff0000; border-color:#ff0000; color:#fff;">BAN</button>
                         <button onclick="deleteUser('${escapeHtml(usr.username)}', '${passingId}')" style="font-size:0.8em; padding:2px; background:#000; border:1px solid #ff0000; color:#ff0000;">🗑 DELETE</button>
+                        ${usr.username.toLowerCase() !== 'neocryptz' ? `<button onclick="toggleAdminPromotion('${escapeHtml(usr.username)}')" style="font-size:0.8em; padding:2px; background:${usr.is_admin ? '#4b0082' : '#003366'}; border-color:${usr.is_admin ? '#9400d3' : '#0066cc'}; color:#fff;">${usr.is_admin ? '★ CO-ADMIN' : '☆ PROMOTE'}</button>` : '<span style="font-size:0.75em; color:#ffd700;">👑 OWNER</span>'}
                     </td>
                 </tr>`;
             }
