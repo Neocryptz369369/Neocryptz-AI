@@ -767,12 +767,17 @@
 
     <!-- Watch Ad Modal -->
     <div id="watch-ad-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.88); z-index:99999; align-items:center; justify-content:center;">
-        <div style="background:#0a0a0a; border:1px solid #00ff88; border-radius:14px; padding:44px 40px; text-align:center; max-width:380px; box-shadow:0 0 40px rgba(0,255,136,0.2);">
-            <div style="font-size:3.2em; margin-bottom:12px;">📺</div>
-            <h2 style="color:#00ff88; margin:0 0 8px; font-family:monospace; letter-spacing:2px;">WATCHING AD</h2>
-            <p style="color:#aaa; margin:0 0 24px; font-size:0.9em;">Your +5 questions credit in</p>
-            <div id="ad-countdown" style="font-size:4.5em; color:#00ffff; font-weight:bold; font-family:monospace; line-height:1;">20</div>
-            <p style="color:#555; font-size:0.75em; margin-top:18px;">Keep this tab open · Ad loaded in new tab</p>
+        <div style="background:#0a0a0a; border:1px solid #00ff88; border-radius:14px; padding:36px 40px; text-align:center; max-width:420px; box-shadow:0 0 40px rgba(0,255,136,0.2);">
+            <h2 style="color:#00ff88; margin:0 0 6px; font-family:monospace; letter-spacing:2px; font-size:1.1em;">AD IS PLAYING</h2>
+            <p style="color:#aaa; margin:0 0 4px; font-size:0.85em;">An ad opened in a new tab behind this window.</p>
+            <p style="color:#555; margin:0 0 18px; font-size:0.78em;">Switch to that tab to view it, then come back here.</p>
+            <!-- Banner ad slot — Adsterra banner code goes here -->
+            <div id="adsterra-banner-slot" style="min-height:90px; display:flex; align-items:center; justify-content:center; background:#111; border:1px dashed #333; border-radius:8px; margin-bottom:18px; color:#444; font-size:0.75em;">
+                Ad zone
+            </div>
+            <p style="color:#aaa; margin:0 0 6px; font-size:0.85em;">Credits awarded in</p>
+            <div id="ad-countdown" style="font-size:4em; color:#00ffff; font-weight:bold; font-family:monospace; line-height:1;">20</div>
+            <p style="color:#555; font-size:0.72em; margin-top:10px;">seconds · keep this tab open</p>
         </div>
     </div>
 
