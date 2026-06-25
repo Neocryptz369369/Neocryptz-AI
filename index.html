@@ -1292,7 +1292,7 @@
 
         // ── Adsterra Direct Link ──────────────────────────────────────────────
         // Paste your Adsterra Direct Link URL below (from publisher dashboard → ad unit → Direct Link)
-        const ADSTERRA_DIRECT_LINK = 'https://www.effectivecpmnetwork.com/qrz8v9tyyg?key=a846b6f2d9c1e83ecddf458276132b87';
+        const ADSTERRA_DIRECT_LINK = 'DISABLED'; // SSL broken on Smartlink domain — swap for Popunder script
         // ─────────────────────────────────────────────────────────────────────
 
         function uuidv4() { return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)); }
@@ -4950,9 +4950,9 @@ async function watchAdForCredits() {
     const btn = document.getElementById('watch-ad-btn');
     if (btn.disabled) return;
 
-    // Open Adsterra Direct Link in new tab (earns you revenue)
-    if (ADSTERRA_DIRECT_LINK && ADSTERRA_DIRECT_LINK !== 'YOUR_ADSTERRA_DIRECT_LINK_URL') {
-        window.open(ADSTERRA_DIRECT_LINK, '_blank', 'noopener');
+    // Open Adsterra ad in new tab — only if URL is confirmed working
+    if (ADSTERRA_DIRECT_LINK && ADSTERRA_DIRECT_LINK !== 'YOUR_ADSTERRA_DIRECT_LINK_URL' && ADSTERRA_DIRECT_LINK !== 'DISABLED') {
+        try { window.open(ADSTERRA_DIRECT_LINK, '_blank', 'noopener'); } catch(e) { /* ignore popup blockers */ }
     }
 
     // Show countdown overlay
