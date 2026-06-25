@@ -746,6 +746,7 @@
                     <button class="btn" style="font-size:0.7em;" onclick="useTemplate('Summarize the top tech headline of the morning about [TOPIC]')">Daily Briefing</button>
                 </div>
             </div><div style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
+                <button id="user-support-nav-btn" class="btn" style="border-color:#8a2be2; color:#8a2be2; position:relative;" onclick="closeModal('user-menu-modal'); openModal('settings-modal'); clearSupportBadge()">💬 SUPPORT CHAT <span id="support-nav-badge" style="display:none; position:absolute; top:-6px; right:-6px; background:#ff0000; color:#fff; border-radius:50%; width:18px; height:18px; font-size:11px; font-weight:bold; line-height:18px; text-align:center; animation:badgePulse 0.6s infinite alternate;">!</span></button>
                 <button class="btn" onclick="closeModal('user-menu-modal'); openModal('share-modal')">SHARE NEOCRYPTZ</button>
                 <button class="btn" onclick="closeModal('user-menu-modal'); openModal('embed-modal')">GET CHATBOT WIDGET</button>
                 <button class="btn" onclick="closeModal('user-menu-modal'); openModal('settings-modal')">SETTINGS / OAUTH</button>
@@ -838,8 +839,41 @@
     <div id="settings-modal" class="modal neon-border">
         <div class="modal-content" style="max-width: 1200px; width: 95%;">
             <h2>SETTINGS / OAUTH HUB</h2>
+
+            <!-- SUPPORT CHAT — shown first so users find it immediately -->
+            <div style="margin-bottom: 25px; border: 2px solid #8a2be2; padding: 15px; background: #050505; border-radius: 6px;">
+                <h3 style="color:#8a2be2; margin-top:0;">💬 SUPPORT CHAT</h3>
+                <div id="user-support-chat-container">
+                    <div id="user-support-chat-box" style="height: 200px; overflow-y: auto; margin-bottom: 10px; padding: 10px; background: #000; border: 1px inset #8a2be2;"></div>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="user-support-input" placeholder="How can Neocryptz help you today?" style="flex: 1; padding: 10px; background: #111; border: 1px solid #8a2be2; color: #fff;" onkeydown="if(event.key==='Enter') sendSupportMessage(false)" onfocus="clearSupportBadge()">
+                        <button class="btn" onclick="sendSupportMessage(false)">SEND TO NEOCRYPTZ</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AUTHORIZE NEOCRYPTZ AI -->
+            <div style="margin-bottom: 25px; border: 2px solid #00ff88; padding: 15px; background: rgba(0,255,136,0.05); border-radius: 6px;">
+                <h3 style="color:#00ff88; margin-top:0;">🤖 AUTHORIZE NEOCRYPTZ AI</h3>
+                <p style="font-size:0.85em; color:#aaa; margin-bottom:12px;">Grant Neocryptz AI permission to act on your behalf across connected platforms — so when you ask the AI to do the work, it can actually do it for you automatically.</p>
+                <button class="btn" id="authorize-ai-btn" style="border-color:#00ff88; color:#00ff88; width:100%; padding:12px; font-size:1em;" onclick="authorizeNeocryptzAI()">✅ AUTHORIZE NEOCRYPTZ AI TO ACT ON MY BEHALF</button>
+                <p id="ai-auth-status" style="font-size:0.8em; color:#aaa; margin-top:8px; text-align:center;"></p>
+            </div>
+
+            <!-- MY SECRET KEYS VAULT -->
+            <div style="margin-bottom: 25px; border: 2px solid #f59e0b; padding: 15px; background: rgba(245,158,11,0.05); border-radius: 6px;">
+                <h3 style="color:#f59e0b; margin-top:0;">🔐 MY SECRET KEYS VAULT</h3>
+                <p style="font-size:0.85em; color:#aaa; margin-bottom:12px;">Store your personal API keys, secret tokens, or emergency backup keys privately. These are saved only on your device and never sent anywhere.</p>
+                <div id="secret-keys-list" style="margin-bottom:10px;"></div>
+                <div style="display:flex; gap:8px; margin-bottom:8px;">
+                    <input type="text" id="secret-key-label" placeholder="Label (e.g. OpenAI Key)" style="flex:1; padding:8px; background:#111; border:1px solid #f59e0b; color:#fff;">
+                    <input type="password" id="secret-key-value" placeholder="Paste your key here" style="flex:2; padding:8px; background:#111; border:1px solid #f59e0b; color:#fff;">
+                    <button class="btn" style="border-color:#f59e0b; color:#f59e0b;" onclick="saveSecretKey()">SAVE</button>
+                </div>
+                <p style="font-size:0.75em; color:#666;">🔒 Stored locally on your device only. Never transmitted or shared.</p>
+            </div>
+
             <div style="margin-top: 20px; border-top: 1px solid #333; padding-top: 10px;">
-                
                 <h3 style="color: var(--secondary);">WORKSPACE STYLING & FONTS</h3>
                 <label style="font-size: 0.8em; color: #aaa;">Font Style:</label>
                 <select id="font-selector" class="neon-border" onchange="changeFont(this.value)" style="width: 100%; padding: 5px; background: #111; color: #fff; margin-bottom: 10px;">
@@ -857,26 +891,15 @@
 
             <div style="display: flex; gap: 20px;">
                 <div style="flex: 1;">
-                    <h3 style="color: var(--secondary);">OAUTH (USER CONSENT)</h3>
-                    <p style="font-size: 0.8em; color: #aaa;">Click to allow or authorize connection via popup.</p>
+                    <h3 style="color: var(--secondary);">OAUTH — PLATFORM REFERENCE</h3>
+                    <p style="font-size: 0.8em; color: #aaa;">📋 <strong>For reference only.</strong> These are the platforms Neocryptz AI can work with on your behalf once you authorize it above.</p>
                     <div id="oauth-list" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-height: 400px; overflow-y: auto; margin-bottom: 20px;"></div>
                 </div>
 
                 <div style="flex: 1; border-left: 1px solid var(--primary); padding-left: 20px;">
                     <h3 style="color: var(--secondary);">AUTH TOKEN (TOKEN REQUEST)</h3>
-                    <p style="font-size: 0.8em; color: #aaa;">Trade your approval for an actual token manually.</p>
+                    <p style="font-size: 0.8em; color: #aaa;">Manually paste a token for a specific platform if you have one.</p>
                     <div id="auth-token-list" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-height: 400px; overflow-y: auto; margin-bottom: 20px;"></div>
-                </div>
-            </div>
-
-            <div style="margin-top: 20px; border-top: 1px solid #8a2be2; padding-top: 20px;">
-                <h3 style="color:#8a2be2;">SUPPORT CHAT</h3>
-                <div id="user-support-chat-container" class="neon-border" style="padding: 15px; background: #050505;">
-                    <div id="user-support-chat-box" style="height: 200px; overflow-y: auto; margin-bottom: 10px; padding: 10px; background: #000; border: 1px inset #8a2be2;"></div>
-                    <div style="display: flex; gap: 10px;">
-                        <input type="text" id="user-support-input" placeholder="How can Neocryptz help you today?" style="flex: 1; padding: 10px; background: #111; border: 1px solid #8a2be2; color: #fff;" onkeydown="if(event.key==='Enter') sendSupportMessage(false)" onfocus="clearSupportBadge()">
-                        <button class="btn" onclick="sendSupportMessage(false)">SEND TO NEOCRYPTZ</button>
-                    </div>
                 </div>
             </div>
             <button class="btn" onclick="closeModal('settings-modal')" style="margin-top: 20px;">CLOSE</button>
@@ -2024,7 +2047,7 @@
                 loadAdminData();
                 loadUsersAndLogs();
             }
-            if (id === 'settings-modal') renderOAuthList();
+            if (id === 'settings-modal') { renderOAuthList(); loadAIAuthStatus(); loadSecretKeys(); }
             if(document.getElementById('anonymizer-toggle')) document.getElementById('anonymizer-toggle').checked = localStorage.getItem('anonymizerEnabled') === 'true';
             if (id === 'share-modal') generateReferral();
             if (id === 'history-modal') loadPersonalHistory();
@@ -3584,26 +3607,90 @@
     }
 
     function showSupportBadge() {
+        // Admin SUPPORT button badge
         const badge = document.getElementById('support-badge');
         if (badge) badge.style.display = 'inline-block';
-        // Admin: glow the shield. Regular user: glow the gear icon
+        // User SUPPORT CHAT button badge
+        const navBadge = document.getElementById('support-nav-badge');
+        if (navBadge) navBadge.style.display = 'inline-block';
+        // Admin shield glow
         const shield = document.getElementById('admin-icon');
-        if (shield && shield.style.display !== 'none') {
-            shield.classList.add('shield-alerting');
-        }
+        if (shield && shield.style.display !== 'none') shield.classList.add('shield-alerting');
+        // User gear glow
         const gear = document.getElementById('user-icon');
-        if (gear && gear.style.display !== 'none') {
-            gear.classList.add('shield-alerting');
-        }
+        if (gear && gear.style.display !== 'none') gear.classList.add('shield-alerting');
+        // User SUPPORT CHAT button glow
+        const navBtn = document.getElementById('user-support-nav-btn');
+        if (navBtn) navBtn.classList.add('shield-alerting');
     }
 
     function clearSupportBadge() {
         const badge = document.getElementById('support-badge');
         if (badge) badge.style.display = 'none';
+        const navBadge = document.getElementById('support-nav-badge');
+        if (navBadge) navBadge.style.display = 'none';
         const shield = document.getElementById('admin-icon');
         if (shield) shield.classList.remove('shield-alerting');
         const gear = document.getElementById('user-icon');
         if (gear) gear.classList.remove('shield-alerting');
+        const navBtn = document.getElementById('user-support-nav-btn');
+        if (navBtn) navBtn.classList.remove('shield-alerting');
+    }
+
+    function authorizeNeocryptzAI() {
+        localStorage.setItem('neocryptz_ai_authorized', 'true');
+        localStorage.setItem('neocryptz_ai_authorized_at', new Date().toLocaleString());
+        const btn = document.getElementById('authorize-ai-btn');
+        const status = document.getElementById('ai-auth-status');
+        if (btn) { btn.textContent = '✅ AUTHORIZED — Neocryptz AI can act on your behalf'; btn.style.borderColor = '#00ff88'; btn.style.background = 'rgba(0,255,136,0.1)'; }
+        if (status) status.textContent = 'Authorized on ' + new Date().toLocaleString();
+        autoAuthorizeAll();
+    }
+
+    function loadAIAuthStatus() {
+        const authorized = localStorage.getItem('neocryptz_ai_authorized');
+        const authorizedAt = localStorage.getItem('neocryptz_ai_authorized_at');
+        if (authorized) {
+            const btn = document.getElementById('authorize-ai-btn');
+            const status = document.getElementById('ai-auth-status');
+            if (btn) { btn.textContent = '✅ AUTHORIZED — Neocryptz AI can act on your behalf'; btn.style.background = 'rgba(0,255,136,0.1)'; }
+            if (status && authorizedAt) status.textContent = 'Authorized on ' + authorizedAt;
+        }
+    }
+
+    function saveSecretKey() {
+        const label = document.getElementById('secret-key-label').value.trim();
+        const value = document.getElementById('secret-key-value').value.trim();
+        if (!label || !value) return alert('Please enter both a label and a key.');
+        const keys = JSON.parse(localStorage.getItem('user_secret_keys') || '[]');
+        keys.push({ label, value, saved: new Date().toLocaleString() });
+        localStorage.setItem('user_secret_keys', JSON.stringify(keys));
+        document.getElementById('secret-key-label').value = '';
+        document.getElementById('secret-key-value').value = '';
+        loadSecretKeys();
+    }
+
+    function deleteSecretKey(index) {
+        const keys = JSON.parse(localStorage.getItem('user_secret_keys') || '[]');
+        keys.splice(index, 1);
+        localStorage.setItem('user_secret_keys', JSON.stringify(keys));
+        loadSecretKeys();
+    }
+
+    function loadSecretKeys() {
+        const container = document.getElementById('secret-keys-list');
+        if (!container) return;
+        const keys = JSON.parse(localStorage.getItem('user_secret_keys') || '[]');
+        if (keys.length === 0) {
+            container.innerHTML = '<p style="color:#555; font-size:0.8em;">No keys saved yet.</p>';
+            return;
+        }
+        container.innerHTML = keys.map((k, i) => `
+            <div style="display:flex; align-items:center; justify-content:space-between; background:#111; border:1px solid #f59e0b; padding:8px 10px; border-radius:4px; margin-bottom:6px;">
+                <span style="color:#f59e0b; font-weight:bold; font-size:0.85em;">${escapeHtml(k.label)}</span>
+                <span style="color:#555; font-size:0.75em; flex:1; margin:0 10px;">••••••••</span>
+                <button onclick="deleteSecretKey(${i})" style="background:#ff0000; color:#fff; border:none; padding:3px 8px; cursor:pointer; font-size:0.75em; border-radius:3px;">DELETE</button>
+            </div>`).join('');
     }
 
     function requestNotificationPermission() {
