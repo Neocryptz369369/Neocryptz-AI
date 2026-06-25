@@ -1,108 +1,126 @@
-// Connects to an existing Browserbase session via CDP and runs actions
-// Uses playwright-core (remote CDP — NO local Chromium binary needed)
-// The user watches live via the iframe; this just drives the browser
+// Unified browser run — creates session, navigates, clicks every button,
+// screenshots after each action, returns real frames from the actual page
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
-    const { sessionId, url, actions = [] } = req.body || {};
-    if (!sessionId) return res.status(400).json({ error: 'sessionId required' });
+    const { url, task } = req.body || {};
     if (!url) return res.status(400).json({ error: 'url required' });
 
     const apiKey = process.env.BROWSERBASE_API_KEY;
     if (!apiKey) return res.status(500).json({ error: 'BROWSERBASE_API_KEY not configured' });
 
+    const bbHeaders = {
+        'x-bb-api-key': apiKey,
+        'Authorization': 'Bearer ' + apiKey,
+        'Content-Type': 'application/json'
+    };
+
     let browser;
-    const log = [];
+    const frames = [];
+    const report = [];
 
     try {
+        // ── Step 1: Create Browserbase session ────────────────────────────
+        let projectId = null;
+        try {
+            const pr = await fetch('https://www.browserbase.com/v1/projects', { headers: bbHeaders });
+            if (pr.ok) { const pd = await pr.json(); projectId = (pd.data || pd)[0]?.id; }
+        } catch(_) {}
+
+        const sr = await fetch('https://www.browserbase.com/v1/sessions', {
+            method: 'POST', headers: bbHeaders,
+            body: JSON.stringify(projectId ? { projectId } : {})
+        });
+        if (!sr.ok) return res.status(500).json({ error: 'Session create failed: ' + await sr.text() });
+        const session = await sr.json();
+        const sessionId = session.id;
+
+        // ── Step 2: Connect via Playwright CDP (no local browser needed) ──
         const { chromium } = await import('playwright-core');
-
-        // Connect to the live Browserbase session via CDP — no local binary needed
-        const wsEndpoint = `wss://connect.browserbase.com?apiKey=${apiKey}&sessionId=${sessionId}`;
-        browser = await chromium.connectOverCDP(wsEndpoint);
-
-        const context = browser.contexts()[0] || await browser.newContext();
+        browser = await chromium.connectOverCDP(
+            `wss://connect.browserbase.com?apiKey=${apiKey}&sessionId=${sessionId}`
+        );
+        const context = browser.contexts()[0];
         const page = context.pages()[0] || await context.newPage();
+        await page.setViewportSize({ width: 1280, height: 720 });
 
-        // ── Navigate to the starting URL ─────────────────────────────────
-        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 25000 });
-        await page.waitForTimeout(1500);
-        log.push({ step: 'navigate', label: `Opened ${url}`, url: page.url() });
-
-        // ── Run each action ───────────────────────────────────────────────
-        for (const action of actions) {
+        async function snap(label) {
             try {
-                if (action.type === 'navigate') {
-                    await page.goto(action.url, { waitUntil: 'domcontentloaded', timeout: 20000 });
-                    await page.waitForTimeout(1200);
-                    log.push({ step: 'navigate', label: action.label || `Went to ${action.url}`, url: page.url() });
+                const buf = await page.screenshot({ type: 'jpeg', quality: 78 });
+                frames.push({ label, image: buf.toString('base64'), url: page.url() });
+            } catch(_) {}
+        }
 
-                } else if (action.type === 'click') {
-                    // Try selector, then fallback to text-based matching
-                    try {
-                        await page.click(action.selector, { timeout: 5000 });
-                    } catch (_) {
-                        // Try finding by visible text
-                        if (action.label) {
-                            try {
-                                await page.click(`text=${action.label}`, { timeout: 3000 });
-                            } catch (__) {
-                                log.push({ step: 'skip', label: `⚠️ Could not find: "${action.label || action.selector}"` });
-                                continue;
-                            }
-                        } else {
-                            log.push({ step: 'skip', label: `⚠️ Element not found: ${action.selector}` });
-                            continue;
-                        }
-                    }
-                    await page.waitForTimeout(1000);
-                    log.push({ step: 'click', label: action.label || `Clicked ${action.selector}`, url: page.url() });
+        // ── Step 3: Navigate to target URL ────────────────────────────────
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 25000 });
+        await page.waitForTimeout(2500);
+        await snap('🌐 Opened ' + url);
 
-                } else if (action.type === 'scroll') {
-                    await page.evaluate((y) => window.scrollTo({ top: y, behavior: 'smooth' }), action.y || 500);
-                    await page.waitForTimeout(600);
-                    log.push({ step: 'scroll', label: action.label || 'Scrolled' });
+        // ── Step 4: Discover all clickable elements on the page ───────────
+        const elements = await page.evaluate(() => {
+            const seen = new Set();
+            const results = [];
+            document.querySelectorAll('button, a[href], input[type="submit"], input[type="button"], [role="button"]').forEach(el => {
+                const rect = el.getBoundingClientRect();
+                if (rect.width < 5 || rect.height < 5 || rect.top < 0 || rect.top > window.innerHeight + 200) return;
+                const text = (el.textContent?.trim() || el.getAttribute('aria-label') || el.getAttribute('value') || el.getAttribute('href') || '?').slice(0, 60);
+                const key = text + '|' + el.tagName;
+                if (seen.has(key)) return;
+                seen.add(key);
+                results.push({
+                    text,
+                    tag: el.tagName.toLowerCase(),
+                    href: el.getAttribute('href') || null,
+                    cx: Math.round(rect.left + rect.width / 2),
+                    cy: Math.round(rect.top + rect.height / 2)
+                });
+            });
+            return results.slice(0, 12);
+        });
 
-                } else if (action.type === 'type') {
-                    await page.fill(action.selector, action.value || '');
-                    log.push({ step: 'type', label: action.label || `Typed "${action.value}"` });
+        // ── Step 5: Click each element and screenshot ─────────────────────
+        for (const el of elements) {
+            const startUrl = page.url();
+            try {
+                await page.mouse.move(el.cx, el.cy);
+                await page.waitForTimeout(300);
+                await page.mouse.click(el.cx, el.cy);
+                await page.waitForTimeout(1800);
 
-                } else if (action.type === 'wait') {
-                    await page.waitForTimeout(Math.min(action.ms || 1000, 5000));
-                    log.push({ step: 'wait', label: action.label || 'Waited' });
+                const endUrl = page.url();
+                const navigated = endUrl !== startUrl;
+                const label = navigated
+                    ? `✅ "${el.text}" → navigated to ${endUrl}`
+                    : `⚠️ "${el.text}" → no navigation (JS-only or dead)`;
 
-                } else if (action.type === 'screenshot') {
-                    log.push({ step: 'screenshot', label: action.label || 'Snapshot', url: page.url() });
+                await snap(label);
+                report.push({ element: el.text, tag: el.tag, navigated, destination: navigated ? endUrl : null });
+
+                if (navigated) {
+                    await page.goBack({ waitUntil: 'domcontentloaded', timeout: 12000 }).catch(() => page.goto(url, { waitUntil: 'domcontentloaded' }));
+                    await page.waitForTimeout(1500);
                 }
-            } catch (e) {
-                log.push({ step: 'error', label: `⚠️ ${action.label || action.type}: ${e.message.slice(0, 100)}` });
+            } catch(e) {
+                report.push({ element: el.text, tag: el.tag, error: e.message.slice(0, 100) });
+                frames.push({ label: `❌ "${el.text}": ${e.message.slice(0, 80)}`, image: null, error: true });
             }
         }
 
-        // ── Find all links on the final page ─────────────────────────────
-        const linkData = await page.evaluate(() => {
-            const links = [];
-            document.querySelectorAll('a[href], button').forEach(el => {
-                const label = el.textContent?.trim().slice(0, 60);
-                const href = el.getAttribute('href');
-                const tag = el.tagName.toLowerCase();
-                if (label) links.push({ label, href, tag });
-            });
-            return links.slice(0, 20);
-        });
-
         await browser.close();
+
+        const working = report.filter(r => r.navigated).length;
+        const dead = report.filter(r => !r.navigated && !r.error).length;
 
         return res.status(200).json({
             ok: true,
-            log,
-            links: linkData,
-            summary: `Completed ${log.length} steps. Found ${linkData.length} clickable elements on page.`
+            frames: frames.filter(f => f.image),
+            report,
+            summary: `Found ${elements.length} elements — ${working} navigate somewhere, ${dead} do nothing`
         });
 
     } catch (err) {
-        if (browser) try { await browser.close(); } catch (_) {}
-        return res.status(200).json({ ok: false, error: err.message, log });
+        if (browser) try { await browser.close(); } catch(_) {}
+        return res.status(200).json({ ok: false, error: err.message, frames: frames.filter(f => f.image), report });
     }
 }
