@@ -1,0 +1,14 @@
+{
+  "functions": {
+    "api/browser.js": {
+      "memory": 3009,
+      "maxDuration": 60
+    },
+    "api/chat.js": {
+      "maxDuration": 30
+    },
+    "api/execute.js": {
+      "maxDuration": 30
+    }
+  }
+}
