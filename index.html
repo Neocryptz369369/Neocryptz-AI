@@ -874,7 +874,7 @@
                 <div id="user-support-chat-container" class="neon-border" style="padding: 15px; background: #050505;">
                     <div id="user-support-chat-box" style="height: 200px; overflow-y: auto; margin-bottom: 10px; padding: 10px; background: #000; border: 1px inset #8a2be2;"></div>
                     <div style="display: flex; gap: 10px;">
-                        <input type="text" id="user-support-input" placeholder="How can Neocryptz help you today?" style="flex: 1; padding: 10px; background: #111; border: 1px solid #8a2be2; color: #fff;" onkeydown="if(event.key==='Enter') sendSupportMessage(false)">
+                        <input type="text" id="user-support-input" placeholder="How can Neocryptz help you today?" style="flex: 1; padding: 10px; background: #111; border: 1px solid #8a2be2; color: #fff;" onkeydown="if(event.key==='Enter') sendSupportMessage(false)" onfocus="clearSupportBadge()">
                         <button class="btn" onclick="sendSupportMessage(false)">SEND TO NEOCRYPTZ</button>
                     </div>
                 </div>
@@ -3586,8 +3586,15 @@
     function showSupportBadge() {
         const badge = document.getElementById('support-badge');
         if (badge) badge.style.display = 'inline-block';
+        // Admin: glow the shield. Regular user: glow the gear icon
         const shield = document.getElementById('admin-icon');
-        if (shield) shield.classList.add('shield-alerting');
+        if (shield && shield.style.display !== 'none') {
+            shield.classList.add('shield-alerting');
+        }
+        const gear = document.getElementById('user-icon');
+        if (gear && gear.style.display !== 'none') {
+            gear.classList.add('shield-alerting');
+        }
     }
 
     function clearSupportBadge() {
@@ -3595,6 +3602,8 @@
         if (badge) badge.style.display = 'none';
         const shield = document.getElementById('admin-icon');
         if (shield) shield.classList.remove('shield-alerting');
+        const gear = document.getElementById('user-icon');
+        if (gear) gear.classList.remove('shield-alerting');
     }
 
     function requestNotificationPermission() {
