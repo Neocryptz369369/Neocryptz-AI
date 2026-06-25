@@ -4555,50 +4555,95 @@
     async function _runBrowserSlideshow(req) {
         const chat = document.getElementById('chat-window');
         const wid = 'brow-' + Date.now();
+        const token = typeof currentToken !== 'undefined' ? currentToken : '';
+
+        // ── Build the browser panel ───────────────────────────────────────
         const wrap = document.createElement('div');
         wrap.id = wid;
         wrap.style.cssText = 'border:2px solid #a855f7;border-radius:10px;overflow:hidden;margin:8px 0;background:#0a001a;';
-        wrap.innerHTML = `<div style="background:#120020;padding:7px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #a855f733;"><span style="color:#a855f7;font-weight:bold;font-size:0.82em;letter-spacing:1px;">🌐 NEOCRYPTZ AI BROWSER</span><span id="${wid}-status" style="color:#555;font-size:0.75em;flex:1;">Opening...</span><span style="background:#ff4444;border-radius:50%;width:8px;height:8px;display:inline-block;animation:badgePulse 0.6s infinite alternate;"></span></div><div id="${wid}-content" style="min-height:200px;display:flex;align-items:center;justify-content:center;color:#a855f7;font-size:0.88em;padding:20px;">⠹ Launching browser, this takes a few seconds...</div>`;
+        wrap.innerHTML = `
+            <div style="background:#120020;padding:7px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #a855f733;">
+                <span style="color:#a855f7;font-weight:bold;font-size:0.82em;letter-spacing:1px;">🌐 NEOCRYPTZ AI BROWSER</span>
+                <span id="${wid}-status" style="color:#888;font-size:0.75em;flex:1;">Connecting to live browser...</span>
+                <span id="${wid}-dot" style="background:#ff4444;border-radius:50%;width:8px;height:8px;display:inline-block;animation:badgePulse 0.6s infinite alternate;"></span>
+            </div>
+            <div id="${wid}-content" style="min-height:240px;display:flex;align-items:center;justify-content:center;color:#a855f7;font-size:0.88em;padding:20px;">
+                ⠹ Starting live browser session...
+            </div>`;
         chat.appendChild(wrap);
         chat.scrollTop = chat.scrollHeight;
 
-        window._browserFrames = window._browserFrames || {};
-        const token = typeof currentToken !== 'undefined' ? currentToken : '';
+        const ct = document.getElementById(wid + '-content');
+        const st = document.getElementById(wid + '-status');
+        const dot = document.getElementById(wid + '-dot');
 
         try {
-            const r = await fetch('/api/browser', {
+            // ── Phase 1: Create Browserbase session (fast) ────────────────
+            const sessRes = await fetch('/api/browser-session', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                body: JSON.stringify({ url: req.url, actions: req.actions || [] })
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }
             });
-            const d = await r.json();
-            const ct = document.getElementById(wid + '-content');
-            const st = document.getElementById(wid + '-status');
-            if (!d.ok || !d.frames || !d.frames.length) {
-                if (ct) ct.innerHTML = '<div style="color:#f44;padding:20px;font-size:0.85em;">⚠️ ' + escapeHtml(d.error || 'Browser returned no screenshots') + '</div>';
-                if (st) st.textContent = 'Error';
+            const sess = await sessRes.json();
+
+            if (!sess.sessionId || !sess.liveViewUrl) {
+                ct.innerHTML = '<div style="color:#f44;padding:20px;font-size:0.85em;">⚠️ ' + escapeHtml(sess.error || 'Could not create browser session. Check BROWSERBASE_API_KEY in Vercel.') + '</div>';
+                st.textContent = 'Error';
                 return;
             }
-            window._browserFrames[wid] = d.frames;
-            if (ct) ct.style.cssText = 'position:relative;';
-            if (st) st.textContent = d.frames.length + ' steps captured';
 
-            // Animate through frames
-            for (let i = 0; i < d.frames.length; i++) {
-                _showBrowserFrame(wid, i);
-                if (i < d.frames.length - 1) await new Promise(r => setTimeout(r, 1800));
-            }
+            // ── Phase 2: Show live iframe immediately — user watches now ──
+            ct.style.cssText = 'position:relative;padding:0;';
+            ct.innerHTML = `
+                <iframe
+                    src="${sess.liveViewUrl}"
+                    style="width:100%;height:520px;border:none;display:block;background:#000;"
+                    allow="clipboard-read; clipboard-write"
+                    sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+                ></iframe>
+                <div style="position:absolute;top:10px;right:10px;background:rgba(255,0,0,0.85);color:#fff;padding:4px 12px;border-radius:20px;font-size:0.72em;font-weight:bold;letter-spacing:1px;pointer-events:none;">
+                    🔴 LIVE
+                </div>`;
+            st.textContent = '🔴 Live — watching ' + req.url;
+            dot.style.background = '#ff4444';
 
-            // Navigation dots
-            if (d.frames.length > 1) {
-                const dots = document.createElement('div');
-                dots.id = wid + '-dots';
-                dots.style.cssText = 'display:flex;justify-content:center;gap:7px;padding:10px;background:#0a001a;border-top:1px solid #a855f722;';
-                dots.innerHTML = d.frames.map((_, i) => `<button onclick="_showBrowserFrame('${wid}',${i})" title="Step ${i+1}" style="width:9px;height:9px;border-radius:50%;background:${i===d.frames.length-1?'#a855f7':'#333'};border:none;cursor:pointer;padding:0;transition:background 0.2s;"></button>`).join('');
-                wrap.appendChild(dots);
-            }
+            // ── Phase 3: Run actions in background (user watches them happen live) ──
+            fetch('/api/browser-run', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify({ sessionId: sess.sessionId, url: req.url, actions: req.actions || [] })
+            }).then(async r => {
+                const d = await r.json();
+                dot.style.animation = 'none';
+                dot.style.background = d.ok ? '#00ff88' : '#ff4444';
+
+                if (d.ok) {
+                    st.textContent = '✓ Done — ' + (d.summary || 'Completed');
+                    // Show action log below the live view
+                    if (d.log && d.log.length) {
+                        const logDiv = document.createElement('div');
+                        logDiv.style.cssText = 'background:#0a001a;border-top:1px solid #a855f722;padding:10px 14px;font-size:0.74em;font-family:monospace;color:#888;max-height:160px;overflow-y:auto;';
+                        logDiv.innerHTML = d.log.map((l, i) =>
+                            `<div style="padding:2px 0;color:${l.step==='error'?'#f44':l.step==='skip'?'#fa0':'#a855f7'};">${i+1}. ${escapeHtml(l.label)}${l.url && l.url !== req.url ? ' <span style="color:#555;">→ '+escapeHtml(l.url)+'</span>' : ''}</div>`
+                        ).join('');
+                        wrap.appendChild(logDiv);
+                    }
+                    // Report broken links if found
+                    if (d.links && d.links.length) {
+                        const linksDiv = document.createElement('div');
+                        linksDiv.style.cssText = 'background:#120020;border-top:1px solid #a855f733;padding:10px 14px;font-size:0.76em;color:#ccc;';
+                        linksDiv.innerHTML = '<div style="color:#a855f7;font-weight:bold;margin-bottom:6px;">🔗 Clickable elements found:</div>' +
+                            d.links.map(l => `<div style="padding:2px 0;">• ${escapeHtml(l.label)} ${l.href ? '<span style="color:#555;">('+escapeHtml(l.href)+')</span>' : '<span style="color:#fa0;">[no link — JS only]</span>'}</div>`).join('');
+                        wrap.appendChild(linksDiv);
+                    }
+                } else {
+                    st.textContent = '⚠️ Error: ' + (d.error || 'unknown');
+                }
+                chat.scrollTop = chat.scrollHeight;
+            }).catch(e => {
+                st.textContent = '⚠️ Run failed: ' + e.message;
+            });
+
         } catch(e) {
-            const ct = document.getElementById(wid + '-content');
             if (ct) ct.innerHTML = '<div style="color:#f44;padding:20px;font-size:0.85em;">Failed: ' + escapeHtml(e.message) + '</div>';
         }
     }
