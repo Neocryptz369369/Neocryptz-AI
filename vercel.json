@@ -1,8 +1,13 @@
 {
   "functions": {
-    "api/browser.js": {
-      "memory": 3009,
+    "api/browser-session.js": {
+      "maxDuration": 15
+    },
+    "api/browser-run.js": {
       "maxDuration": 60
+    },
+    "api/browser.js": {
+      "maxDuration": 30
     },
     "api/chat.js": {
       "maxDuration": 30
