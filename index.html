@@ -1034,6 +1034,10 @@
                 <button class="btn" style="border-color:#0f0; color:#0f0;" onclick="showAdminTab('admin-monitor'); fetchLiveUserStats()">LIVE MONITOR</button>
                 <button class="btn" onclick="showAdminTab('admin-ads')">ADS</button>
                 <button class="btn" style="border-color:#ff0050; color:#ff0050;" onclick="showAdminTab('admin-tiktok'); loadTikTokLinks()">TIKTOK LINKS</button>
+                <span style="border-left:1px solid #444; margin:0 4px;"></span>
+                <button class="btn" style="font-size:0.7em; border-color:#aaa; color:#aaa;" onclick="testPlanLights('police')">🚨 TEST POLICE</button>
+                <button class="btn" style="font-size:0.7em; border-color:#00ff44; color:#00ff44;" onclick="testPlanLights('green')">🟢 TEST GREEN</button>
+                <button class="btn" style="font-size:0.7em; border-color:#ffd700; color:#ffd700;" onclick="testPlanLights('newuser')">🌟 TEST NEW USER</button>
                 <button class="btn" onclick="showAdminTab('admin-feedback'); loadAdminData()">FEEDBACK</button>
                 <button class="btn" onclick="showAdminTab('admin-settings')">SETTINGS</button>
                 <button class="btn" style="border-color:#f59e0b; color:#f59e0b;" onclick="showAdminTab('admin-gift-codes'); loadGiftCodes()">🎁 GIFT CODES</button>
@@ -4601,6 +4605,19 @@
     setInterval(() => {
         if (currentUser && currentUser.is_admin) checkNewUserNotifications();
     }, 60000);
+
+    function testPlanLights(mode) {
+        const shield = document.getElementById('admin-icon');
+        if (!shield) return;
+        shield.classList.remove('shield-police', 'shield-green', 'shield-new-user', 'shield-alerting');
+        if (mode === 'police')  shield.classList.add('shield-police');
+        if (mode === 'green')   shield.classList.add('shield-green');
+        if (mode === 'newuser') shield.classList.add('shield-new-user');
+        setTimeout(() => {
+            shield.classList.remove('shield-police', 'shield-green', 'shield-new-user');
+            checkNewUserNotifications();
+        }, 8000);
+    }
 
     function triggerPlanLights(planName, period) {
         const shield = document.getElementById('admin-icon');
