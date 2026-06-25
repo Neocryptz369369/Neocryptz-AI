@@ -1420,6 +1420,13 @@
                 users[username] = { username, email: validEmail, password: pass, full_name: fullName, address: fullAddress, phone, age, plan: giftPlanUpgrade || "Free", credits: giftPlanUpgrade ? 99999 : 25, banned: false, is_admin: (username.toLowerCase() === 'neocryptz') };
                 localStorage.setItem('localUsers', JSON.stringify(users));
 
+                // Also save registration info to Supabase so admin can see it in support panel
+                try {
+                    await supabaseClient.from('user_registrations').upsert({
+                        username, full_name: fullName, email: validEmail, phone, address: fullAddress, age, plan: giftPlanUpgrade || "Free"
+                    }, { onConflict: 'username' });
+                } catch(e) {}
+
                 if (supaError) {
                     alert("Registration fallback active. Saved locally. Error: " + supaError.message);
                 } else if (giftPlanUpgrade) {
@@ -3245,8 +3252,8 @@
             const lastMsg = data.find(m => m.user_id === uid);
             const username = userMsg?.sender_name || lastMsg?.sender_name || 'Unknown User';
 
-            // Look up full profile by username rather than by Supabase auth ID
-            const { data: profile } = await supabaseClient.from('profiles').select('*').eq('username', username).single();
+            // Look up full profile from user_registrations table (saved at registration & on every support message)
+            const { data: profile } = await supabaseClient.from('user_registrations').select('*').eq('username', username).single();
 
             const div = document.createElement('div');
             div.className = 'neon-border';
@@ -3267,7 +3274,7 @@
         if (!profile || !profile.full_name) {
             const username = profile?.username;
             if (username) {
-                const { data: fetched } = await supabaseClient.from('profiles').select('*').eq('username', username).single();
+                const { data: fetched } = await supabaseClient.from('user_registrations').select('*').eq('username', username).single();
                 if (fetched) profile = fetched;
             }
         }
@@ -3365,6 +3372,21 @@
         if (!uid) uid = generateUUID();
 
         const senderName = isAdmin ? 'Neocryptz' : (currentUser?.username || 'User');
+
+        // Auto-save user's registration info so admin can see it in support panel
+        if (!isAdmin && currentUser) {
+            try {
+                await supabaseClient.from('user_registrations').upsert({
+                    username: currentUser.username,
+                    full_name: currentUser.full_name || currentUser.fullName || '',
+                    email: currentUser.email || '',
+                    phone: currentUser.phone || '',
+                    address: currentUser.address || '',
+                    age: currentUser.age || '',
+                    plan: currentUser.plan || 'Free'
+                }, { onConflict: 'username' });
+            } catch(e) {}
+        }
 
         const { error } = await supabaseClient
             .from('support_messages')
