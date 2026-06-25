@@ -1370,6 +1370,69 @@
             }
             loadAds();
             loadCustomStyles();
+            if (currentUser) loadPersistentHistory();
+        }
+
+        async function loadPersistentHistory() {
+            try {
+                const resp = await fetch('/api/history', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: currentUser.username, action: 'fetch' })
+                });
+                if (!resp.ok) return;
+                const data = await resp.json();
+                if (!data.history || data.history.length === 0) return;
+
+                // Merge server history into localStorage so AI context is populated
+                let localCache = JSON.parse(localStorage.getItem('globalChatHistory') || '[]');
+                const localKeys = new Set(localCache.map(h => h.user_msg + '|' + (h.timestamp || '')));
+                data.history.forEach(h => {
+                    const k = h.user_msg + '|' + (h.created_at || '');
+                    if (!localKeys.has(k)) {
+                        localCache.push({
+                            timestamp: h.created_at,
+                            username: currentUser.username,
+                            user_msg: h.user_msg,
+                            ai_response: h.ai_response || ''
+                        });
+                    }
+                });
+                localStorage.setItem('globalChatHistory', JSON.stringify(localCache));
+
+                // Display last 8 exchanges with a session divider (keep UI compact)
+                const win = document.getElementById('chat-window');
+                const toShow = data.history.slice(-8);
+
+                const dividerTop = document.createElement('div');
+                dividerTop.style.cssText = 'text-align:center;color:#555;font-size:0.72em;margin:8px 0;padding:4px;border-top:1px solid #222;border-bottom:1px solid #222;letter-spacing:1px;';
+                dividerTop.textContent = '─── PREVIOUS SESSION — ' + data.history.length + ' messages restored ───';
+                win.appendChild(dividerTop);
+
+                toShow.forEach(h => {
+                    const uDiv = document.createElement('div');
+                    uDiv.className = 'message user neon-border';
+                    uDiv.style.opacity = '0.75';
+                    uDiv.innerHTML = formatText(h.user_msg);
+                    win.appendChild(uDiv);
+
+                    if (h.ai_response) {
+                        const aDiv = document.createElement('div');
+                        aDiv.className = 'message assistant neon-border';
+                        aDiv.style.opacity = '0.75';
+                        aDiv.innerHTML = formatText(h.ai_response);
+                        win.appendChild(aDiv);
+                    }
+                });
+
+                const dividerBottom = document.createElement('div');
+                dividerBottom.style.cssText = 'text-align:center;color:#00ffc8;font-size:0.72em;margin:8px 0;padding:4px;border-top:1px solid #00ffc8;border-bottom:1px solid #00ffc8;letter-spacing:1px;';
+                dividerBottom.textContent = '─── NEW SESSION — AI has your full context ───';
+                win.appendChild(dividerBottom);
+                win.scrollTop = win.scrollHeight;
+            } catch(e) {
+                console.log('Persistent history load skipped:', e.message);
+            }
         }
 
         const tosSentences = [
@@ -1779,13 +1842,14 @@
             let historyPayload = [];
             try {
                 const allHistory = JSON.parse(localStorage.getItem('globalChatHistory') || '[]');
-                historyPayload = allHistory.filter(h => h.username === myUsername).slice(-2); // Limit history to last 2 messages for extreme token optimization
+                const historyLimit = (myUsername === 'Neocryptz') ? 20 : 10;
+                historyPayload = allHistory.filter(h => h.username === myUsername).slice(-historyLimit);
             } catch(e) {}
 
             const resp = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentToken}` },
-                body: JSON.stringify({ prompt: applyAnonymizer(displayMsg), session_id: session_id, keys: keysPayload, history: historyPayload })
+                body: JSON.stringify({ prompt: applyAnonymizer(displayMsg), session_id: session_id, keys: keysPayload, history: historyPayload, username: currentUser?.username || 'Unknown' })
             });
 
             const data = await resp.json();
@@ -1934,7 +1998,7 @@
                 appendMessage('assistant', aiText);
             }
 
-            // Save to Global Chat History
+            // Save to Global Chat History (localStorage + Supabase cloud backup)
             let globalChat = JSON.parse(localStorage.getItem('globalChatHistory') || '[]');
             globalChat.push({
                 timestamp: new Date().toISOString(),
@@ -1943,6 +2007,13 @@
                 ai_response: aiText
             });
             localStorage.setItem('globalChatHistory', JSON.stringify(globalChat));
+
+            // Cloud backup — save to Supabase so history survives browser/device changes
+            fetch('/api/history', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: currentUser?.username, action: 'save', user_msg: msg, ai_response: aiText })
+            }).catch(() => {}); // fire and forget
         }
 
         function appendMessage(role, text) {
