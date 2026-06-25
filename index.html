@@ -523,6 +523,15 @@
             0% { transform: scale(1); box-shadow: 0 0 4px #ff0000; }
             100% { transform: scale(1.3); box-shadow: 0 0 10px #ff0000; }
         }
+        @keyframes shieldAlert {
+            0%   { filter: drop-shadow(0 0 4px #8a2be2) brightness(1);   transform: scale(1); }
+            50%  { filter: drop-shadow(0 0 18px #ffffff) brightness(2.5); transform: scale(1.25); }
+            100% { filter: drop-shadow(0 0 4px #8a2be2) brightness(1);   transform: scale(1); }
+        }
+        .shield-alerting {
+            animation: shieldAlert 0.7s infinite ease-in-out;
+            cursor: pointer;
+        }
 
 </style>
 </head>
@@ -622,7 +631,7 @@
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 10px;">
             <h2 style="color: var(--primary); font-size: 1.2em; margin: 0;">NEOCRYPTZ AI</h2>
             <div>
-                <span id="admin-icon" style="display:none; cursor: pointer; color: #8a2be2; font-size: 1.2em; margin-right: 5px;" onclick="openModal('admin-modal')" title="Admin Console">🛡️</span>
+                <span id="admin-icon" style="display:none; cursor: pointer; color: #8a2be2; font-size: 1.2em; margin-right: 5px;" onclick="openModal('admin-modal'); clearSupportBadge()" title="Admin Console">🛡️</span>
                 <span id="user-icon" style="display:none; cursor: pointer; font-size: 1.2em;" onclick="openModal('user-menu-modal')" title="Settings & Menu">⚙️</span>
             </div>
 
@@ -3542,11 +3551,15 @@
     function showSupportBadge() {
         const badge = document.getElementById('support-badge');
         if (badge) badge.style.display = 'inline-block';
+        const shield = document.getElementById('admin-icon');
+        if (shield) shield.classList.add('shield-alerting');
     }
 
     function clearSupportBadge() {
         const badge = document.getElementById('support-badge');
         if (badge) badge.style.display = 'none';
+        const shield = document.getElementById('admin-icon');
+        if (shield) shield.classList.remove('shield-alerting');
     }
 
     function requestNotificationPermission() {
