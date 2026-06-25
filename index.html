@@ -1565,6 +1565,13 @@
 
             if (!msg) return;
 
+            // Platform authorization check — intercept before credit deduction
+            const unauthorizedPlatform = detectPlatformInMessage(msg);
+            if (unauthorizedPlatform) {
+                requestPlatformAuth(unauthorizedPlatform, () => sendMessage());
+                return;
+            }
+
             // Credit Check: 5 credits per question
             if (currentUser.credits !== null && currentUser.credits < 5) {
                 appendMessage("assistant", "Insufficient credits! Each question costs 5 credits. Please upgrade your plan.");
@@ -1999,9 +2006,72 @@
         function renderOAuthList() {
             const oauthList = document.getElementById('oauth-list');
             const tokenList = document.getElementById('auth-token-list');
+            if (!oauthList || !tokenList) return;
 
-            oauthList.innerHTML = oauthProviders.map(p => { const auth = localStorage.getItem(`authToken_${p}`); return `<button class="btn provider-btn ${auth ? "authorized" : ""}" style="padding: 10px; font-size: 0.9em;" onclick="autoAuthorizeAll()">OAuth: ${p}</button>`; }).join('');
-            tokenList.innerHTML = oauthProviders.map(p => { const auth = localStorage.getItem(`authToken_${p}`); return `<button class="btn provider-btn ${auth ? "authorized" : ""}" style="padding: 10px; font-size: 0.9em;" onclick="promptAuthToken('${p}')">Token: ${p}</button>`; }).join('');
+            oauthList.innerHTML = oauthProviders.map(p => {
+                const auth = localStorage.getItem(`authToken_${p}`);
+                const label = auth ? `✅ ${p}` : `🔐 ${p}`;
+                const style = auth ? 'border-color:#00ff88; color:#00ff88;' : '';
+                return `<button class="btn provider-btn" style="padding:8px; font-size:0.85em; ${style}" onclick="authorizePlatform('${p.replace(/'/g,"\\'")}', true)">${label}</button>`;
+            }).join('');
+
+            tokenList.innerHTML = oauthProviders.map(p => {
+                const auth = localStorage.getItem(`authToken_${p}`);
+                const label = auth ? `✅ ${p}` : `Token: ${p}`;
+                const style = auth ? 'border-color:#00ff88; color:#00ff88;' : '';
+                return `<button class="btn provider-btn" style="padding:8px; font-size:0.85em; ${style}" onclick="promptAuthToken('${p.replace(/'/g,"\\'")}')">${label}</button>`;
+            }).join('');
+        }
+
+        // Store the pending callback for after user clicks Authorize
+        let _platformAuthCallback = null;
+        let _platformAuthName = null;
+
+        function detectPlatformInMessage(msg) {
+            const lower = msg.toLowerCase();
+            return oauthProviders.find(p => {
+                const name = p.toLowerCase().replace(/[^a-z0-9]/g, '');
+                const msgClean = lower.replace(/[^a-z0-9]/g, ' ');
+                return msgClean.includes(name) && !localStorage.getItem(`authToken_${p}`);
+            }) || null;
+        }
+
+        function requestPlatformAuth(platform, callback) {
+            _platformAuthName = platform;
+            _platformAuthCallback = callback;
+            const modal = document.getElementById('platform-auth-modal');
+            document.getElementById('platform-auth-name').textContent = platform;
+            document.getElementById('platform-auth-name2').textContent = platform;
+            modal.style.display = 'flex';
+        }
+
+        function authorizePlatform(platform, fromSettings) {
+            localStorage.setItem(`authToken_${platform}`, 'NEOCRYPTZ_AUTH_' + Date.now());
+            if (fromSettings) {
+                renderOAuthList();
+                appendMessage('assistant', `✅ Neocryptz AI is now authorized to access **${platform}** on your behalf.`);
+            }
+        }
+
+        function confirmPlatformAuth() {
+            document.getElementById('platform-auth-modal').style.display = 'none';
+            if (_platformAuthName) {
+                authorizePlatform(_platformAuthName, false);
+                appendMessage('assistant', `✅ Authorized! Neocryptz AI now has access to **${_platformAuthName}**. Proceeding with your request...`);
+            }
+            if (_platformAuthCallback) {
+                const cb = _platformAuthCallback;
+                _platformAuthCallback = null;
+                _platformAuthName = null;
+                cb();
+            }
+        }
+
+        function cancelPlatformAuth() {
+            document.getElementById('platform-auth-modal').style.display = 'none';
+            appendMessage('assistant', `❌ Authorization cancelled. Neocryptz AI cannot access **${_platformAuthName || 'that platform'}** without your permission. You can authorize it anytime in Settings / OAuth.`);
+            _platformAuthCallback = null;
+            _platformAuthName = null;
         }
 
         function filterOAuth() {
@@ -3302,6 +3372,22 @@
             <br>
             <button onclick="cleanPastedText()" class="action-btn neon-border">Clean & Apply</button>
             <button onclick="document.getElementById('smart-paste-modal').style.display='none'" class="action-btn neon-border" style="background: #333; color: white;">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Per-platform authorization popup -->
+    <div id="platform-auth-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center;">
+        <div class="neon-border" style="background:#0a0a0a; padding:30px; max-width:420px; width:90%; text-align:center; border-radius:8px;">
+            <div style="font-size:2.5em; margin-bottom:10px;">🔐</div>
+            <h2 style="color:#00ff88; margin-bottom:10px;">Authorization Required</h2>
+            <p style="color:#aaa; font-size:0.9em; margin-bottom:6px;">Neocryptz AI wants to connect to:</p>
+            <div id="platform-auth-name" style="font-size:1.4em; color:#fff; font-weight:bold; margin-bottom:16px;"></div>
+            <p style="color:#aaa; font-size:0.85em; margin-bottom:24px;">Do you authorize <strong style="color:#00ff88;">Neocryptz AI</strong> to access <span id="platform-auth-name2" style="color:#fff;"></span> on your behalf so it can complete this task for you?</p>
+            <div style="display:flex; gap:12px; justify-content:center;">
+                <button class="btn" style="border-color:#00ff88; color:#00ff88; padding:10px 24px; font-size:1em;" onclick="confirmPlatformAuth()">✅ AUTHORIZE</button>
+                <button class="btn" style="border-color:#ff4444; color:#ff4444; padding:10px 24px; font-size:1em;" onclick="cancelPlatformAuth()">❌ CANCEL</button>
+            </div>
+            <p style="color:#444; font-size:0.75em; margin-top:16px;">You can revoke this at any time in Settings / OAuth</p>
         </div>
     </div>
 
