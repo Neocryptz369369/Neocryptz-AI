@@ -2733,6 +2733,30 @@
             loadUsersAndLogs();
         }
 
+        async function deleteUser(username, userId) {
+            if (!confirm(`Permanently delete "${username}"? This cannot be undone.`)) return;
+
+            // Remove from localStorage
+            let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
+            const key = Object.keys(users).find(k => k.toLowerCase() === username.toLowerCase());
+            if (key) {
+                delete users[key];
+                localStorage.setItem('localUsers', JSON.stringify(users));
+            }
+
+            // Remove from Supabase profiles + auth (best effort)
+            try {
+                await supabaseClient.from('profiles').delete().eq('id', userId);
+            } catch(e) {}
+            try {
+                await supabaseClient.from('users').delete().eq('id', userId);
+            } catch(e) {}
+
+            alert(`"${username}" has been deleted.`);
+            loadAdminData();
+            loadUsersAndLogs();
+        }
+
         async function grantManualPlan(userId, planName, period = 'monthly') {
             // Calculate duration
             const days = period === 'yearly' ? 365 : 30;
@@ -2867,6 +2891,7 @@
                         <button onclick="grantManualPlan('${passingId}', 'Unlimited', 'yearly')" style="font-size:0.7em; padding:2px;">UNL (Y)</button>
                         <button onclick="grantManualPlan('${passingId}', 'Free')" style="font-size:0.8em; padding:2px; background:#ff8c00; border-color:#ff8c00; color:#fff;">REVOKE</button>
                         <button onclick="banUser('${passingId}')" style="font-size:0.8em; padding:2px; background:#ff0000; border-color:#ff0000; color:#fff;">BAN</button>
+                        <button onclick="deleteUser('${escapeHtml(usr.username)}', '${passingId}')" style="font-size:0.8em; padding:2px; background:#000; border:1px solid #ff0000; color:#ff0000;">🗑 DELETE</button>
                     </td>
                 </tr>`;
             }
