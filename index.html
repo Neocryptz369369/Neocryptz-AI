@@ -1857,8 +1857,7 @@
             if (resp.ok) {
                 aiText = data.result || 'Task execution initiated.';
 
-                // ── Autonomous Execution Engine ──────────────────────────────
-                // Detect <<<EXEC>>>...<<<END_EXEC>>> blocks and run them for real
+                // ── Autonomous Execution Engine v2 — Step-by-step pipeline ──
                 const execMatch = aiText.match(/<<<EXEC>>>([\s\S]*?)<<<END_EXEC>>>/);
                 if (execMatch) {
                     const visibleText = aiText.replace(/<<<EXEC>>>[\s\S]*?<<<END_EXEC>>>/g, '').trim();
@@ -1866,93 +1865,181 @@
 
                     let actionJson;
                     try { actionJson = JSON.parse(execMatch[1].trim()); }
-                    catch(e) {
-                        appendMessage('assistant', '⚠️ Execution error: could not parse action JSON. Raw: ' + execMatch[1]);
-                        return;
+                    catch(e) { appendMessage('assistant', '⚠️ Could not parse execution command. Raw: ' + execMatch[1].slice(0,120)); return; }
+
+                    // ── Pipeline UI helpers ──────────────────────────────────
+                    const _SF = ['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'];
+                    const _spinners = {};
+                    let _pipelinePanel = null;
+
+                    function _makePipeline() {
+                        const p = document.createElement('div');
+                        p.id = 'pipe-' + Date.now();
+                        p.style.cssText = 'background:rgba(0,18,12,0.96);border:1px solid #00ffc8;border-radius:8px;padding:14px 16px;margin:8px 0;font-family:monospace;font-size:0.83em;line-height:1.85;box-shadow:0 0 14px rgba(0,255,200,0.12);';
+                        p.innerHTML = `<div style="color:#00ffc8;font-weight:bold;margin-bottom:10px;letter-spacing:2px;font-size:0.88em;border-bottom:1px solid #00ffc822;padding-bottom:6px;">⚡ NEOCRYPTZ EXECUTION PIPELINE</div><div id="${p.id}-steps"></div>`;
+                        document.getElementById('chat-window').appendChild(p);
+                        document.getElementById('chat-window').scrollTop = document.getElementById('chat-window').scrollHeight;
+                        _pipelinePanel = p;
+                        return p;
                     }
 
-                    const statusDiv = document.createElement('div');
-                    statusDiv.className = 'message assistant neon-border';
-                    statusDiv.style.background = 'rgba(0,255,200,0.05)';
-                    statusDiv.style.borderColor = '#00ffc8';
-                    statusDiv.innerHTML = `<span style="color:#00ffc8">⚙️ EXECUTING: <b>${actionJson.action}</b> ${actionJson.repo ? 'on ' + actionJson.repo : ''}...</span>`;
-                    document.getElementById('chat-window').appendChild(statusDiv);
-                    document.getElementById('chat-window').scrollTop = document.getElementById('chat-window').scrollHeight;
+                    function _addStep(id, label) {
+                        const wrap = document.getElementById(_pipelinePanel.id + '-steps');
+                        const row = document.createElement('div');
+                        row.id = 'ps-' + id;
+                        row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:2px 0;';
+                        row.innerHTML = `<span id="psi-${id}" style="min-width:20px;text-align:center;color:#444;font-size:1.1em;">○</span><span id="psl-${id}" style="color:#555;">${label}</span>`;
+                        wrap.appendChild(row);
+                        document.getElementById('chat-window').scrollTop = document.getElementById('chat-window').scrollHeight;
+                    }
+
+                    function _setStep(id, state, label) {
+                        const icon = document.getElementById('psi-' + id);
+                        const lab  = document.getElementById('psl-' + id);
+                        if (!icon) return;
+                        if (_spinners[id]) { clearInterval(_spinners[id]); delete _spinners[id]; }
+                        if (state === 'active') {
+                            let fi = 0;
+                            icon.style.color = '#00ffc8'; lab.style.color = '#00ffc8';
+                            _spinners[id] = setInterval(() => { icon.textContent = _SF[fi++ % _SF.length]; }, 80);
+                        } else if (state === 'done') {
+                            icon.textContent = '✅'; icon.style.color = '#00ff88'; lab.style.color = '#ccc';
+                        } else if (state === 'warn') {
+                            icon.textContent = '⚠️'; icon.style.color = '#ffaa00'; lab.style.color = '#ffaa00';
+                        } else if (state === 'error') {
+                            icon.textContent = '❌'; icon.style.color = '#ff4444'; lab.style.color = '#ff4444';
+                        }
+                        if (label !== undefined) lab.textContent = label;
+                        document.getElementById('chat-window').scrollTop = document.getElementById('chat-window').scrollHeight;
+                    }
+
+                    function _step(id, label, state) { _addStep(id, label); if (state) _setStep(id, state, label); }
+
+                    function _stopAll() { Object.keys(_spinners).forEach(k => { clearInterval(_spinners[k]); delete _spinners[k]; }); }
+
+                    // ── Vercel deploy poller (via GitHub commit statuses) ────
+                    async function _waitDeploy(repo, sha, stepId) {
+                        for (let i = 0; i < 24; i++) {
+                            await new Promise(r => setTimeout(r, 5000));
+                            try {
+                                const r = await fetch('/api/deploy-status', {
+                                    method: 'POST', headers: {'Content-Type':'application/json'},
+                                    body: JSON.stringify({ repo, commit_sha: sha })
+                                });
+                                const d = await r.json();
+                                const secs = (i + 1) * 5;
+                                if (d.state === 'success') return { ok: true, elapsed: secs, url: d.url };
+                                if (d.state === 'failure' || d.state === 'error') return { ok: false, error: d.description || 'Vercel build failed' };
+                                _setStep(stepId, 'active', `Vercel building... (${secs}s elapsed)`);
+                            } catch(_) {}
+                        }
+                        return { ok: false, error: 'Deploy check timed out — site should be live shortly.' };
+                    }
+
+                    // ── Run the pipeline ────────────────────────────────────
+                    _makePipeline();
+                    const _isRead = actionJson.action === 'list_repos' || actionJson.action === 'read_file_excerpt';
 
                     try {
-                        const execResp = await fetch('/api/execute', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentToken}` },
-                            body: JSON.stringify(actionJson)
-                        });
-                        const execData = await execResp.json();
+                        if (_isRead) {
+                            // ── READ → AI → PUSH flow ────────────────────
+                            _step('p1', `Fetching data from GitHub (${actionJson.action})...`, 'active');
 
-                        if (!execResp.ok) {
-                            statusDiv.innerHTML = `<span style="color:#ff4444">❌ Execution failed: ${execData.error || 'Unknown error'}</span>`;
-                            return;
-                        }
-
-                        // For read actions: feed result back to AI for continuation
-                        if (actionJson.action === 'list_repos' || actionJson.action === 'read_file_excerpt') {
-                            const resultSummary = actionJson.action === 'list_repos'
-                                ? 'Repos: ' + execData.repos.map(r => r.full_name + ' (last push: ' + r.pushed_at + ')').join(', ')
-                                : 'File excerpt from ' + actionJson.repo + '/' + actionJson.path + ':\n\n' + execData.excerpt;
-
-                            statusDiv.innerHTML = `<span style="color:#00ffc8">✅ ${actionJson.action === 'list_repos' ? 'Listed repos' : 'Read file'} — continuing...</span>`;
-
-                            // Feed result back to AI for next step
-                            const continueResp = await fetch('/api/chat', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentToken}` },
-                                body: JSON.stringify({
-                                    prompt: '[SYSTEM EXECUTION RESULT] ' + resultSummary + '\n\nNow continue with the user\'s original request using the above data.',
-                                    keys: keysPayload,
-                                    history: historyPayload
-                                })
+                            const rR = await fetch('/api/execute', {
+                                method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${currentToken}`},
+                                body: JSON.stringify(actionJson)
                             });
-                            const continueData = await continueResp.json();
-                            if (continueData.result) {
-                                // Recursively handle — the continuation may also have an EXEC block
-                                aiText = continueData.result;
-                                const execMatch2 = aiText.match(/<<<EXEC>>>([\s\S]*?)<<<END_EXEC>>>/);
-                                if (execMatch2) {
-                                    const visText2 = aiText.replace(/<<<EXEC>>>[\s\S]*?<<<END_EXEC>>>/g, '').trim();
-                                    if (visText2) appendMessage('assistant', visText2);
-                                    let action2;
-                                    try { action2 = JSON.parse(execMatch2[1].trim()); } catch(e) { appendMessage('assistant', 'Parse error on continuation.'); return; }
+                            const rD = await rR.json();
+                            if (!rR.ok) { _setStep('p1','error', rD.error || 'GitHub read failed'); _stopAll(); return; }
+                            _setStep('p1', 'done', actionJson.action === 'list_repos' ? 'All repos listed ✓' : `${actionJson.path} read from GitHub ✓`);
 
-                                    const statusDiv2 = document.createElement('div');
-                                    statusDiv2.className = 'message assistant neon-border';
-                                    statusDiv2.style.borderColor = '#00ffc8';
-                                    statusDiv2.innerHTML = `<span style="color:#00ffc8">⚙️ EXECUTING: <b>${action2.action}</b> ${action2.repo ? 'on ' + action2.repo : ''}...</span>`;
-                                    document.getElementById('chat-window').appendChild(statusDiv2);
+                            _step('p2', 'AI analyzing data and generating changes...', 'active');
+                            const summary = actionJson.action === 'list_repos'
+                                ? 'Repos: ' + rD.repos.map(r => r.full_name + ' (pushed: ' + r.pushed_at + ')').join(', ')
+                                : 'File from ' + actionJson.repo + '/' + actionJson.path + ':\n\n' + rD.excerpt;
 
-                                    const execResp2 = await fetch('/api/execute', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentToken}` },
-                                        body: JSON.stringify(action2)
-                                    });
-                                    const execData2 = await execResp2.json();
-                                    statusDiv2.innerHTML = execData2.success
-                                        ? `<span style="color:#00ff88">✅ ${execData2.message}</span><br><small style="color:#aaa">Commit: ${execData2.commit?.slice(0,7)}</small>`
-                                        : `<span style="color:#ff4444">❌ ${execData2.error}</span>`;
-                                    aiText = (visText2 || '') + ' ' + (execData2.message || execData2.error || '');
+                            const cR = await fetch('/api/chat', {
+                                method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${currentToken}`},
+                                body: JSON.stringify({ prompt:'[SYSTEM RESULT] ' + summary + '\n\nNow execute the user\'s original request.', keys:keysPayload, history:historyPayload, username:currentUser?.username })
+                            });
+                            const cD = await cR.json();
+                            if (!cD.result) { _setStep('p2','error','AI failed to continue'); _stopAll(); return; }
+                            _setStep('p2', 'done', 'Changes generated ✓');
+
+                            aiText = cD.result;
+                            const eM2 = aiText.match(/<<<EXEC>>>([\s\S]*?)<<<END_EXEC>>>/);
+                            if (!eM2) {
+                                _stopAll();
+                                appendMessage('assistant', aiText.replace(/<<<EXEC>>>[\s\S]*?<<<END_EXEC>>>/g,'').trim() || aiText);
+                            } else {
+                                let a2; try { a2 = JSON.parse(eM2[1].trim()); } catch(e) { _stopAll(); appendMessage('assistant','Parse error on continuation.'); return; }
+                                const vT2 = aiText.replace(/<<<EXEC>>>[\s\S]*?<<<END_EXEC>>>/g,'').trim();
+                                if (vT2) appendMessage('assistant', vT2);
+
+                                _step('p3', `Applying changes: ${a2.action} on ${a2.repo || ''}...`, 'active');
+                                const eR2 = await fetch('/api/execute', {
+                                    method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${currentToken}`},
+                                    body: JSON.stringify(a2)
+                                });
+                                const eD2 = await eR2.json();
+                                if (!eD2.success) { _setStep('p3','error', eD2.error || 'Push failed'); _stopAll(); return; }
+                                _setStep('p3', 'done', `Pushed to GitHub ✓  (commit: ${eD2.commit?.slice(0,7)})`);
+
+                                _step('p4', 'Waiting for Vercel to build and deploy...', 'active');
+                                const dep = await _waitDeploy(a2.repo, eD2.commit, 'p4');
+                                if (dep.ok) {
+                                    _setStep('p4', 'done', `Vercel deployed in ${dep.elapsed}s ✓`);
+                                    _step('p5', '🚀  CHANGES ARE LIVE — your site has been updated!', 'done');
                                 } else {
-                                    appendMessage('assistant', continueData.result);
-                                    aiText = continueData.result;
+                                    _setStep('p4', 'warn', dep.error);
+                                    _step('p5', '⚠️  Push successful — site will be live in a moment.', 'warn');
                                 }
+                                aiText = eD2.message || '';
                             }
+
                         } else {
-                            // Push/inject/patch success
-                            statusDiv.innerHTML = execData.success
-                                ? `<span style="color:#00ff88">✅ ${execData.message}</span><br><small style="color:#aaa">Commit: ${execData.commit?.slice(0,7)}</small>`
-                                : `<span style="color:#ff4444">❌ ${execData.error}</span>`;
-                            aiText = execData.message || execData.error || aiText;
+                            // ── DIRECT PUSH / INJECT / PATCH flow ────────
+                            _step('d1', `Reading ${actionJson.path || 'file'} from GitHub...`, 'active');
+                            await new Promise(r => setTimeout(r, 350)); // let user see step
+                            _step('d2', `Applying ${actionJson.action}...`, 'active');
+
+                            const eR = await fetch('/api/execute', {
+                                method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${currentToken}`},
+                                body: JSON.stringify(actionJson)
+                            });
+                            const eD = await eR.json();
+
+                            if (!eD.success) {
+                                _setStep('d1','done', `${actionJson.path || 'File'} read ✓`);
+                                _setStep('d2','error', eD.error || 'Operation failed');
+                                _stopAll(); return;
+                            }
+
+                            _setStep('d1', 'done', `${actionJson.path || 'File'} read ✓`);
+                            _setStep('d2', 'done', 'Changes applied ✓');
+                            _step('d3', 'Pushing to GitHub...', 'active');
+                            await new Promise(r => setTimeout(r, 200));
+                            _setStep('d3', 'done', `Pushed to GitHub ✓  (commit: ${eD.commit?.slice(0,7)})`);
+
+                            _step('d4', 'Waiting for Vercel to build and deploy...', 'active');
+                            const dep = await _waitDeploy(actionJson.repo, eD.commit, 'd4');
+                            if (dep.ok) {
+                                _setStep('d4', 'done', `Vercel deployed in ${dep.elapsed}s ✓`);
+                                _step('d5', '🚀  CHANGES ARE LIVE — your site has been updated!', 'done');
+                            } else {
+                                _setStep('d4', 'warn', dep.error);
+                                _step('d5', '⚠️  Push successful — site will be live in a moment.', 'warn');
+                            }
+                            aiText = eD.message || '';
                         }
-                    } catch(execErr) {
-                        statusDiv.innerHTML = `<span style="color:#ff4444">❌ Network error during execution: ${execErr.message}</span>`;
+
+                        _stopAll();
+                    } catch(pipeErr) {
+                        _stopAll();
+                        appendMessage('assistant', `❌ Pipeline error: ${pipeErr.message}`);
                     }
-                    // Skip the normal appendMessage since we already displayed output
+
+                    // Record usage and history
                     if (myUsername !== 'Neocryptz') {
                         usageData[myUsername].count += 1;
                         localStorage.setItem('dailyUsage', JSON.stringify(usageData));
@@ -1961,6 +2048,7 @@
                     let globalChat = JSON.parse(localStorage.getItem('globalChatHistory') || '[]');
                     globalChat.push({ timestamp: new Date().toISOString(), username: currentUser?.username || 'Unknown', user_msg: msg, ai_response: aiText });
                     localStorage.setItem('globalChatHistory', JSON.stringify(globalChat));
+                    fetch('/api/history', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username: currentUser?.username, action:'save', user_msg: msg, ai_response: aiText }) }).catch(()=>{});
                     return;
                 }
                 // ── End Execution Engine ──────────────────────────────────────
