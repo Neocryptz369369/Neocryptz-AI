@@ -45,10 +45,49 @@ export default async function handler(req, res) {
         const page = context.pages()[0] || await context.newPage();
         await page.setViewportSize({ width: 1280, height: 720 });
 
-        async function snap(label) {
+        async function snap(label, cursor) {
             try {
+                if (cursor) {
+                    // Inject a bright red cursor dot at the click position
+                    await page.evaluate(([cx, cy]) => {
+                        const old = document.getElementById('__ai_cursor__');
+                        if (old) old.remove();
+                        const dot = document.createElement('div');
+                        dot.id = '__ai_cursor__';
+                        dot.style.cssText = [
+                            'position:fixed',
+                            `left:${cx - 14}px`, `top:${cy - 14}px`,
+                            'width:28px', 'height:28px',
+                            'border-radius:50%',
+                            'background:rgba(255,30,30,0.85)',
+                            'border:3px solid #fff',
+                            'box-shadow:0 0 0 4px rgba(255,30,30,0.4), 0 0 18px rgba(255,30,30,0.9)',
+                            'pointer-events:none',
+                            'z-index:2147483647'
+                        ].join(';');
+                        document.body.appendChild(dot);
+                        // Ripple ring
+                        const ring = document.createElement('div');
+                        ring.style.cssText = [
+                            'position:fixed',
+                            `left:${cx - 24}px`, `top:${cy - 24}px`,
+                            'width:48px', 'height:48px',
+                            'border-radius:50%',
+                            'border:3px solid rgba(255,30,30,0.6)',
+                            'pointer-events:none',
+                            'z-index:2147483646'
+                        ].join(';');
+                        ring.id = '__ai_cursor_ring__';
+                        document.body.appendChild(ring);
+                    }, [cursor.x, cursor.y]);
+                }
                 const buf = await page.screenshot({ type: 'jpeg', quality: 78 });
                 frames.push({ label, image: buf.toString('base64'), url: page.url() });
+                if (cursor) {
+                    await page.evaluate(() => {
+                        ['__ai_cursor__','__ai_cursor_ring__'].forEach(id => { const e = document.getElementById(id); if(e) e.remove(); });
+                    }).catch(()=>{});
+                }
             } catch(_) {}
         }
 
@@ -94,7 +133,7 @@ export default async function handler(req, res) {
                     ? `✅ "${el.text}" → navigated to ${endUrl}`
                     : `⚠️ "${el.text}" → no navigation (JS-only or dead)`;
 
-                await snap(label);
+                await snap(label, { x: el.cx, y: el.cy });
                 report.push({ element: el.text, tag: el.tag, navigated, destination: navigated ? endUrl : null });
 
                 if (navigated) {
