@@ -26,10 +26,10 @@ export default async function handler(req, res) {
         console.error("Server-side geo-check failed:", e);
     }
 
-    const { prompt, keys, history } = req.body;
+    const { prompt, keys, history, username } = req.body;
     if (!prompt) return res.status(400).json({ error: 'Missing prompt' });
 
-    // Helper to cache AI responses to Supabase
+    // Helper to cache AI responses to Supabase query_cache
     async function upsertCache(supabase, promptText, responseText) {
         if (!supabase) return;
         try {
@@ -40,6 +40,14 @@ export default async function handler(req, res) {
         } catch (e) {
             console.error("Cache upsert failed:", e.message);
         }
+    }
+
+    // Helper to persist chat exchange to chat_history (fire and forget)
+    function saveHistory(supabase, uname, user_msg, ai_response) {
+        if (!supabase || !uname || uname === 'Unknown') return;
+        supabase.from('chat_history')
+            .insert([{ username: uname, user_msg, ai_response }])
+            .then(() => {}).catch(() => {});
     }
 
     const supabaseUrl = process.env.SUPABASE_URL || 'https://bxzvxgjnlvbexeuocbey.supabase.co';
@@ -178,6 +186,7 @@ RULES:
                     if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts[0]) {
                         const text = data.candidates[0].content.parts[0].text;
                         await upsertCache(supabase, prompt, text);
+                        saveHistory(supabase, username, prompt, text);
                         return res.status(200).json({ result: text, provider: "Gemini" });
                     }
                 } else {
@@ -201,6 +210,7 @@ RULES:
                     if (data.choices && data.choices[0] && data.choices[0].message) {
                         const text = data.choices[0].message.content;
                         await upsertCache(supabase, prompt, text);
+                        saveHistory(supabase, username, prompt, text);
                         return res.status(200).json({ result: text, provider: "OpenRouter" });
                     }
                 } else {
@@ -221,6 +231,7 @@ RULES:
                 if (polRes.ok) {
                     const text = await polRes.text();
                     await upsertCache(supabase, prompt, text);
+                    saveHistory(supabase, username, prompt, text);
                     return res.status(200).json({ result: text, provider: "Pollinations" });
                 } else {
                     lastError += "Pollinations Error: " + polRes.statusText + " | ";
@@ -243,6 +254,7 @@ RULES:
                     if (data.choices && data.choices[0] && data.choices[0].message) {
                         const text = data.choices[0].message.content;
                         await upsertCache(supabase, prompt, text);
+                        saveHistory(supabase, username, prompt, text);
                         return res.status(200).json({ result: text, provider: "SambaNova" });
                     }
                 } else {
