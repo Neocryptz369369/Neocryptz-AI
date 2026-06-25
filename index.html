@@ -697,6 +697,7 @@
             </div>
 
         </div>
+        <button id="mobile-settings-btn" onclick="openModal('user-menu-modal')" style="display:none; width:100%; margin: 8px 0; padding: 10px; background:#1a0a2e; border:1px solid #8a2be2; color:#fff; font-size:1em; cursor:pointer; text-align:left;">⚙️ MY SETTINGS &amp; MENU</button>
         <div id="user-info" style="font-size: 0.9em;"></div>
         <div style="flex: 1; display: flex; align-items: center; justify-content: center;">
             <img src="crypt.png" alt="Neocryptz Logo" class="neon-border" style="max-width: 150px; display: block; border-radius: 5px;">
@@ -1346,10 +1347,12 @@
 
                 if (currentUser.is_admin) {
                      document.getElementById('admin-icon').style.display = 'inline-block';
-                     document.getElementById('user-icon').style.display = 'inline-block';
+                     document.getElementById('user-icon').style.display = 'none';
+                     document.getElementById('mobile-settings-btn').style.display = 'block';
                 } else {
                      document.getElementById('admin-icon').style.display = 'none';
                      document.getElementById('user-icon').style.display = 'inline-block';
+                     document.getElementById('mobile-settings-btn').style.display = 'none';
                 }
             }
             loadAds();
