@@ -1791,15 +1791,15 @@
                 return;
             }
 
-            // Credit Check: 5 credits per question
-            if (currentUser.credits !== null && currentUser.credits < 5) {
+            // Credit Check: 5 credits per question (admins are always exempt)
+            if (!currentUser.is_admin && currentUser.credits !== null && currentUser.credits < 5) {
                 appendMessage("assistant", "Insufficient credits! Each question costs 5 credits. Please upgrade your plan.");
                 setTimeout(() => openModal("pricing-modal"), 1500);
                 return;
             }
 
-            // Deduct 5 credits
-            if (currentUser.credits !== null) {
+            // Deduct 5 credits (never deduct from admin accounts)
+            if (!currentUser.is_admin && currentUser.credits !== null) {
                 currentUser.credits -= 5;
                 if (currentUser.credits < 0) currentUser.credits = 0;
                 localStorage.setItem("currentUser", JSON.stringify(currentUser));
@@ -1814,6 +1814,15 @@
                 // Update UI
                 const creditsDisp = (currentUser.credits >= 999999) ? "Unlimited" : currentUser.credits;
                 document.getElementById("user-info").innerHTML = `USER: ${currentUser.username}<br>PLAN: ${currentUser.plan}<br>CREDITS: ${creditsDisp}`;
+            } else if (currentUser.is_admin) {
+                // Always keep admin credits at unlimited
+                currentUser.credits = 999999;
+                localStorage.setItem("currentUser", JSON.stringify(currentUser));
+                let localUsers = JSON.parse(localStorage.getItem("localUsers") || "{}");
+                if (localUsers[currentUser.username]) {
+                    localUsers[currentUser.username].credits = 999999;
+                    localStorage.setItem("localUsers", JSON.stringify(localUsers));
+                }
             }
 
             // Enforce 50 word limit for user inputs
