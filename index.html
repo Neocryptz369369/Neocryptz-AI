@@ -1792,6 +1792,115 @@
             let aiText = '';
             if (resp.ok) {
                 aiText = data.result || 'Task execution initiated.';
+
+                // ── Autonomous Execution Engine ──────────────────────────────
+                // Detect <<<EXEC>>>...<<<END_EXEC>>> blocks and run them for real
+                const execMatch = aiText.match(/<<<EXEC>>>([\s\S]*?)<<<END_EXEC>>>/);
+                if (execMatch) {
+                    const visibleText = aiText.replace(/<<<EXEC>>>[\s\S]*?<<<END_EXEC>>>/g, '').trim();
+                    if (visibleText) appendMessage('assistant', visibleText);
+
+                    let actionJson;
+                    try { actionJson = JSON.parse(execMatch[1].trim()); }
+                    catch(e) {
+                        appendMessage('assistant', '⚠️ Execution error: could not parse action JSON. Raw: ' + execMatch[1]);
+                        return;
+                    }
+
+                    const statusDiv = document.createElement('div');
+                    statusDiv.className = 'message assistant neon-border';
+                    statusDiv.style.background = 'rgba(0,255,200,0.05)';
+                    statusDiv.style.borderColor = '#00ffc8';
+                    statusDiv.innerHTML = `<span style="color:#00ffc8">⚙️ EXECUTING: <b>${actionJson.action}</b> ${actionJson.repo ? 'on ' + actionJson.repo : ''}...</span>`;
+                    document.getElementById('chat-window').appendChild(statusDiv);
+                    document.getElementById('chat-window').scrollTop = document.getElementById('chat-window').scrollHeight;
+
+                    try {
+                        const execResp = await fetch('/api/execute', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentToken}` },
+                            body: JSON.stringify(actionJson)
+                        });
+                        const execData = await execResp.json();
+
+                        if (!execResp.ok) {
+                            statusDiv.innerHTML = `<span style="color:#ff4444">❌ Execution failed: ${execData.error || 'Unknown error'}</span>`;
+                            return;
+                        }
+
+                        // For read actions: feed result back to AI for continuation
+                        if (actionJson.action === 'list_repos' || actionJson.action === 'read_file_excerpt') {
+                            const resultSummary = actionJson.action === 'list_repos'
+                                ? 'Repos: ' + execData.repos.map(r => r.full_name + ' (last push: ' + r.pushed_at + ')').join(', ')
+                                : 'File excerpt from ' + actionJson.repo + '/' + actionJson.path + ':\n\n' + execData.excerpt;
+
+                            statusDiv.innerHTML = `<span style="color:#00ffc8">✅ ${actionJson.action === 'list_repos' ? 'Listed repos' : 'Read file'} — continuing...</span>`;
+
+                            // Feed result back to AI for next step
+                            const continueResp = await fetch('/api/chat', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentToken}` },
+                                body: JSON.stringify({
+                                    prompt: '[SYSTEM EXECUTION RESULT] ' + resultSummary + '\n\nNow continue with the user\'s original request using the above data.',
+                                    keys: keysPayload,
+                                    history: historyPayload
+                                })
+                            });
+                            const continueData = await continueResp.json();
+                            if (continueData.result) {
+                                // Recursively handle — the continuation may also have an EXEC block
+                                aiText = continueData.result;
+                                const execMatch2 = aiText.match(/<<<EXEC>>>([\s\S]*?)<<<END_EXEC>>>/);
+                                if (execMatch2) {
+                                    const visText2 = aiText.replace(/<<<EXEC>>>[\s\S]*?<<<END_EXEC>>>/g, '').trim();
+                                    if (visText2) appendMessage('assistant', visText2);
+                                    let action2;
+                                    try { action2 = JSON.parse(execMatch2[1].trim()); } catch(e) { appendMessage('assistant', 'Parse error on continuation.'); return; }
+
+                                    const statusDiv2 = document.createElement('div');
+                                    statusDiv2.className = 'message assistant neon-border';
+                                    statusDiv2.style.borderColor = '#00ffc8';
+                                    statusDiv2.innerHTML = `<span style="color:#00ffc8">⚙️ EXECUTING: <b>${action2.action}</b> ${action2.repo ? 'on ' + action2.repo : ''}...</span>`;
+                                    document.getElementById('chat-window').appendChild(statusDiv2);
+
+                                    const execResp2 = await fetch('/api/execute', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentToken}` },
+                                        body: JSON.stringify(action2)
+                                    });
+                                    const execData2 = await execResp2.json();
+                                    statusDiv2.innerHTML = execData2.success
+                                        ? `<span style="color:#00ff88">✅ ${execData2.message}</span><br><small style="color:#aaa">Commit: ${execData2.commit?.slice(0,7)}</small>`
+                                        : `<span style="color:#ff4444">❌ ${execData2.error}</span>`;
+                                    aiText = (visText2 || '') + ' ' + (execData2.message || execData2.error || '');
+                                } else {
+                                    appendMessage('assistant', continueData.result);
+                                    aiText = continueData.result;
+                                }
+                            }
+                        } else {
+                            // Push/inject/patch success
+                            statusDiv.innerHTML = execData.success
+                                ? `<span style="color:#00ff88">✅ ${execData.message}</span><br><small style="color:#aaa">Commit: ${execData.commit?.slice(0,7)}</small>`
+                                : `<span style="color:#ff4444">❌ ${execData.error}</span>`;
+                            aiText = execData.message || execData.error || aiText;
+                        }
+                    } catch(execErr) {
+                        statusDiv.innerHTML = `<span style="color:#ff4444">❌ Network error during execution: ${execErr.message}</span>`;
+                    }
+                    // Skip the normal appendMessage since we already displayed output
+                    if (myUsername !== 'Neocryptz') {
+                        usageData[myUsername].count += 1;
+                        localStorage.setItem('dailyUsage', JSON.stringify(usageData));
+                        if (myPlan === 'Free') { lifetimeUsage[myUsername] += 1; localStorage.setItem('lifetimeUsage', JSON.stringify(lifetimeUsage)); }
+                    }
+                    let globalChat = JSON.parse(localStorage.getItem('globalChatHistory') || '[]');
+                    globalChat.push({ timestamp: new Date().toISOString(), username: currentUser?.username || 'Unknown', user_msg: msg, ai_response: aiText });
+                    localStorage.setItem('globalChatHistory', JSON.stringify(globalChat));
+                    return;
+                }
+                // ── End Execution Engine ──────────────────────────────────────
+
                 if (isFlashcard) {
                     const topic = msg.replace('/flashcard', '').trim();
                     aiText = `
