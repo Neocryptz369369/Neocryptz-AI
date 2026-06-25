@@ -2153,28 +2153,63 @@
             loadUsersAndLogs();
         }
 
-        function loadUsersAndLogs() {
+        async function loadUsersAndLogs() {
             const logsContainer = document.getElementById('admin-logs');
             if (!logsContainer) return;
-            logsContainer.innerHTML = '';
+            logsContainer.innerHTML = '<p style="color:#aaa;">Loading users...</p>';
 
-            let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
+            // Local users (registered on this device)
+            let localUsers = JSON.parse(localStorage.getItem('localUsers') || '{}');
             let globalChat = JSON.parse(localStorage.getItem('globalChatHistory') || '[]');
+
+            // Remote users — pull __profile__ messages from Supabase
+            let remoteUsers = {};
+            try {
+                const { data: profileMsgs } = await supabaseClient
+                    .from('support_messages')
+                    .select('user_id, message, created_at')
+                    .eq('sender_name', '__profile__')
+                    .order('created_at', { ascending: false });
+
+                if (profileMsgs) {
+                    // Deduplicate by user_id — keep most recent profile per user
+                    const seen = new Set();
+                    for (const msg of profileMsgs) {
+                        if (seen.has(msg.user_id)) continue;
+                        seen.add(msg.user_id);
+                        try {
+                            const p = JSON.parse(msg.message);
+                            if (p && p.username) {
+                                const key = p.username.toLowerCase();
+                                // Don't overwrite a local user entry (local has plan/ban info)
+                                if (!localUsers[key]) {
+                                    remoteUsers[key] = { ...p, _remote: true };
+                                }
+                            }
+                        } catch(e) {}
+                    }
+                }
+            } catch(e) {}
+
+            // Merge: local first, then remote users not already in local
+            const allUsers = { ...localUsers, ...remoteUsers };
+
+            logsContainer.innerHTML = '';
 
             // Render User Registry
             let html = '<h3 style="color:var(--primary); margin-bottom:10px;">USER REGISTRY & PLANS</h3>';
             html += '<table style="width:100%; border-collapse: collapse; font-size:0.8em; margin-bottom: 20px;"><tr><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Username</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Email</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Name/Age</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Phone</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Address</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Plan</th><th style="border-bottom: 1px solid var(--primary); text-align:left; padding:5px;">Controls</th></tr>';
-            for (let u in users) {
-                let usr = users[u];
+            for (let u in allUsers) {
+                let usr = allUsers[u];
                 let userPlan = usr.plan || 'Free';
                 if (usr.plan_granted_at) userPlan += `<br><span style="font-size:0.8em; color:#aaa;">(Granted: ${usr.plan_granted_at})</span>`;
-                
-                const passingId = usr.id || usr.username; // Ensure Supabase UUID or Username fallback is used
+                const passingId = usr.id || usr.username;
                 const isBanned = usr.banned ? ' <strong style="color:red;">[BANNED]</strong>' : '';
+                const sourceTag = usr._remote ? ' <span style="font-size:0.7em; color:#8a2be2;">[remote]</span>' : '';
                 html += `<tr>
-                    <td style="padding: 5px;">${escapeHtml(usr.username)}${isBanned}</td>
-                    <td style="padding: 5px;">${escapeHtml(usr.email)}</td>
-                    <td style="padding: 5px;">${escapeHtml(usr.full_name || 'N/A')}<br>Age: ${escapeHtml(usr.age || 'N/A')}</td>
+                    <td style="padding: 5px;">${escapeHtml(usr.username)}${isBanned}${sourceTag}</td>
+                    <td style="padding: 5px;">${escapeHtml(usr.email || 'N/A')}</td>
+                    <td style="padding: 5px;">${escapeHtml(usr.full_name || 'N/A')}<br>Age: ${escapeHtml(String(usr.age || 'N/A'))}</td>
                     <td style="padding: 5px;">${escapeHtml(usr.phone || 'N/A')}</td>
                     <td style="padding: 5px;">${escapeHtml(usr.address || 'N/A')}</td>
                     <td style="padding: 5px; color: var(--secondary);">${userPlan}</td>
