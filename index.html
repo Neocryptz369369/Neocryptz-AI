@@ -3254,41 +3254,40 @@
         const userList = document.getElementById('support-user-list');
         userList.innerHTML = '';
 
-        // Unique user IDs from messages
-        const uniqueUserIds = [...new Set(data.filter(m => m.user_id).map(m => m.user_id))];
+        // All unique user IDs — include registered-only users (profile message, no chat yet)
+        const allUserIds = [...new Set(data.filter(m => m.user_id).map(m => m.user_id))];
+        // Keep only entries that have at least one non-Neocryptz message (user or profile)
+        const realUserIds = allUserIds.filter(uid =>
+            data.some(m => m.user_id === uid && m.sender_name !== 'Neocryptz')
+        );
 
-        if (uniqueUserIds.length === 0) {
+        if (realUserIds.length === 0) {
             userList.innerHTML = '<p style="color: #aaa; text-align: center;">No active support requests.</p>';
             return;
         }
 
-        // Get all unique user IDs — include profile-only entries (registered but never chatted)
-        const allUserIds = [...new Set(data.filter(m => m.user_id).map(m => m.user_id))];
-        // Filter out the admin's own UID
-        const realUserIds = allUserIds.filter(uid => {
-            const msgs = data.filter(m => m.user_id === uid);
-            // Exclude if ALL messages are from Neocryptz (no user messages at all)
-            return msgs.some(m => m.sender_name !== 'Neocryptz');
-        });
-
         for (const uid of realUserIds) {
-            // Extract profile from hidden __profile__ message first
+            // Get profile from hidden __profile__ message
             const profileMsg = data.find(m => m.user_id === uid && m.sender_name === '__profile__');
             let profile = null;
             if (profileMsg) {
                 try { profile = JSON.parse(profileMsg.message); } catch(e) {}
             }
 
-            // Get username: from profile data, or from a real chat message
+            // Get username from profile or from a real chat message sender name
             const chatMsg = data.find(m => m.user_id === uid && m.sender_name !== 'Neocryptz' && m.sender_name !== '__profile__');
             const username = profile?.username || chatMsg?.sender_name || 'Unknown User';
 
-            // Fall back to Supabase profiles table if no embedded profile
+            // Fall back to Supabase profiles table if no embedded profile data
             if (!profile || !profile.full_name) {
                 const { data: dbProfile } = await supabaseClient.from('profiles').select('username,full_name,email,phone,address,age,plan').ilike('username', username).single();
                 if (dbProfile) profile = { ...dbProfile, username: dbProfile.username || username };
             }
             if (!profile) profile = { username };
+
+            // Most recent message timestamp for display
+            const anyMsg = data.find(m => m.user_id === uid);
+            const timeLabel = anyMsg ? new Date(anyMsg.created_at).toLocaleString() : '';
 
             const div = document.createElement('div');
             div.className = 'neon-border';
@@ -3296,8 +3295,8 @@
             div.style.marginBottom = '10px';
             div.style.cursor = 'pointer';
             div.style.background = selectedSupportUserId === uid ? 'rgba(138, 43, 226, 0.2)' : '#111';
-            div.innerHTML = `<strong>${username}</strong><br><small style="color: #666;">${new Date(lastMsg.created_at).toLocaleString()}</small>`;
-            div.onclick = () => selectSupportUser(uid, profile || { username });
+            div.innerHTML = `<strong>${username}</strong><br><small style="color: #666;">${timeLabel}</small>`;
+            div.onclick = () => selectSupportUser(uid, profile);
             userList.appendChild(div);
         }
     }
