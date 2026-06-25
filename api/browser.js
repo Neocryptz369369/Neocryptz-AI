@@ -1,5 +1,5 @@
-// Browser automation — puppeteer-core + @sparticuz/chromium (correct Vercel pairing)
-// No limits, no budget caps — runs as many sessions as needed
+// Browser API — uses thum.io for real screenshots (free, no API key)
+// + fetch for HTML parsing and link health checks
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
@@ -7,85 +7,117 @@ export default async function handler(req, res) {
     const { url, actions = [] } = req.body || {};
     if (!url) return res.status(400).json({ error: 'url required' });
 
-    let browser;
     const frames = [];
+    const baseUrl = new URL(url);
+
+    // Take a real screenshot of any URL using thum.io (free, no auth)
+    async function snap(pageUrl, label) {
+        try {
+            const thumbUrl = `https://image.thum.io/get/width/1280/crop/720/noanimate/${encodeURIComponent(pageUrl)}`;
+            const r = await fetch(thumbUrl, { signal: AbortSignal.timeout(12000) });
+            if (r.ok && r.headers.get('content-type')?.startsWith('image/')) {
+                const buf = await r.arrayBuffer();
+                frames.push({ label, image: Buffer.from(buf).toString('base64'), url: pageUrl });
+                return true;
+            }
+        } catch (e) {
+            // timeout or network error — note it
+        }
+        frames.push({ label: `⚠️ ${label} — screenshot failed`, image: null, error: true });
+        return false;
+    }
+
+    // Resolve a possibly-relative URL against the base
+    function resolve(href) {
+        try {
+            if (!href || href.startsWith('#') || href.startsWith('javascript') || href.startsWith('mailto') || href.startsWith('tel')) return null;
+            return new URL(href, baseUrl.origin).href;
+        } catch { return null; }
+    }
 
     try {
-        const chromium = (await import('@sparticuz/chromium')).default;
-        const puppeteer = (await import('puppeteer-core')).default;
+        // ── Step 1: Screenshot the landing page ──────────────────────────
+        await snap(url, `🌐 Opened ${baseUrl.hostname}`);
 
-        browser = await puppeteer.launch({
-            args: chromium.args,
-            defaultViewport: { width: 1280, height: 720 },
-            executablePath: await chromium.executablePath(),
-            headless: chromium.headless,
+        // ── Step 2: Fetch HTML and extract all clickable elements ─────────
+        let links = [];
+        let buttonLabels = [];
+        try {
+            const htmlRes = await fetch(url, {
+                headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36' },
+                signal: AbortSignal.timeout(10000)
+            });
+            const html = await htmlRes.text();
+
+            // Extract <a href="...">label</a>
+            const linkMatches = [...html.matchAll(/<a[^>]+href=["']([^"'#][^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi)];
+            for (const m of linkMatches) {
+                const href = resolve(m[1]);
+                const label = m[2].replace(/<[^>]+>/g, '').trim().slice(0, 60) || m[1];
+                if (href) links.push({ href, label });
+            }
+
+            // Extract buttons (for display — actual JS buttons can't be clicked without a real browser)
+            const btnMatches = [...html.matchAll(/<button[^>]*>([\s\S]*?)<\/button>/gi)];
+            for (const b of btnMatches) {
+                const lbl = b[1].replace(/<[^>]+>/g, '').trim().slice(0, 60);
+                if (lbl) buttonLabels.push(lbl);
+            }
+
+            // Deduplicate links by href
+            const seen = new Set();
+            links = links.filter(l => { if (seen.has(l.href)) return false; seen.add(l.href); return true; });
+
+        } catch (e) {
+            frames.push({ label: `⚠️ Could not fetch page HTML: ${e.message}`, image: null, error: true });
+        }
+
+        // ── Step 3: Process explicit actions from the AI ──────────────────
+        for (const action of actions) {
+            if (action.type === 'screenshot') {
+                await snap(url, action.label || 'Snapshot');
+            } else if (action.type === 'navigate' && action.url) {
+                const target = resolve(action.url) || action.url;
+                await snap(target, action.label || `Navigated to ${target}`);
+            }
+            // click actions become link visits below
+        }
+
+        // ── Step 4: Visit each link and screenshot it ─────────────────────
+        const toVisit = links.slice(0, 8); // cap at 8 to stay under timeout
+        for (const { href, label } of toVisit) {
+            // Health check
+            let status = '?';
+            try {
+                const hr = await fetch(href, { method: 'HEAD', signal: AbortSignal.timeout(6000) });
+                status = hr.ok ? '✅' : `❌ ${hr.status}`;
+            } catch { status = '❌ unreachable'; }
+
+            // Screenshot the destination
+            await snap(href, `${status} "${label}"`);
+        }
+
+        // ── Step 5: Report pure-JS buttons that can't be navigated ───────
+        if (buttonLabels.length > 0) {
+            frames.push({
+                label: `ℹ️ Buttons found (JS-only — need real browser to click): ${buttonLabels.join(', ')}`,
+                image: null,
+                info: true
+            });
+        }
+
+        return res.status(200).json({
+            ok: true,
+            frames: frames.filter(f => f.image),
+            notes: frames.filter(f => !f.image)
         });
 
-        const page = await browser.newPage();
-        await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36');
-
-        async function snap(label) {
-            const buf = await page.screenshot({ type: 'jpeg', quality: 78, fullPage: false });
-            frames.push({ label, image: buf.toString('base64'), url: page.url() });
-        }
-
-        // Navigate to starting URL
-        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
-        await new Promise(r => setTimeout(r, 1800));
-        await snap(`Opened ${new URL(url).hostname}`);
-
-        // Execute each action
-        for (const action of actions) {
-            try {
-                if (action.type === 'navigate') {
-                    await page.goto(action.url, { waitUntil: 'domcontentloaded', timeout: 15000 });
-                    await new Promise(r => setTimeout(r, 1200));
-                    await snap(action.label || 'Navigated');
-
-                } else if (action.type === 'click') {
-                    // Try the selector, fall back gracefully
-                    try {
-                        await page.click(action.selector, { timeout: 4000 });
-                        await new Promise(r => setTimeout(r, 900));
-                    } catch(ce) {
-                        // Selector not found — note it but still screenshot
-                        frames.push({ label: `⚠️ ${action.label || action.selector} — element not found`, image: null, skipped: true });
-                        continue;
-                    }
-                    await snap(action.label || 'Clicked');
-
-                } else if (action.type === 'scroll') {
-                    await page.evaluate((y) => window.scrollTo({ top: y, behavior: 'smooth' }), action.y || 500);
-                    await new Promise(r => setTimeout(r, 600));
-                    await snap(action.label || 'Scrolled');
-
-                } else if (action.type === 'type') {
-                    await page.type(action.selector, action.value || '', { delay: 40 });
-                    await snap(action.label || 'Typed');
-
-                } else if (action.type === 'wait') {
-                    await new Promise(r => setTimeout(r, Math.min(action.ms || 1000, 5000)));
-                    await snap(action.label || 'Waiting');
-
-                } else if (action.type === 'screenshot') {
-                    await snap(action.label || 'Snapshot');
-                }
-            } catch (e) {
-                frames.push({ label: `⚠️ ${action.label || action.type}: ${e.message.slice(0, 120)}`, image: null, error: true });
-            }
-        }
-
-        await browser.close();
-        return res.status(200).json({ ok: true, frames: frames.filter(f => f.image) });
-
     } catch (err) {
-        if (browser) try { await browser.close(); } catch (_) {}
-        // Return partial frames + error so the frontend can show what it got
         return res.status(200).json({
             ok: false,
             error: err.message,
             frames: frames.filter(f => f.image),
-            debug: err.stack ? err.stack.slice(0, 400) : undefined
+            notes: frames.filter(f => !f.image)
         });
     }
 }
