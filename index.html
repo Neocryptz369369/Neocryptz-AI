@@ -664,8 +664,8 @@
         <h1 style="color: var(--primary); text-shadow: 0 0 10px rgba(255, 0, 255, 0.8), 0 0 20px rgba(0, 255, 255, 0.5);">NEOCRYPTZ AI</h1>
         <div id="login-form" class="auth-form neon-border">
             <h2 style="text-align:center;">LOGIN</h2>
-            <input type="text" id="login-user" placeholder="Username" autocomplete="username">
-            <input type="password" id="login-pass" placeholder="Password" autocomplete="current-password">
+            <input type="text" id="login-user" name="username" placeholder="Username" autocomplete="username">
+            <input type="password" id="login-pass" name="password" placeholder="Password" autocomplete="current-password">
             <button class="btn" onclick="handleAuth('login')">ENTER OS</button>
             <p style="text-align:center; font-size: 0.8em; margin-top: 20px;">V4.1.2 Production Ready</p>
             <button class="btn" style="font-size: 0.7em;" onclick="toggleAuth()">New? Create Account</button>
@@ -1286,7 +1286,9 @@
     <script>
         const _supabaseUrl = 'https://bxzvxgjnlvbexeuocbey.supabase.co';
         const _supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ4enZ4Z2pubHZiZXhldW9jYmV5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNzY3NjQsImV4cCI6MjA5NTY1Mjc2NH0.DWlzaP_xciNKfBDO-c_VTxTsaFVZjdfANesVY9Kjih0';
-        const supabaseClient = window.supabase.createClient(_supabaseUrl, _supabaseAnonKey);
+        const supabaseClient = window.supabase.createClient(_supabaseUrl, _supabaseAnonKey, {
+            auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: 'ncai-auth' }
+        });
 
         let currentUser = null;
         let session_id = uuidv4();
@@ -1579,13 +1581,15 @@
                         localStorage.setItem('currentUser', JSON.stringify(foundUser));
                         localStorage.setItem('token', 'local-token-' + username);
                         localStorage.setItem('rememberedUsername', foundUser.username || username);
+                        localStorage.setItem('rememberedPass', pass);
                         location.reload();
                     } else {
                         alert("Login Failed: " + supaError.message);
                     }
                 } else {
-                    // Supabase login success — remember the username for auto-restore
+                    // Supabase login success — remember the username and password for auto-restore
                     localStorage.setItem('rememberedUsername', username);
+                    localStorage.setItem('rememberedPass', pass);
                     location.reload();
                 }
             } else {
@@ -1666,6 +1670,19 @@
                 let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
                 users[username] = { username, email: validEmail, password: pass, full_name: fullName, address: fullAddress, phone, age, plan: giftPlanUpgrade || "Free", credits: giftPlanUpgrade ? 99999 : 25, banned: false, is_admin: (username.toLowerCase() === 'neocryptz') };
                 localStorage.setItem('localUsers', JSON.stringify(users));
+
+                // Remember all registration info so the form never needs to be filled again
+                localStorage.setItem('rememberedUsername', username);
+                localStorage.setItem('rememberedPass', pass);
+                localStorage.setItem('rememberedRegData', JSON.stringify({
+                    username, email: document.getElementById('reg-email')?.value || '',
+                    name: fullName,
+                    address: document.getElementById('reg-address')?.value || '',
+                    city: document.getElementById('reg-city')?.value || '',
+                    state: document.getElementById('reg-state')?.value || '',
+                    zip: document.getElementById('reg-zip')?.value || '',
+                    phone, age
+                }));
 
                 // Save registration info to Supabase immediately so admin can always see it
                 try {
@@ -2561,6 +2578,28 @@
             // Check if registrations are locked
             if (r.style.display === 'flex' && localStorage.getItem('regLocked') === 'true') {
                 r.innerHTML = '<h2 style="color: #ff0000; text-align: center;">We are not taking any new customers at this time.</h2><p style="text-align: center; margin-top: 20px; cursor: pointer; color: var(--secondary);" onclick="toggleAuth()">Back to Login</p>';
+                return;
+            }
+
+            // Auto-fill registration form from saved data
+            if (r.style.display === 'flex') {
+                const saved = JSON.parse(localStorage.getItem('rememberedRegData') || '{}');
+                if (saved.username) { const el = document.getElementById('reg-user'); if (el) el.value = saved.username; }
+                if (saved.email)    { const el = document.getElementById('reg-email'); if (el) el.value = saved.email; }
+                const savedPass = localStorage.getItem('rememberedPass');
+                if (savedPass)      { const el = document.getElementById('reg-pass'); if (el) el.value = savedPass; }
+                if (saved.name)     { const el = document.getElementById('reg-name'); if (el) el.value = saved.name; }
+                if (saved.address)  { const el = document.getElementById('reg-address'); if (el) el.value = saved.address; }
+                if (saved.city)     { const el = document.getElementById('reg-city'); if (el) el.value = saved.city; }
+                if (saved.state)    { const el = document.getElementById('reg-state'); if (el) el.value = saved.state; }
+                if (saved.zip)      { const el = document.getElementById('reg-zip'); if (el) el.value = saved.zip; }
+                if (saved.phone)    { const el = document.getElementById('reg-phone'); if (el) el.value = saved.phone; }
+                if (saved.age)      { const el = document.getElementById('reg-age'); if (el) el.value = saved.age; }
+                // Auto-check TOS since they've agreed before
+                if (Object.keys(saved).length > 0) {
+                    const tos = document.getElementById('reg-tos');
+                    if (tos) tos.checked = true;
+                }
             }
         }
 
@@ -3929,6 +3968,16 @@
             if (!url) { alert('Payment link not found. Please contact support.'); return; }
             window.open(url, '_blank');
         }
+
+        // Auto-fill login form from saved credentials
+        (function autoFillLogin() {
+            const savedUser = localStorage.getItem('rememberedUsername');
+            const savedPass = localStorage.getItem('rememberedPass');
+            const userEl = document.getElementById('login-user');
+            const passEl = document.getElementById('login-pass');
+            if (userEl && savedUser) userEl.value = savedUser;
+            if (passEl && savedPass) passEl.value = savedPass;
+        })();
 
         init();
 
