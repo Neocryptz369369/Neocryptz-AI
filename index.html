@@ -1420,11 +1420,27 @@
                 users[username] = { username, email: validEmail, password: pass, full_name: fullName, address: fullAddress, phone, age, plan: giftPlanUpgrade || "Free", credits: giftPlanUpgrade ? 99999 : 25, banned: false, is_admin: (username.toLowerCase() === 'neocryptz') };
                 localStorage.setItem('localUsers', JSON.stringify(users));
 
-                // Also save registration info to Supabase so admin can see it in support panel
+                // Save registration info to Supabase immediately so admin can always see it
                 try {
-                    await supabaseClient.from('user_registrations').upsert({
+                    // Generate or reuse a stable UUID for this user
+                    let regUid = localStorage.getItem('support_uid_' + username);
+                    if (!regUid || !/^[0-9a-f-]{36}$/.test(regUid)) {
+                        try { regUid = crypto.randomUUID(); } catch(e) {
+                            regUid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+                                const r = Math.random() * 16 | 0;
+                                return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+                            });
+                        }
+                        localStorage.setItem('support_uid_' + username, regUid);
+                    }
+                    const profileData = JSON.stringify({
                         username, full_name: fullName, email: validEmail, phone, address: fullAddress, age, plan: giftPlanUpgrade || "Free"
-                    }, { onConflict: 'username' });
+                    });
+                    await supabaseClient.from('support_messages').insert([{
+                        user_id: regUid,
+                        sender_name: '__profile__',
+                        message: profileData
+                    }]);
                 } catch(e) {}
 
                 if (supaError) {
@@ -3246,26 +3262,33 @@
             return;
         }
 
-        // Only count real users (not admin/system messages)
-        const realUserIds = [...new Set(data.filter(m => m.user_id && m.sender_name !== 'Neocryptz' && m.sender_name !== '__profile__').map(m => m.user_id))];
+        // Get all unique user IDs — include profile-only entries (registered but never chatted)
+        const allUserIds = [...new Set(data.filter(m => m.user_id).map(m => m.user_id))];
+        // Filter out the admin's own UID
+        const realUserIds = allUserIds.filter(uid => {
+            const msgs = data.filter(m => m.user_id === uid);
+            // Exclude if ALL messages are from Neocryptz (no user messages at all)
+            return msgs.some(m => m.sender_name !== 'Neocryptz');
+        });
 
         for (const uid of realUserIds) {
-            // Get username from a real chat message
-            const userMsg = data.find(m => m.user_id === uid && m.sender_name !== 'Neocryptz' && m.sender_name !== '__profile__');
-            const lastRealMsg = data.find(m => m.user_id === uid && m.sender_name !== '__profile__');
-            const username = userMsg?.sender_name || 'Unknown User';
-
-            // Extract profile from hidden __profile__ message (sent alongside chat messages)
+            // Extract profile from hidden __profile__ message first
             const profileMsg = data.find(m => m.user_id === uid && m.sender_name === '__profile__');
             let profile = null;
             if (profileMsg) {
                 try { profile = JSON.parse(profileMsg.message); } catch(e) {}
             }
-            // Fall back to Supabase profiles table
+
+            // Get username: from profile data, or from a real chat message
+            const chatMsg = data.find(m => m.user_id === uid && m.sender_name !== 'Neocryptz' && m.sender_name !== '__profile__');
+            const username = profile?.username || chatMsg?.sender_name || 'Unknown User';
+
+            // Fall back to Supabase profiles table if no embedded profile
             if (!profile || !profile.full_name) {
                 const { data: dbProfile } = await supabaseClient.from('profiles').select('username,full_name,email,phone,address,age,plan').ilike('username', username).single();
-                if (dbProfile) profile = dbProfile;
+                if (dbProfile) profile = { ...dbProfile, username: dbProfile.username || username };
             }
+            if (!profile) profile = { username };
 
             const div = document.createElement('div');
             div.className = 'neon-border';
