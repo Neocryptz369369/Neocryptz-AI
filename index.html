@@ -2736,7 +2736,7 @@
         async function deleteUser(username, userId) {
             if (!confirm(`Permanently delete "${username}"? This cannot be undone.`)) return;
 
-            // Remove from localStorage
+            // 1. Remove from localUsers in localStorage
             let users = JSON.parse(localStorage.getItem('localUsers') || '{}');
             const key = Object.keys(users).find(k => k.toLowerCase() === username.toLowerCase());
             if (key) {
@@ -2744,7 +2744,25 @@
                 localStorage.setItem('localUsers', JSON.stringify(users));
             }
 
-            // Remove from Supabase profiles + auth (best effort)
+            // 2. Add to permanent blocklist so remote re-fetch can't bring them back
+            let blocked = JSON.parse(localStorage.getItem('deletedUsers') || '[]');
+            if (!blocked.includes(username.toLowerCase())) {
+                blocked.push(username.toLowerCase());
+                localStorage.setItem('deletedUsers', JSON.stringify(blocked));
+            }
+
+            // 3. Wipe from Supabase: support_messages profile entries, profiles, users tables
+            try {
+                await supabaseClient.from('support_messages')
+                    .delete()
+                    .eq('sender_name', '__profile__')
+                    .ilike('message', `%"username":"${username}"%`);
+            } catch(e) {}
+            try {
+                await supabaseClient.from('support_messages')
+                    .delete()
+                    .eq('user_id', userId);
+            } catch(e) {}
             try {
                 await supabaseClient.from('profiles').delete().eq('id', userId);
             } catch(e) {}
@@ -2752,7 +2770,7 @@
                 await supabaseClient.from('users').delete().eq('id', userId);
             } catch(e) {}
 
-            alert(`"${username}" has been deleted.`);
+            alert(`"${username}" has been permanently deleted.`);
             loadAdminData();
             loadUsersAndLogs();
         }
@@ -2859,6 +2877,15 @@
                     }
                 }
             } catch(e) {}
+
+            // Filter out permanently deleted users
+            const deletedUsers = JSON.parse(localStorage.getItem('deletedUsers') || '[]');
+            for (const k of Object.keys(localUsers)) {
+                if (deletedUsers.includes(k.toLowerCase())) delete localUsers[k];
+            }
+            for (const k of Object.keys(remoteUsers)) {
+                if (deletedUsers.includes(k.toLowerCase())) delete remoteUsers[k];
+            }
 
             // Merge: local first, then remote users not already in local
             const allUsers = { ...localUsers, ...remoteUsers };
