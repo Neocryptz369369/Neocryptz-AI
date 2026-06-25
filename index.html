@@ -581,6 +581,15 @@
             0% { transform: scale(1); box-shadow: 0 0 4px #ff0000; }
             100% { transform: scale(1.3); box-shadow: 0 0 10px #ff0000; }
         }
+        @keyframes ncThink {
+            0%,80%,100% { transform: scale(0.45); opacity: 0.25; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes ncFadeToast {
+            0% { opacity: 1; transform: translateX(-50%) translateY(0); }
+            75% { opacity: 1; }
+            100% { opacity: 0; transform: translateX(-50%) translateY(-14px); }
+        }
         @keyframes shieldAlert {
             0%   { filter: drop-shadow(0 0 4px #8a2be2) brightness(1);   transform: scale(1); }
             50%  { filter: drop-shadow(0 0 18px #ffffff) brightness(2.5); transform: scale(1.25); }
@@ -1861,6 +1870,30 @@
                 historyPayload = allHistory.filter(h => h.username === myUsername).slice(-historyLimit);
             } catch(e) {}
 
+            // ── Thinking bubble (three pulsing dots) ────────────────────
+            const _thinkId = 'ncthink-' + Date.now();
+            (function() {
+                const cw = document.getElementById('chat-window');
+                const tb = document.createElement('div');
+                tb.id = _thinkId;
+                tb.className = 'message assistant neon-border';
+                const _thinkMsgs = ['Neocryptz is thinking...','Analyzing your request...','Crafting a response...','Processing...'];
+                let _tmi = 0;
+                tb.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:4px 2px;">
+                    <span style="width:10px;height:10px;border-radius:50%;background:#00ffc8;display:inline-block;animation:ncThink 1.3s ease-in-out 0s infinite;"></span>
+                    <span style="width:10px;height:10px;border-radius:50%;background:#00ffc8;display:inline-block;animation:ncThink 1.3s ease-in-out 0.22s infinite;"></span>
+                    <span style="width:10px;height:10px;border-radius:50%;background:#00ffc8;display:inline-block;animation:ncThink 1.3s ease-in-out 0.44s infinite;"></span>
+                    <span id="${_thinkId}-lbl" style="color:#555;font-size:0.8em;margin-left:6px;transition:opacity 0.3s;">${_thinkMsgs[0]}</span>
+                </div>`;
+                cw.appendChild(tb);
+                cw.scrollTop = cw.scrollHeight;
+                window['_thinkTimer_'+_thinkId] = setInterval(() => {
+                    _tmi = (_tmi + 1) % _thinkMsgs.length;
+                    const lbl = document.getElementById(_thinkId + '-lbl');
+                    if (lbl) { lbl.style.opacity = '0'; setTimeout(() => { if(lbl) { lbl.textContent = _thinkMsgs[_tmi]; lbl.style.opacity='1'; }}, 200); }
+                }, 2200);
+            })();
+
             const resp = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentToken}` },
@@ -1868,6 +1901,13 @@
             });
 
             const data = await resp.json();
+            // ── Remove thinking bubble ───────────────────────────────────
+            (function() {
+                clearInterval(window['_thinkTimer_'+_thinkId]);
+                const tb = document.getElementById(_thinkId);
+                if (tb) { tb.style.transition = 'opacity 0.2s'; tb.style.opacity = '0'; setTimeout(() => tb.remove(), 220); }
+            })();
+
             let aiText = '';
             if (resp.ok) {
                 aiText = data.result || 'Task execution initiated.';
@@ -2162,6 +2202,7 @@
 
                         _broadcast('_done_', 'finish', '');
                         _stopAll();
+                        _ncDoneToast('⚡ Pipeline complete');
                         try { if (_liveBC) _liveBC.unsubscribe(); _unregisterLiveSession(currentUser.username); } catch(e) {}
                     } catch(pipeErr) {
                         _broadcast('_done_', 'finish', '');
@@ -2200,7 +2241,7 @@
                     </div>`;
                 }
 
-                appendMessage('assistant', aiText); triggerWebhook(aiText);
+                _ncTypewriter(aiText, () => { _ncDoneToast('✓ Done'); triggerWebhook(aiText); });
 
                 // Increment Usage Count on Success
                 if (myUsername !== 'Neocryptz') {
@@ -2214,7 +2255,7 @@
                 }
             } else {
                 aiText = `ERROR: ${data.error || 'Request Failed'}`;
-                appendMessage('assistant', aiText);
+                _ncTypewriter(aiText, () => {});
             }
 
             // Save to Global Chat History (localStorage + Supabase cloud backup)
@@ -4469,6 +4510,46 @@
                 response: JSON.stringify(req)
             }], { onConflict: 'prompt' });
         } catch(e) {}
+    }
+
+    // ========== TYPEWRITER + DONE TOAST ==========
+    function _ncTypewriter(text, onDone) {
+        const win = document.getElementById('chat-window');
+        const div = document.createElement('div');
+        const msgId = 'msg-' + Date.now() + '-' + Math.floor(Math.random() * 9999);
+        div.id = msgId;
+        div.className = 'message assistant neon-border';
+        win.appendChild(div);
+        let i = 0;
+        // Speed scales with length: very long responses skip more chars per tick
+        const CHUNK = text.length > 1200 ? 12 : text.length > 500 ? 6 : text.length > 200 ? 3 : 2;
+        const DELAY = text.length > 1200 ? 4 : text.length > 500 ? 8 : 14;
+        function tick() {
+            i = Math.min(i + CHUNK, text.length);
+            // Show cursor blink while typing
+            div.innerHTML = formatText(text.substring(0, i)) +
+                (i < text.length ? '<span style="border-right:2px solid #00ffc8;display:inline-block;width:2px;height:1em;vertical-align:text-bottom;margin-left:1px;"></span>' : '');
+            win.scrollTop = win.scrollHeight;
+            if (i < text.length) {
+                setTimeout(tick, DELAY);
+            } else {
+                // Fully done: render final formatted text + READ ALOUD button
+                div.innerHTML = formatText(text) + '<br><button class="btn" style="font-size:0.7em;padding:2px 5px;margin-top:5px;" onclick="playAudio(\'' + msgId + '\')">🔊 READ ALOUD</button>';
+                win.scrollTop = win.scrollHeight;
+                if (onDone) onDone();
+            }
+        }
+        tick();
+        return msgId;
+    }
+    function _ncDoneToast(msg) {
+        const t = document.createElement('div');
+        const isErr = (msg || '').startsWith('❌');
+        t.style.cssText = 'position:fixed;bottom:88px;left:50%;transform:translateX(-50%);background:' +
+            (isErr ? '#ff4444' : '#00ff88') + ';color:#000;padding:7px 24px;border-radius:22px;font-weight:bold;font-size:0.85em;z-index:9999;animation:ncFadeToast 2.8s forwards;pointer-events:none;box-shadow:0 4px 24px rgba(0,255,136,0.35);letter-spacing:0.5px;';
+        t.textContent = msg || '✓ Done';
+        document.body.appendChild(t);
+        setTimeout(() => { if (t.parentNode) t.remove(); }, 3000);
     }
 
     // ========== BROWSER PERMISSION + LIVE SLIDESHOW ==========
