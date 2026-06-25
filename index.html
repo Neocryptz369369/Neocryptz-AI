@@ -2912,6 +2912,18 @@
             let localUsers = JSON.parse(localStorage.getItem('localUsers') || '{}');
             let globalChat = JSON.parse(localStorage.getItem('globalChatHistory') || '[]');
 
+            // Always make sure the current admin appears — clear them from blocklist and inject into table
+            if (currentUser && currentUser.is_admin) {
+                let blocked = JSON.parse(localStorage.getItem('deletedUsers') || '[]');
+                blocked = blocked.filter(n => n !== (currentUser.username || '').toLowerCase());
+                localStorage.setItem('deletedUsers', JSON.stringify(blocked));
+                const adminKey = currentUser.username || 'Neocryptz';
+                if (!localUsers[adminKey]) {
+                    localUsers[adminKey] = { ...currentUser };
+                    localStorage.setItem('localUsers', JSON.stringify(localUsers));
+                }
+            }
+
             // Remote users — pull __profile__ messages from Supabase
             let remoteUsers = {};
             try {
