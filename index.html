@@ -1873,9 +1873,18 @@
                 aiText = data.result || 'Task execution initiated.';
 
                 // ── Browser Permission Request ─────────────────────────────
-                const bpMatch = aiText.match(/<<<BROWSER_PERMISSION>>>([\s\S]*?)<<<END_BROWSER_PERMISSION>>>/);
+                // Permissive match — handles malformed closing tags like >>>} or >>>  
+                const bpMatch = aiText.match(/<<<BROWSER_PERMISSION>>>([\s\S]*?)<<<END_BROWSER_PERMISSION/);
                 if (bpMatch) {
-                    let bpReq; try { bpReq = JSON.parse(bpMatch[1].trim()); } catch(e) { bpReq = null; }
+                    // Try to extract clean JSON even if there's trailing garbage after the block
+                    let bpReq = null;
+                    try {
+                        let raw = bpMatch[1].trim();
+                        // Strip any trailing non-JSON chars after the last }
+                        const lastBrace = raw.lastIndexOf('}');
+                        if (lastBrace !== -1) raw = raw.substring(0, lastBrace + 1);
+                        bpReq = JSON.parse(raw);
+                    } catch(e) { bpReq = null; }
                     if (bpReq) {
                         const bpVisible = aiText.replace(/<<<BROWSER_PERMISSION>>>[\s\S]*?<<<END_BROWSER_PERMISSION>>>/g,'').trim();
                         if (bpVisible) appendMessage('assistant', bpVisible);
