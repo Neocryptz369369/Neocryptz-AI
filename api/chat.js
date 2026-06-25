@@ -306,9 +306,9 @@ BROWSER RULES:
                             if (retried) text = retried;
                         }
                         const { text: cleanText, browserRequest } = extractBrowserBlock(text);
-                        await upsertCache(supabase, prompt, cleanText || text);
-                        saveHistory(supabase, username, prompt, cleanText || text);
-                        return res.status(200).json({ result: cleanText || text, browserRequest, provider: "Gemini" });
+                        await upsertCache(supabase, prompt, cleanText);
+                        saveHistory(supabase, username, prompt, cleanText);
+                        return res.status(200).json({ result: cleanText, browserRequest, provider: "Gemini" });
                     }
                 } else {
                     lastError += "Gemini Error: " + resGemini.statusText + " | ";
@@ -335,9 +335,9 @@ BROWSER RULES:
                             if (retried) text = retried;
                         }
                         const { text: cleanText, browserRequest } = extractBrowserBlock(text);
-                        await upsertCache(supabase, prompt, cleanText || text);
-                        saveHistory(supabase, username, prompt, cleanText || text);
-                        return res.status(200).json({ result: cleanText || text, browserRequest, provider: "OpenRouter" });
+                        await upsertCache(supabase, prompt, cleanText);
+                        saveHistory(supabase, username, prompt, cleanText);
+                        return res.status(200).json({ result: cleanText, browserRequest, provider: "OpenRouter" });
                     }
                 } else {
                     lastError += "OpenRouter Error: " + orRes.statusText + " | ";
@@ -361,9 +361,9 @@ BROWSER RULES:
                         if (retried) text = retried;
                     }
                     const { text: cleanText, browserRequest } = extractBrowserBlock(text);
-                    await upsertCache(supabase, prompt, cleanText || text);
-                    saveHistory(supabase, username, prompt, cleanText || text);
-                    return res.status(200).json({ result: cleanText || text, browserRequest, provider: "Pollinations" });
+                    await upsertCache(supabase, prompt, cleanText);
+                    saveHistory(supabase, username, prompt, cleanText);
+                    return res.status(200).json({ result: cleanText, browserRequest, provider: "Pollinations" });
                 } else {
                     lastError += "Pollinations Error: " + polRes.statusText + " | ";
                 }
@@ -389,9 +389,9 @@ BROWSER RULES:
                             if (retried) text = retried;
                         }
                         const { text: cleanText, browserRequest } = extractBrowserBlock(text);
-                        await upsertCache(supabase, prompt, cleanText || text);
-                        saveHistory(supabase, username, prompt, cleanText || text);
-                        return res.status(200).json({ result: cleanText || text, browserRequest, provider: "SambaNova" });
+                        await upsertCache(supabase, prompt, cleanText);
+                        saveHistory(supabase, username, prompt, cleanText);
+                        return res.status(200).json({ result: cleanText, browserRequest, provider: "SambaNova" });
                     }
                 } else {
                     lastError += "SambaNova Error: " + sambaRes.statusText + " | ";
