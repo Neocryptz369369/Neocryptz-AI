@@ -4044,6 +4044,9 @@
             if (!url) { alert('Payment link not found. Please contact support.'); return; }
 
             const userId = encodeURIComponent(currentUser?.username || currentUser?.id || 'guest');
+            // Fire shield lights for the plan being purchased
+            const lightPlan = plan === 'Corporate Team' ? 'Corporate Team' : (plan === 'Unlimited Text' || plan === 'Unlimited' ? 'Unlimited Text' : plan);
+            triggerPlanLights(lightPlan, period);
             window.open(`${url}?client_reference_id=${userId}`, '_blank');
         }
 
@@ -4616,7 +4619,7 @@
         setTimeout(() => {
             shield.classList.remove('shield-police', 'shield-green', 'shield-new-user');
             checkNewUserNotifications();
-        }, 8000);
+        }, 60000);
     }
 
     function triggerPlanLights(planName, period) {
@@ -4629,8 +4632,8 @@
         shield.classList.add(isPolice ? 'shield-police' : 'shield-green');
         setTimeout(() => {
             shield.classList.remove('shield-police', 'shield-green');
-            checkNewUserNotifications(); // restore new-user glow if still relevant
-        }, 8000);
+            checkNewUserNotifications();
+        }, 60000);
     }
 
     function authorizeNeocryptzAI() {
