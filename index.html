@@ -1933,6 +1933,48 @@
 
                     function _stopAll() { Object.keys(_spinners).forEach(k => { clearInterval(_spinners[k]); delete _spinners[k]; }); }
 
+                    // ── "Watch me work" content panels ──────────────────────
+                    function _showWorkPanel(icon, title, content, color) {
+                        color = color || '#00ffc8';
+                        const chat = document.getElementById('chat-window');
+                        const panel = document.createElement('div');
+                        panel.style.cssText = 'background:#060d0a;border:1px solid ' + color + '44;border-radius:6px;margin:6px 0;font-family:monospace;font-size:0.78em;overflow:hidden;';
+                        const safe = content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                        const preview = safe.slice(0, 4000) + (safe.length > 4000 ? '\n… (truncated)' : '');
+                        panel.innerHTML = `<div onclick="const b=this.nextElementSibling;b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.wp-arrow').textContent=b.style.display==='none'?'▶':'▼';" style="display:flex;align-items:center;gap:8px;padding:7px 12px;cursor:pointer;background:${color}0d;color:${color};font-weight:bold;font-size:0.84em;user-select:none;"><span class="wp-arrow">▼</span>${icon} ${title}</div><div style="padding:10px 12px;max-height:220px;overflow-y:auto;color:#8a9;white-space:pre-wrap;word-break:break-word;line-height:1.55;">${preview}</div>`;
+                        chat.appendChild(panel);
+                        chat.scrollTop = chat.scrollHeight;
+                        return panel;
+                    }
+
+                    function _showDiffPanel(summary, removals, additions) {
+                        const chat = document.getElementById('chat-window');
+                        const panel = document.createElement('div');
+                        panel.style.cssText = 'background:#060d0a;border:1px solid #00ffc844;border-radius:6px;margin:6px 0;font-family:monospace;font-size:0.78em;overflow:hidden;';
+                        let inner = '<div onclick="const b=this.nextElementSibling;b.style.display=b.style.display===\'none\'?\'block\':\'none\';this.querySelector(\'.wp-arrow\').textContent=b.style.display===\'none\'?\'▶\':\'▼\';" style="display:flex;align-items:center;gap:8px;padding:7px 12px;cursor:pointer;background:#00ffc80d;color:#00ffc8;font-weight:bold;font-size:0.84em;user-select:none;"><span class="wp-arrow">▼</span>✏️ What I changed</div><div style="padding:10px 12px;max-height:240px;overflow-y:auto;">';
+                        if (summary) inner += '<div style="color:#aaa;margin-bottom:8px;font-family:sans-serif;font-size:0.95em;">' + summary.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>';
+                        if (removals && removals.length) {
+                            removals.slice(0,20).forEach(l => { inner += '<div style="color:#ff6666;background:#ff000011;padding:1px 4px;">- ' + l.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>'; });
+                        }
+                        if (additions && additions.length) {
+                            additions.slice(0,20).forEach(l => { inner += '<div style="color:#66ff88;background:#00ff0011;padding:1px 4px;">+ ' + l.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>'; });
+                        }
+                        inner += '</div>';
+                        panel.innerHTML = inner;
+                        chat.appendChild(panel);
+                        chat.scrollTop = chat.scrollHeight;
+                    }
+
+                    function _showSitePreview(url, label) {
+                        if (!url) return;
+                        const chat = document.getElementById('chat-window');
+                        const panel = document.createElement('div');
+                        panel.style.cssText = 'border:1px solid #00ffc844;border-radius:6px;margin:6px 0;overflow:hidden;';
+                        panel.innerHTML = `<div style="background:#00ffc80d;color:#00ffc8;font-weight:bold;font-size:0.82em;padding:7px 12px;display:flex;align-items:center;justify-content:space-between;">🌐 Live Preview — ${label || url}<a href="${url}" target="_blank" style="color:#00ffc8;font-size:0.85em;text-decoration:none;border:1px solid #00ffc844;padding:2px 8px;border-radius:3px;">↗ Open</a></div><iframe src="${url}" style="width:100%;height:300px;border:none;background:#111;" loading="lazy"></iframe>`;
+                        chat.appendChild(panel);
+                        chat.scrollTop = chat.scrollHeight;
+                    }
+
                     // ── Vercel deploy poller (via GitHub commit statuses) ────
                     async function _waitDeploy(repo, sha, stepId) {
                         for (let i = 0; i < 24; i++) {
@@ -1982,6 +2024,13 @@
                             if (!rR.ok) { _setStep('p1','error', rD.error || 'GitHub read failed'); _stopAll(); return; }
                             _setStep('p1', 'done', actionJson.action === 'list_repos' ? 'All repos listed ✓' : `${actionJson.path} read from GitHub ✓`);
 
+                            // Show what the AI is reading
+                            if (actionJson.action === 'list_repos' && rD.repos) {
+                                _showWorkPanel('📂', 'Your repositories', rD.repos.map(r => '• ' + r.full_name + '  (last push: ' + r.pushed_at + ')').join('\n'), '#a855f7');
+                            } else if (rD.excerpt) {
+                                _showWorkPanel('📄', 'Reading: ' + actionJson.path, rD.excerpt, '#a855f7');
+                            }
+
                             _step('p2', 'AI analyzing data and generating changes...', 'active');
                             const summary = actionJson.action === 'list_repos'
                                 ? 'Repos: ' + rD.repos.map(r => r.full_name + ' (pushed: ' + r.pushed_at + ')').join(', ')
@@ -2005,6 +2054,17 @@
                                 const vT2 = aiText.replace(/<<<EXEC>>>[\s\S]*?<<<END_EXEC>>>/g,'').trim();
                                 if (vT2) appendMessage('assistant', vT2);
 
+                                // Show what the AI is about to write
+                                if (a2.content) {
+                                    const origLines = (rD.excerpt || '').split('\n');
+                                    const newLines  = a2.content.split('\n');
+                                    const removed = origLines.filter(l => l.trim() && !newLines.includes(l)).slice(0,15);
+                                    const added   = newLines.filter(l => l.trim() && !origLines.includes(l)).slice(0,15);
+                                    _showDiffPanel(vT2 || ('Rewriting ' + (a2.path || 'file')), removed, added);
+                                } else if (a2.html_to_inject || a2.patch) {
+                                    _showWorkPanel('✏️', 'What I\'m adding', a2.html_to_inject || a2.patch || '', '#00ffc8');
+                                }
+
                                 _step('p3', `Applying changes: ${a2.action} on ${a2.repo || ''}...`, 'active');
                                 const eR2 = await fetch('/api/execute', {
                                     method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${currentToken}`},
@@ -2019,6 +2079,7 @@
                                 if (dep.ok) {
                                     _setStep('p4', 'done', `Vercel deployed in ${dep.elapsed}s ✓`);
                                     _step('p5', '🚀  CHANGES ARE LIVE — your site has been updated!', 'done');
+                                    if (dep.url) _showSitePreview(dep.url, a2.repo);
                                 } else {
                                     _setStep('p4', 'warn', dep.error);
                                     _step('p5', '⚠️  Push successful — site will be live in a moment.', 'warn');
@@ -2046,6 +2107,14 @@
 
                             _setStep('d1', 'done', `${actionJson.path || 'File'} read ✓`);
                             _setStep('d2', 'done', 'Changes applied ✓');
+
+                            // Show what was changed
+                            if (actionJson.html_to_inject || actionJson.patch) {
+                                _showWorkPanel('✏️', 'What I\'m adding / changing', actionJson.html_to_inject || actionJson.patch || '', '#00ffc8');
+                            } else if (actionJson.content) {
+                                _showWorkPanel('📝', 'New file content', actionJson.content, '#00ffc8');
+                            }
+
                             _step('d3', 'Pushing to GitHub...', 'active');
                             await new Promise(r => setTimeout(r, 200));
                             _setStep('d3', 'done', `Pushed to GitHub ✓  (commit: ${eD.commit?.slice(0,7)})`);
@@ -2055,6 +2124,7 @@
                             if (dep.ok) {
                                 _setStep('d4', 'done', `Vercel deployed in ${dep.elapsed}s ✓`);
                                 _step('d5', '🚀  CHANGES ARE LIVE — your site has been updated!', 'done');
+                                if (dep.url) _showSitePreview(dep.url, actionJson.repo);
                             } else {
                                 _setStep('d4', 'warn', dep.error);
                                 _step('d5', '⚠️  Push successful — site will be live in a moment.', 'warn');
