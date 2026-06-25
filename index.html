@@ -3252,8 +3252,8 @@
             const lastMsg = data.find(m => m.user_id === uid);
             const username = userMsg?.sender_name || lastMsg?.sender_name || 'Unknown User';
 
-            // Look up full profile from user_registrations table (saved at registration & on every support message)
-            const { data: profile } = await supabaseClient.from('user_registrations').select('*').eq('username', username).single();
+            // Look up full profile by username from profiles table
+            const { data: profile } = await supabaseClient.from('profiles').select('username,full_name,email,phone,address,age,plan').eq('username', username).single();
 
             const div = document.createElement('div');
             div.className = 'neon-border';
@@ -3270,11 +3270,11 @@
     async function selectSupportUser(uid, profile) {
         selectedSupportUserId = uid;
 
-        // If profile was not found by username lookup, try fetching it now
+        // If profile was not found, try fetching from profiles table by username
         if (!profile || !profile.full_name) {
             const username = profile?.username;
             if (username) {
-                const { data: fetched } = await supabaseClient.from('user_registrations').select('*').eq('username', username).single();
+                const { data: fetched } = await supabaseClient.from('profiles').select('username,full_name,email,phone,address,age,plan').eq('username', username).single();
                 if (fetched) profile = fetched;
             }
         }
