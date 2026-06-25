@@ -524,6 +524,10 @@
 
             #chat-window { padding: 10px; }
 
+            /* Sidebar header: stack title + icons vertically so icons don't hide off-screen */
+            #sidebar > div:first-child { flex-direction: column; align-items: flex-start; gap: 8px; }
+            #sidebar > div:first-child > div { display: flex; gap: 10px; font-size: 1.4em; }
+
             #input-area { padding: 10px; flex-direction: column; gap: 8px; }
             #message-input { width: 100%; box-sizing: border-box; }
             #send-btn { width: 100%; margin-left: 0; padding: 12px; }
