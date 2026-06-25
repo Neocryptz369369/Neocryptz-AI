@@ -1,19 +1,11 @@
 {
   "functions": {
-    "api/browser-session.js": {
-      "maxDuration": 15
-    },
-    "api/browser-run.js": {
-      "maxDuration": 90
-    },
-    "api/browser.js": {
-      "maxDuration": 30
-    },
-    "api/chat.js": {
-      "maxDuration": 30
-    },
-    "api/execute.js": {
-      "maxDuration": 30
-    }
+    "api/browser-session.js": { "maxDuration": 15 },
+    "api/browser-run.js":     { "maxDuration": 90 },
+    "api/browser.js":         { "maxDuration": 30 },
+    "api/chat.js":            { "maxDuration": 30 },
+    "api/execute.js":         { "maxDuration": 30 },
+    "api/stripe-webhook.js":  { "maxDuration": 15 },
+    "api/purchase-poll.js":   { "maxDuration": 10 }
   }
 }
