@@ -881,7 +881,7 @@
                 <button class="btn" onclick="showAdminTab('admin-feedback'); loadAdminData()">FEEDBACK</button>
                 <button class="btn" onclick="showAdminTab('admin-settings')">SETTINGS</button>
                 <button class="btn" style="border-color:#f59e0b; color:#f59e0b;" onclick="showAdminTab('admin-gift-codes'); loadGiftCodes()">🎁 GIFT CODES</button>
-                <button class="btn" style="border-color:#8a2be2; color:#8a2be2;" onclick="showAdminTab('admin-support'); loadSupportUsers()">SUPPORT</button>
+                <button class="btn" style="border-color:#8a2be2; color:#8a2be2;" onclick="showAdminTab('admin-support'); loadSupportUsers(); requestNotificationPermission()">SUPPORT</button>
                 <button class="btn" style="border-color:#00ffff; color:#00ffff;" onclick="showAdminTab('admin-deployment'); loadVercelProjects()">DEPLOYMENT</button>
                 <div style="border-left: 1px solid #333; margin: 0 10px;"></div>
                 <button class="btn" onclick="closeModal('admin-modal'); openModal('share-modal')">SHARE</button>
@@ -3463,7 +3463,7 @@
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'support_messages' }, async payload => {
                 const newMsg = payload.new;
 
-                if (currentUser?.is_admin && newMsg.sender_name !== 'Neocryptz') {
+                if (currentUser?.is_admin && newMsg.sender_name !== 'Neocryptz' && newMsg.sender_name !== '__profile__') {
                     playSupportAlert();
                     if (selectedSupportUserId === newMsg.user_id) {
                         loadSupportMessages(newMsg.user_id, true);
@@ -3481,10 +3481,47 @@
     }
 
     function playSupportAlert() {
+        // 1. Web Audio API — generates a loud ding directly, no file needed
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+            const playTone = (freq, startTime, duration, vol) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, startTime);
+                gain.gain.setValueAtTime(vol, startTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+                osc.start(startTime);
+                osc.stop(startTime + duration);
+            };
+
+            // Double ding: two tones back to back
+            playTone(1046, ctx.currentTime,        0.4, 1.0); // C6
+            playTone(1318, ctx.currentTime + 0.25, 0.5, 1.0); // E6
+        } catch(e) {}
+
+        // 2. Browser notification (shows even if tab is in background)
+        if (Notification.permission === 'granted') {
+            new Notification('⚡ Neocryptz Support', {
+                body: 'New message from a user!',
+                icon: '/favicon.ico'
+            });
+        }
+
+        // 3. Fallback HTML audio
         const audio = document.getElementById('support-alert-sound');
         if (audio) {
             audio.volume = 1.0;
-            audio.play().catch(e => console.log("Audio play blocked", e));
+            audio.play().catch(() => {});
+        }
+    }
+
+    function requestNotificationPermission() {
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
         }
     }
 
