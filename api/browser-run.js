@@ -11,6 +11,8 @@ export default async function handler(req, res) {
 
     const apiKey = process.env.BROWSERBASE_API_KEY;
     if (!apiKey) return res.status(500).json({ error: 'BROWSERBASE_API_KEY not configured' });
+    // DEBUG: surface key prefix so we can confirm correct key is loaded
+    const _keyDebug = apiKey.slice(0, 12) + '...(len=' + apiKey.length + ')';
 
     const bbHeaders = {
         'x-bb-api-key': apiKey,
@@ -34,7 +36,7 @@ export default async function handler(req, res) {
             method: 'POST', headers: bbHeaders,
             body: JSON.stringify(projectId ? { projectId } : {})
         });
-        if (!sr.ok) return res.status(500).json({ error: 'Session create failed: ' + await sr.text() });
+        if (!sr.ok) return res.status(500).json({ error: 'Session create failed: ' + await sr.text(), keyDebug: _keyDebug });
         const session = await sr.json();
         const sessionId = session.id;
 
