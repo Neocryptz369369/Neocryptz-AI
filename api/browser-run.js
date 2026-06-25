@@ -94,7 +94,7 @@ export default async function handler(req, res) {
 
         // ── Step 3: Navigate to target URL ────────────────────────────────
         await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 25000 });
-        await page.waitForTimeout(2500);
+        await page.waitForTimeout(1500);
         await snap('🌐 Opened ' + url);
 
         // ── Step 4: Discover all clickable elements on the page ───────────
@@ -116,7 +116,7 @@ export default async function handler(req, res) {
                     cy: Math.round(rect.top + rect.height / 2)
                 });
             });
-            return results.slice(0, 12);
+            return results.slice(0, 8);
         });
 
         // ── Step 5: Click each element and screenshot ─────────────────────
@@ -124,9 +124,9 @@ export default async function handler(req, res) {
             const startUrl = page.url();
             try {
                 await page.mouse.move(el.cx, el.cy);
-                await page.waitForTimeout(300);
+                await page.waitForTimeout(200);
                 await page.mouse.click(el.cx, el.cy);
-                await page.waitForTimeout(1800);
+                await page.waitForTimeout(1000);
 
                 const endUrl = page.url();
                 const navigated = endUrl !== startUrl;
@@ -138,8 +138,8 @@ export default async function handler(req, res) {
                 report.push({ element: el.text, tag: el.tag, navigated, destination: navigated ? endUrl : null });
 
                 if (navigated) {
-                    await page.goBack({ waitUntil: 'domcontentloaded', timeout: 12000 }).catch(() => page.goto(url, { waitUntil: 'domcontentloaded' }));
-                    await page.waitForTimeout(1500);
+                    await page.goBack({ waitUntil: 'domcontentloaded', timeout: 10000 }).catch(() => page.goto(url, { waitUntil: 'domcontentloaded' }));
+                    await page.waitForTimeout(800);
                 }
             } catch(e) {
                 report.push({ element: el.text, tag: el.tag, error: e.message.slice(0, 100) });
