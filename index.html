@@ -932,8 +932,13 @@
             <h2 style="text-align:center;">LOGIN</h2>
             <input type="text" id="login-user" placeholder="Username"
                    autocomplete="username" onkeydown="if(event.key==='Enter')handleAuth('login')">
-            <input type="password" id="login-pass" placeholder="Password"
-                   autocomplete="current-password" onkeydown="if(event.key==='Enter')handleAuth('login')">
+            <div style="position:relative;width:100%;">
+              <input type="password" id="login-pass" placeholder="Password"
+                     autocomplete="current-password" style="width:100%;padding-right:40px;box-sizing:border-box;"
+                     onkeydown="if(event.key==='Enter')handleAuth('login')">
+              <span onclick="var p=document.getElementById('login-pass');p.type=p.type==='password'?'text':'password';this.textContent=p.type==='password'?'👁':'🙈';"
+                    style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:1.1em;user-select:none;">👁</span>
+            </div>
             <label style="font-size:0.75em;display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer;">
                 <input type="checkbox" id="login-remember" style="accent-color:#ff0050;">
                 Remember me on this device
