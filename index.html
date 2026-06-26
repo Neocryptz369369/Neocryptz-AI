@@ -2395,8 +2395,7 @@
                     if (cimg) {
                         cas.innerHTML = (chref ? '<a href="'+chref+'" target="_blank" style="position:absolute;inset:0;display:block;overflow:hidden;text-decoration:none;">' : '<div style="position:absolute;inset:0;">')
                             + '<img src="'+cimg+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" alt="TikTok Product">'
-                            + '<div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.85));padding:10px 8px 12px;text-align:center;">'
-                            + '<span style="background:#ff0050;color:#fff;font-size:9px;font-weight:bold;padding:3px 12px;border-radius:5px;">Shop Now ↗</span></div>'
+                            
                             + (chref ? '</a>' : '</div>');
                     }
                 } else {
@@ -3944,12 +3943,7 @@
                 if (img) {
                     slot.innerHTML = aOpen
                         + '<img src="' + img + '" alt="TikTok Product" style="' + imgStyle + '">'
-                        + '<div style="position:absolute;bottom:0;left:0;right:0;'
-                        + 'background:linear-gradient(transparent,rgba(0,0,0,0.85));'
-                        + 'padding:14px 8px 16px;text-align:center;">'
-                        + '<span style="background:#ff0050;color:#fff;font-size:9px;font-weight:bold;'
-                        + 'padding:4px 12px;border-radius:5px;pointer-events:none;">Shop Now ↗</span>'
-                        + '</div>' + dots + aClose;
+                         + dots + aClose;
                 } else {
                     slot.innerHTML = aOpen
                         + '<div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;'
@@ -3959,8 +3953,7 @@
                         + 'padding:2px 8px;border-radius:10px;margin-bottom:8px;">' + badge + '</div>'
                         + '<div style="color:#fff;font-size:10px;font-weight:bold;text-align:center;'
                         + 'line-height:1.3;margin-bottom:8px;">' + name + '</div>'
-                        + '<div style="background:#ff0050;color:#fff;font-size:8px;padding:3px 10px;'
-                        + 'border-radius:6px;font-weight:bold;pointer-events:none;">Shop Now ↗</div>'
+                        
                         + dots + '</div>' + aClose;
                 }
                 slot.style.opacity = '1';
@@ -6063,8 +6056,7 @@ async function watchAdForCredits() {
         if (imgUrl) {
             slot.innerHTML = (href ? '<a href="' + href + '" target="_blank" style="position:absolute;inset:0;display:block;overflow:hidden;text-decoration:none;">' : '<div style="position:absolute;inset:0;">')
                 + '<img src="' + imgUrl + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" alt="TikTok Product">'
-                + '<div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.85));padding:10px 8px 12px;text-align:center;">'
-                + '<span style="background:#ff0050;color:#fff;font-size:9px;font-weight:bold;padding:3px 12px;border-radius:5px;">Shop Now ↗</span></div>'
+                
                 + (href ? '</a>' : '</div>');
         } else {
             slot.innerHTML = '<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#0a0a0a,#1a0010);">'
