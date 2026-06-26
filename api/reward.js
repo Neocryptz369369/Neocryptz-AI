@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+const { createClient } = require('@supabase/supabase-js');
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://bxzvxgjnlvbexeuocbey.supabase.co';
 const supabase = createClient(SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -6,7 +6,7 @@ const supabase = createClient(SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KE
 // In-memory cooldown (resets on cold start — DB column is preferred when available)
 const cooldowns = new Map();
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
