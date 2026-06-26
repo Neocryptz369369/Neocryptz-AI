@@ -783,7 +783,7 @@
         .copy-btn { position: absolute; bottom: 5px; right: 5px; font-size: 10px; background: var(--primary); color: #000; border: none; padding: 2px 5px; cursor: pointer; }
 
         #ad-sidebar { width: 200px; border-left: 1px solid var(--primary); padding: 10px; padding-top: 60px; display: flex; flex-direction: column; box-shadow: -2px 0 10px rgba(255, 0, 255, 0.2); overflow-y: auto; }
-        .ad-box { width: 180px; height: 180px; border: 1px solid #333; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; padding: 5px; transition: border-color 0.3s ease; }
+        .ad-box { width: 100%; box-sizing: border-box; height: 180px; border: 1px solid #333; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; padding: 5px; transition: border-color 0.3s ease; }
         .ad-box:hover { border-color: var(--secondary); box-shadow: 0 0 5px rgba(0, 255, 255, 0.3); }
 
         /* Mobile hamburger button */
@@ -1089,21 +1089,21 @@
         <!-- Google AdSense Display Units (publisher: ca-pub-5017188678144132) -->
         <div class="ad-box neon-border" id="ad-2" style="height:180px; overflow:hidden;">
             <ins class="adsbygoogle"
-                 style="display:block; width:180px; min-height:150px;"
+                 style="display:block; width:100%; min-height:150px;"
                  data-ad-client="ca-pub-5017188678144132"
                  data-ad-format="auto"
                  data-full-width-responsive="false"></ins>
         </div>
         <div class="ad-box neon-border" id="ad-3" style="height:180px; overflow:hidden;">
             <ins class="adsbygoogle"
-                 style="display:block; width:180px; min-height:150px;"
+                 style="display:block; width:100%; min-height:150px;"
                  data-ad-client="ca-pub-5017188678144132"
                  data-ad-format="auto"
                  data-full-width-responsive="false"></ins>
         </div>
         <div class="ad-box neon-border" id="ad-4" style="height:180px; overflow:hidden;">
             <ins class="adsbygoogle"
-                 style="display:block; width:180px; min-height:150px;"
+                 style="display:block; width:100%; min-height:150px;"
                  data-ad-client="ca-pub-5017188678144132"
                  data-ad-format="auto"
                  data-full-width-responsive="false"></ins>
@@ -2186,13 +2186,16 @@
 
         let recognition;
         function toggleVoiceInput() {
+            const micBtn = document.getElementById('mic-btn');
+            const input  = document.getElementById('message-input');
+
+            // Always un-stuck the button — sendMessage() may have left it disabled
+            if (micBtn) micBtn.disabled = false;
+
             if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
                 alert("Voice input is not supported in this browser. Please use Chrome or Edge.");
                 return;
             }
-
-            const micBtn = document.getElementById('mic-btn');
-            const input = document.getElementById('message-input');
 
             // If already listening, stop
             if (recognition) {
@@ -2207,12 +2210,14 @@
             const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
             recognition = new SpeechRec();
             recognition.lang = 'en-US';
-            recognition.continuous = false;
+            recognition.continuous = true;
             recognition.interimResults = true;
+            recognition.maxAlternatives = 1;
 
             recognition.onstart = function() {
                 micBtn.style.color = '#ff0000';
-                micBtn.title = 'Recording... click to stop';
+                micBtn.style.textShadow = '0 0 8px #ff0000';
+                micBtn.title = 'Recording… click to stop';
                 input.placeholder = "🎤 Listening — speak now...";
             };
 
@@ -2226,7 +2231,6 @@
                         interim += event.results[i][0].transcript;
                     }
                 }
-                // Show interim result as placeholder, append final to input
                 if (interim) input.placeholder = '🎤 ' + interim;
                 if (final) {
                     input.value += (input.value ? ' ' : '') + final.trim();
@@ -2236,21 +2240,22 @@
 
             recognition.onerror = function(event) {
                 micBtn.style.color = 'var(--primary)';
+                micBtn.style.textShadow = '';
                 micBtn.title = 'Voice Input';
                 input.placeholder = "Enter command or question...";
                 recognition = null;
-                const msgs = {
-                    'not-allowed': '🎤 Microphone access denied. Please allow microphone in your browser settings.',
-                    'no-speech':   '🎤 No speech detected. Try again.',
-                    'network':     '🎤 Network error with speech service. Try again.',
-                    'aborted':     null
-                };
-                const msg = msgs[event.error];
-                if (msg) input.placeholder = msg;
+                if (event.error === 'not-allowed') {
+                    alert('🎤 Microphone access was denied.\n\nTo fix: click the camera/mic icon in your browser address bar and allow microphone access, then try again.');
+                } else if (event.error === 'no-speech') {
+                    input.placeholder = '🎤 No speech detected — try again.';
+                } else if (event.error !== 'aborted') {
+                    input.placeholder = '🎤 Error: ' + event.error + '. Try again.';
+                }
             };
 
             recognition.onend = function() {
                 micBtn.style.color = 'var(--primary)';
+                micBtn.style.textShadow = '';
                 micBtn.title = 'Voice Input';
                 input.placeholder = "Enter command or question...";
                 recognition = null;
@@ -2261,7 +2266,8 @@
             } catch(e) {
                 recognition = null;
                 micBtn.style.color = 'var(--primary)';
-                input.placeholder = "🎤 Could not start microphone. Try again.";
+                micBtn.style.textShadow = '';
+                input.placeholder = "🎤 Could not start microphone: " + e.message;
             }
         }
 
