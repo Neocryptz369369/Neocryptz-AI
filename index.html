@@ -791,13 +791,10 @@
         pre { position: relative; background: #222; padding: 15px; overflow-x: auto; }
         .copy-btn { position: absolute; bottom: 5px; right: 5px; font-size: 10px; background: var(--primary); color: #000; border: none; padding: 2px 5px; cursor: pointer; }
 
-#ad-sidebar { width:220px; border-left:none; padding:10px; padding-top:60px; display:flex; flex-direction:column; gap:14px; overflow-y:auto; flex-shrink:0; }
 .ad-box { width:100%; box-sizing:border-box; flex-shrink:0; height:180px; min-height:180px; margin-bottom:0; overflow:visible; pointer-events:auto !important; background:transparent; position:relative; isolation:isolate; }
         .ad-box:hover { border-color: var(--secondary); box-shadow: 0 0 5px rgba(0, 255, 255, 0.3); }
 .ad-box.neon-border { background:transparent !important; }
 .ad-box a, .ad-box a img { pointer-events:auto !important; position:relative; z-index:1; }
-#sidebar-tiktok-slot { pointer-events:auto !important; z-index:1; }
-#sidebar-tiktok-slot a, #sidebar-tiktok-slot img { pointer-events:auto !important; position:relative; z-index:1; }
 .ad-box iframe { pointer-events:auto !important; border:none; width:100% !important; height:100% !important; display:block; position:relative; z-index:1; }
 .ad-box ins.adsbygoogle { display:block !important; width:100% !important; height:100% !important; min-height:170px; position:relative; z-index:1; }
 
@@ -864,7 +861,7 @@
         /* ── Ad sidebar — DuckDuckGo recommended structure ───────────── */
         /* Ensure decoration never sits above ad content */
 
-        #ad-sidebar { width:220px; padding:10px; padding-top:60px; display:flex; flex-direction:column; gap:14px; overflow-y:auto; flex-shrink:0; }
+        #ad-sidebar { width:220px; padding:10px; padding-top:10px; display:flex; flex-direction:column; gap:14px; overflow-y:auto; flex-shrink:0; }
 
         .ad-box { width:100%; box-sizing:border-box; flex-shrink:0; height:180px; overflow:visible; background:transparent; isolation:isolate; }
         .ad-box:hover { border-color: var(--secondary); box-shadow: 0 0 5px rgba(0,255,255,0.3); }
