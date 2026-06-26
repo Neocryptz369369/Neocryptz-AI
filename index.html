@@ -863,7 +863,6 @@
 
         /* ── Ad sidebar — DuckDuckGo recommended structure ───────────── */
         /* Ensure decoration never sits above ad content */
-        .neon-border * { position: relative; }
 
         #ad-sidebar { width:220px; padding:10px; padding-top:60px; display:flex; flex-direction:column; gap:14px; overflow-y:auto; flex-shrink:0; }
 
@@ -874,7 +873,7 @@
         .ad-content { position:relative; width:100%; height:100%; z-index:0; }
 
         /* TikTok slot */
-        #sidebar-tiktok-slot { position:absolute; inset:0; z-index:0; }
+        #sidebar-tiktok-slot { position:absolute !important; inset:0; z-index:0; }
         #sidebar-tiktok-slot a, #sidebar-tiktok-slot img { position:absolute; inset:0; display:block; width:100%; height:100%; object-fit:cover; }
 
         /* Clickability — targeted, no broad wildcard */
@@ -1136,6 +1135,15 @@
         </div>
         <!-- Box 3: Google AdSense -->
         <div class="ad-box neon-border" id="ad-3" style="height:180px;">
+            <div class="ad-content">
+                <ins class="adsbygoogle"
+                     data-ad-client="ca-pub-5017188678144132"
+                     data-ad-format="auto"
+                     data-full-width-responsive="false"></ins>
+            </div>
+        </div>
+        <!-- Box 4: Google AdSense -->
+        <div class="ad-box neon-border" id="ad-4" style="height:180px;">
             <div class="ad-content">
                 <ins class="adsbygoogle"
                      data-ad-client="ca-pub-5017188678144132"
