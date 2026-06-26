@@ -3931,6 +3931,7 @@
         }
 
         function editTikTokLink(item) {
+            if (typeof item === 'string' || typeof item === 'number') { item = (window._tiktokItems || {})[item]; if (!item) return; }
             document.getElementById('tk-id').value       = item.id || '';
             document.getElementById('tk-badge').value    = item.visual_badge_text || '';
             document.getElementById('tk-name').value     = item.product_name || '';
@@ -3957,7 +3958,7 @@
 
                 let html = '<table style="width:100%; border-collapse: collapse; text-align:left;">';
                 html += '<tr style="border-bottom:1px solid #ff0050;"><th style="padding:6px 5px;">Image</th><th style="padding:6px 5px;">Product</th><th style="padding:6px 5px;">Status</th><th style="padding:6px 5px;">Actions</th></tr>';
-                data.forEach(item => {
+                window._tiktokItems = {}; data.forEach(item => { window._tiktokItems[item.id] = item;
                     const statusColor = item.is_active ? '#0f0' : '#aaa';
                     const statusText  = item.is_active ? 'ACTIVE' : 'INACTIVE';
                     const thumb = item.image_url
@@ -3974,7 +3975,7 @@
                         '<td style="padding:8px 5px;color:' + statusColor + ';">' + statusText + '</td>' +
                         '<td style="padding:8px 5px;white-space:nowrap;">' +
                             '<button class="btn" style="padding:2px 6px;font-size:0.75em;background:#ff0050;color:#fff;border-color:#ff0050;margin-bottom:3px;" ' +
-                                'onclick="editTikTokLink(' + JSON.stringify(item) + ')">EDIT</button><br>' +
+                                'onclick="editTikTokLink(window._tiktokItems[' + JSON.stringify(item.id) + '])">EDIT</button><br>' +
                             '<button class="btn" style="padding:2px 6px;font-size:0.75em;margin-bottom:3px;" ' +
                                 'onclick="toggleTikTokLink(' + item.id + ',' + (!item.is_active) + ')">' + (item.is_active ? 'DISABLE' : 'ACTIVATE') + '</button><br>' +
                             '<button class="btn" style="padding:2px 6px;font-size:0.75em;border-color:#f00;color:#f00;" ' +
