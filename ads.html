@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEOCRYPTZ AI — Ad Copy</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0a0a; color: #eee; font-family: monospace; padding: 20px; }
+  h1 { color: #00ff88; text-align: center; letter-spacing: 3px; margin-bottom: 6px; font-size: 1.4em; }
+  .subtitle { color: #555; text-align: center; font-size: 0.8em; margin-bottom: 30px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 18px; }
+  .card { background: #111; border: 1px solid #222; border-radius: 10px; padding: 18px; position: relative; }
+  .card:hover { border-color: #00ff88; }
+  .platform { display: inline-block; background: #00ff88; color: #000; font-size: 0.7em; font-weight: bold;
+    padding: 2px 10px; border-radius: 20px; letter-spacing: 1px; margin-bottom: 10px; }
+  .platform.tiktok { background: #ff0050; color: #fff; }
+  .platform.facebook { background: #1877f2; color: #fff; }
+  .platform.twitter { background: #1da1f2; color: #fff; }
+  .platform.reddit { background: #ff4500; color: #fff; }
+  .platform.youtube { background: #ff0000; color: #fff; }
+  .platform.google { background: #fbbc04; color: #000; }
+  .ad-text { color: #ccc; font-size: 0.82em; line-height: 1.6; white-space: pre-wrap; word-break: break-word;
+    background: #0d0d0d; border: 1px solid #1a1a1a; border-radius: 6px; padding: 12px; margin-bottom: 12px;
+    max-height: 220px; overflow-y: auto; }
+  .copy-btn { width: 100%; padding: 8px; background: #1a1a1a; color: #00ff88; border: 1px solid #00ff88;
+    border-radius: 6px; cursor: pointer; font-family: monospace; font-size: 0.85em; letter-spacing: 1px;
+    transition: all 0.2s; }
+  .copy-btn:hover { background: #00ff88; color: #000; }
+  .copy-btn.copied { background: #00ff88; color: #000; }
+</style>
+</head>
+<body>
+<h1>NEOCRYPTZ AI // AD COPY</h1>
+<p class="subtitle">Click any COPY button to grab the ad text instantly</p>
+<div class="grid" id="grid"></div>
+<script>
+const ads = [
+  {
+    platform: 'Google Ads', cls: 'google',
+    text: `HEADLINE 1: AI That Never Goes Offline
+HEADLINE 2: 24 Features. One Platform.
+HEADLINE 3: Try Neocryptz AI Free Today
+
+DESCRIPTION 1:
+Multi-model AI chat, image generation, live browser, batch processing & more. Plans from $10/mo. Watch an ad for free credits.
+
+DESCRIPTION 2:
+Your own AI Cloud OS — voice input, secret key vault, embeddable chatbot, and 20+ tools. No tech skills needed.`
+  },
+  {
+    platform: 'Facebook / Instagram', cls: 'facebook',
+    text: `🚀 MEET YOUR NEW AI ASSISTANT — NEOCRYPTZ AI
+
+Tired of paying $20/mo for ONE AI tool?
+
+Neocryptz AI gives you ALL of this in one place:
+✅ Multi-model AI chat (with automatic failover)
+✅ AI image generation
+✅ Watch-the-web LIVE as AI browses for you
+✅ Voice input, batch CSV processing, prompt canvas
+✅ Secret key vault (your data stays private)
+✅ Embed your own chatbot on any website
+
+Plans start at just $10/mo — or earn FREE credits by watching a short ad.
+
+🔗 Try it now: neocryptz-ai.onrender.com
+
+#AI #ArtificialIntelligence #ChatGPT #Productivity #TechTools`
+  },
+  {
+    platform: 'Facebook (Short)', cls: 'facebook',
+    text: `One AI platform. 24 features. Starting at $10/mo.
+
+Neocryptz AI Cloud OS gives you chat, image gen, live browser, voice input, batch processing and more — all in one place.
+
+Watch an ad and get 5 free questions right now. No credit card needed to start.
+
+👉 neocryptz-ai.onrender.com`
+  },
+  {
+    platform: 'TikTok Script', cls: 'tiktok',
+    text: `[0-3s — HOOK]
+"What if ONE app replaced every AI tool you're paying for?"
+
+[3-10s — PROBLEM]
+"Most people are paying for ChatGPT, an image generator, a browser tool... separately. That's $60+ a month just for AI."
+
+[10-20s — SOLUTION]
+"Neocryptz AI Cloud OS gives you ALL of it — chat, image generation, live web browsing, voice input, batch processing — in one platform. Starting at just ten dollars a month."
+
+[20-25s — HOOK CLOSER]
+"And you can try it FREE right now just by watching a short ad on the site."
+
+[25-30s — CTA]
+"Link in bio. Neocryptz AI. Your AI. Your rules."`
+  },
+  {
+    platform: 'Twitter / X', cls: 'twitter',
+    text: `Thread version:
+
+1/ I built an AI platform with 24 features in one place. Here's everything you get 🧵
+
+2/ Multi-model AI chat that auto-switches providers if one goes down. Never lose a conversation again.
+
+3/ Say /imagine and generate AI images. Watch the AI browse the web live. Upload a CSV and batch-run 20 prompts at once.
+
+4/ Voice input. Secret key vault. Embeddable chatbot for your own site. Split A/B view. Grammar polisher. Prompt canvas.
+
+5/ Plans from $10/mo — or watch a short ad for free credits. No excuses not to try it.
+
+6/ 👉 neocryptz-ai.onrender.com — NEOCRYPTZ AI // CLOUD OS
+
+---
+Single tweet version:
+One AI platform. 24 features. $10/mo.
+
+Chat, image gen, live browser, voice input, batch CSV, secret vault, embeddable chatbot + more.
+
+Or watch an ad for free credits.
+
+👉 neocryptz-ai.onrender.com #AI #CloudOS`
+  },
+  {
+    platform: 'Reddit', cls: 'reddit',
+    text: `Title: I built an AI Cloud OS with 24 features — you can try it free by watching an ad
+
+Hey everyone,
+
+I've been building Neocryptz AI for a while now and wanted to share it here. It's an all-in-one AI workspace I call a "Cloud OS."
+
+What it does:
+- Multi-model AI chat (auto-failover if a provider goes down)
+- /imagine command for AI image generation
+- GO LIVE — watch AI browse the web in real time
+- Voice input
+- Batch processing via CSV upload (up to 20 prompts at once)
+- Secret Keys Vault (stored locally, never sent to a server)
+- Embeddable chatbot (put it on your own site)
+- Split A/B view, Grammar Polisher, Prompt Canvas, Clean Paste
+- Referral system, gift vouchers, support chat
+
+You can get free credits just by watching a short TikTok-style ad on the site — no credit card needed.
+
+Paid plans start at $10/mo if you want full access.
+
+Link: neocryptz-ai.onrender.com
+
+Happy to answer any questions!`
+  },
+  {
+    platform: 'YouTube Pre-roll', cls: 'youtube',
+    text: `[0-5s — UNSKIPPABLE HOOK]
+"You're paying too much for AI. Don't skip this."
+
+[5-15s — AGITATE]
+"ChatGPT, image generators, browser tools, batch processors — you're probably paying for all of these separately. That adds up fast."
+
+[15-25s — SOLUTION]
+"Neocryptz AI Cloud OS packs 24 features into one platform. Chat, image generation, live browsing, voice input, a private key vault, and even an embeddable chatbot for your site."
+
+[25-35s — PRICE DROP]
+"Plans start at just ten dollars a month. Or go to the site right now and watch a short ad to get free credits instantly — no credit card required."
+
+[35-40s — CTA]
+"Neocryptz AI. Link below. Try it free today."`
+  },
+  {
+    platform: 'Instagram Story / Reel Caption', cls: 'facebook',
+    text: `POV: You replaced 6 AI subscriptions with one 👇
+
+✨ Neocryptz AI Cloud OS
+🤖 Multi-model AI chat
+🖼️ AI image generation
+🌐 Watch AI browse live
+🎙️ Voice input
+📊 Batch CSV processing
+🔒 Private secret key vault
+🔗 Embed your own chatbot
+
+Starting at $10/mo or get FREE credits by watching an ad on the site.
+
+Link in bio 👆
+#AI #Tech #Productivity #ChatGPT #ArtificialIntelligence #CloudOS #NeocryptzAI`
+  }
+];
+
+const grid = document.getElementById('grid');
+ads.forEach((ad, i) => {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML =
+    '<span class="platform ' + ad.cls + '">' + ad.platform + '</span>' +
+    '<div class="ad-text" id="ad' + i + '">' + ad.text.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>' +
+    '<button class="copy-btn" onclick="copyAd(' + i + ', this)">📋 COPY</button>';
+  grid.appendChild(card);
+});
+
+function copyAd(i, btn) {
+  const text = document.getElementById('ad' + i).innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.innerText = '✅ COPIED!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.innerText = '📋 COPY'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+</script>
+</body>
+</html>
