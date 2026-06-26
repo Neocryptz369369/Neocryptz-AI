@@ -59,4 +59,28 @@ app.post('/run-task', async (req, res) => {
   }
 });
 
+
+// ── /api/register — creates Supabase user via service key (auto-confirmed) ──
+app.post('/api/register', async (req, res) => {
+  try {
+    const { username, email, password } = req.body || {};
+    if (!username || !email || !password) return res.status(400).json({ error: 'username, email and password required' });
+    const svcKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!svcKey) return res.status(500).json({ error: 'Server not configured for registration' });
+    const supaRes = await fetch('https://bxzvxgjnlvbexeuocbey.supabase.co/auth/v1/admin/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': svcKey, 'Authorization': 'Bearer ' + svcKey },
+      body: JSON.stringify({ email, password, email_confirm: true, user_metadata: { username } })
+    });
+    const data = await supaRes.json();
+    if (data.id) {
+      return res.json({ ok: true, id: data.id, email: data.email });
+    } else {
+      return res.status(400).json({ error: data.msg || data.message || 'Registration failed' });
+    }
+  } catch(e) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
 app.listen(8000, () => console.log('Neocryptz AI Core Engine running on port 8000!'));
