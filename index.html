@@ -3974,11 +3974,11 @@
                         '<td style="padding:8px 5px;color:' + statusColor + ';">' + statusText + '</td>' +
                         '<td style="padding:8px 5px;white-space:nowrap;">' +
                             '<button class="btn" style="padding:2px 6px;font-size:0.75em;background:#ff0050;color:#fff;border-color:#ff0050;margin-bottom:3px;" ' +
-                                'onclick='editTikTokLink(' + JSON.stringify(item) + ')'>EDIT</button><br>' +
+                                'onclick="editTikTokLink(' + JSON.stringify(item) + ')">EDIT</button><br>' +
                             '<button class="btn" style="padding:2px 6px;font-size:0.75em;margin-bottom:3px;" ' +
-                                'onclick="toggleTikTokLink('' + item.id + '',' + (!item.is_active) + ')">' + (item.is_active ? 'DISABLE' : 'ACTIVATE') + '</button><br>' +
+                                'onclick="toggleTikTokLink(' + item.id + ',' + (!item.is_active) + ')">' + (item.is_active ? 'DISABLE' : 'ACTIVATE') + '</button><br>' +
                             '<button class="btn" style="padding:2px 6px;font-size:0.75em;border-color:#f00;color:#f00;" ' +
-                                'onclick="deleteTikTokLink('' + item.id + '')">DELETE</button>' +
+                                'onclick="deleteTikTokLink(' + item.id + ')">DELETE</button>' +
                         '</td>' +
                     '</tr>';
                 });
