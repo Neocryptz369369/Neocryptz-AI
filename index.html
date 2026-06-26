@@ -304,6 +304,14 @@
             resEl.style.display = 'block';
             resEl.innerText = "Simulating total AI failure... routing to Doomsday Fallback...";
 
+                // Include user's Secret Keys Vault so AI can use them for any platform
+                const _vaultKeys = JSON.parse(localStorage.getItem('user_secret_keys') || '[]');
+                _vaultKeys.forEach(function(k) {
+                    if (k.label && k.value) {
+                        keysPayload['VAULT_' + k.label.toUpperCase().replace(/[^A-Z0-9]/g, '_')] = k.value;
+                    }
+                });
+
             let scrapes = JSON.parse(localStorage.getItem('localScrapes') || '[]');
 
             try {
@@ -1277,7 +1285,7 @@
                     <input type="password" id="secret-key-value" placeholder="Paste your key here" style="flex:2; padding:8px; background:#111; border:1px solid #f59e0b; color:#fff;">
                     <button class="btn" style="border-color:#f59e0b; color:#f59e0b;" onclick="saveSecretKey()">SAVE</button>
                 </div>
-                <p style="font-size:0.75em; color:#666;">🔒 Stored locally on your device only. Never transmitted or shared.</p>
+                <p style="font-size:0.75em; color:#666;">🔒 Stored on your device. Keys are automatically sent to Neocryptz AI with each message so it can use any platform or API you add here — even ones not in the built-in list.</p>
             </div>
 
             <div style="margin-top: 20px; border-top: 1px solid #333; padding-top: 10px;">
