@@ -24,16 +24,23 @@ const routes = [
   ['/api/recommendations/go',     './api/recommendations/go.js'],
 ];
 
+// Load each route handler — failures are isolated so the server still starts
 for (const [route, file] of routes) {
-  const mod = await import(file);
-  const handler = mod.default;
-  app.all(route, async (req, res) => {
-    try { await handler(req, res); }
-    catch (err) {
-      console.error(route, err.message);
-      if (!res.headersSent) res.status(500).json({ error: 'Internal server error' });
-    }
-  });
+  try {
+    const mod = await import(file);
+    const handler = mod.default;
+    app.all(route, async (req, res) => {
+      try { await handler(req, res); }
+      catch (err) {
+        console.error('[' + route + ']', err.message);
+        if (!res.headersSent) res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+    console.log('✓', route);
+  } catch (err) {
+    console.error('✗ Could not load', route, '—', err.message);
+    app.all(route, (_req, res) => res.status(503).json({ error: 'Route unavailable' }));
+  }
 }
 
 app.get('*', (req, res) => {
