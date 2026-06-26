@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+const { createClient } = require('@supabase/supabase-js');
 
 // Stores chat history in the existing query_cache table using a
 // special key prefix: __NCAI_HIST__:<username>
@@ -9,7 +9,7 @@ const MAX_ENTRIES = { neocryptz: 50, default: 20 };
 
 function histKey(username) { return HIST_PREFIX + username.toLowerCase(); }
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
     const supabaseUrl = process.env.SUPABASE_URL || 'https://bxzvxgjnlvbexeuocbey.supabase.co';
@@ -23,7 +23,7 @@ export default async function handler(req, res) {
     const key = histKey(username);
     const maxEntries = username.toLowerCase() === 'neocryptz' ? MAX_ENTRIES.neocryptz : MAX_ENTRIES.default;
 
-    // ── fetch ──────────────────────────────────────────────────────────────
+    // ── fetch ────────────────────────────────────────────────────────────���─
     if (action === 'fetch' || !action) {
         const { data, error } = await supabase
             .from('query_cache')
