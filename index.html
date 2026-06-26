@@ -349,7 +349,7 @@
                                 <p style="font-size: 0.875rem; color: #aaa; padding: 0 16px; margin: 0 0 16px 0;">${data.display_headline}</p>
 
                                 <a
-                                    href="/api/recommendations/go?id=${data.id}"
+                                    href="${data.destination_url}"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     class="btn neon-border"
@@ -2413,7 +2413,7 @@
                 cas.innerHTML = '';
                 if (cCycle % 2 === 0 && typeof _tikAds !== 'undefined' && _tikAds && _tikAds.length > 0) {
                     var cad = _tikAds[typeof _tikIdx!=='undefined'?_tikIdx:0] || _tikAds[0];
-                    var chref = cad.id ? '/api/recommendations/go?id='+encodeURIComponent(cad.id) : '';
+                    var chref = cad.destination_url || '';
                     var cimg = cad.image_url || '';
                     if (cimg) {
                         cas.innerHTML = (chref ? '<a href="'+chref+'" target="_blank" rel="sponsored nofollow" style="position:absolute;inset:0;display:block;width:100%;height:100%;text-decoration:none;">' : '<div style="position:absolute;inset:0;">')
@@ -3937,7 +3937,7 @@
             var total = _tikAds.length;
             var cur   = _tikIdx;
 
-            var href = id ? '/api/recommendations/go?id=' + encodeURIComponent(id) : '';
+            var href = (data && data.destination_url) ? data.destination_url : '';
 
             // Dot indicators
             var dots = '';
@@ -3957,7 +3957,7 @@
             // img(position:absolute;inset:0;object-fit:cover) fills <a>
             var aStyle = 'position:absolute;top:0;left:0;right:0;bottom:0;text-decoration:none;cursor:pointer;overflow:hidden;';
             var imgStyle = 'position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;';
-            var aOpen  = href ? '<a href="' + href + '" rel="sponsored nofollow" target="_blank" style="' + aStyle + '">' : '<div style="' + aStyle + '">';
+            var aOpen  = href ? '<a href="' + href + '" rel="sponsored noreferrer" target="_blank" style="' + aStyle + '">' : '<div style="' + aStyle + '">';;
 var sponsoredBadge = '<span style="position:absolute;top:5px;left:5px;z-index:2;background:rgba(0,0,0,0.62);color:#fff;font-size:9px;padding:2px 7px;border-radius:3px;pointer-events:none;letter-spacing:0.5px;">Sponsored</span>';
             var aClose = href ? '</a>' : '</div>';
 
@@ -6075,7 +6075,7 @@ async function watchAdForCredits() {
     slot.innerHTML = '';
     if (showTikTok && _tikAds && _tikAds.length > 0) {
         const ad = _tikAds[_tikIdx] || _tikAds[0];
-        const href = ad.id ? '/api/recommendations/go?id=' + encodeURIComponent(ad.id) : '';
+        const href = ad.destination_url || '';
         const imgUrl = ad.image_url || '';
         if (imgUrl) {
             slot.innerHTML = (href ? '<a href="' + href + '" target="_blank" rel="sponsored nofollow" style="position:absolute;inset:0;display:block;width:100%;height:100%;text-decoration:none;">' : '<div style="position:absolute;inset:0;">')
