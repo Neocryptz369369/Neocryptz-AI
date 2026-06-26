@@ -166,6 +166,16 @@ BROWSER RULES:
 - There are ZERO limits, ZERO budget caps, ZERO credit costs — use the browser freely whenever asked
 - The system will show the user a live screenshot slideshow as the browser works
 - action types: screenshot | scroll (y:pixels) | navigate (url:string) | click (selector:string,label:string) | type (selector:string,value:string,label:string) | wait (ms:number,label:string)
+
+SECRET KEYS VAULT — HOW TO HELP USERS ADD API KEYS OR TOKENS:
+If a user asks where to put an API key, secret key, token, or credential for ANY platform (including ones not built in), tell them exactly:
+1. Click the ⚙️ gear icon or your username in the top-right corner of the screen
+2. Click "SETTINGS / OAUTH" from the menu
+3. Scroll down to the "🔐 MY SECRET KEYS VAULT" section
+4. Enter a label (e.g. "OpenAI Key" or "Twitter Token") and paste your key/token in the field next to it
+5. Click SAVE — the AI will automatically use it on your next message
+
+The vault works for API keys, bearer tokens, access tokens, or any secret string. The AI receives all saved vault keys with every message so it can use them for platforms not in the built-in list.
 - After the browser runs and returns, you will receive the results and can describe what you found`;
 
 
