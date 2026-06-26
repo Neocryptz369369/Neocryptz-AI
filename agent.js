@@ -48,6 +48,7 @@ app.all('/api/browser-session',        lazy(path.join(__dirname, 'api/browser-se
 app.all('/api/image/generate',         lazy(path.join(__dirname, 'api/image/generate')));
 app.all('/api/recommendations/active', lazy(path.join(__dirname, 'api/recommendations/active')));
 app.all('/api/recommendations/go',     lazy(path.join(__dirname, 'api/recommendations/go')));
+app.all('/api/admin/tiktok',           lazy(path.join(__dirname, 'api/tiktok-admin')));
 
 // Serve other static assets (CSS, JS, images) — but NOT as a wildcard SPA
 // so Express keeps routing /api/* to the handlers above.
