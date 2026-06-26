@@ -3885,8 +3885,24 @@
                 dots += '</div>';
             }
 
-            // height:100% chain: slot(100%=180px block) → a(100%) → img(100%)
-            // All block elements, so height:100% always resolves correctly in every browser
+            // syncHeight: measure ad-2's actual rendered height (the "correct" reference box)
+            // then force ad-1 and all card elements to that exact pixel value
+            function syncHeight() {
+                var ad2 = document.getElementById('ad-2');
+                var ad1 = document.getElementById('ad-1');
+                if (!ad2 || !ad1) return;
+                var h = ad2.offsetHeight;
+                if (!h || h < 50) return; // safety check
+                ad1.style.height = h + 'px';
+                slot.style.height = h + 'px';
+                var inner = slot.firstElementChild;
+                if (inner) {
+                    inner.style.height = h + 'px';
+                    var imgEl = inner.querySelector ? inner.querySelector('img') : null;
+                    if (imgEl) imgEl.style.height = h + 'px';
+                }
+            }
+
             var wrapStyle = 'display:block;width:100%;height:100%;text-decoration:none;cursor:pointer;position:relative;overflow:hidden;';
             var aOpen  = href ? '<a href="' + href + '" style="' + wrapStyle + '">' : '<div style="' + wrapStyle + '">';
             var aClose = href ? '</a>' : '</div>';
@@ -3918,6 +3934,10 @@
                         + dots + '</div>' + aClose;
                 }
                 slot.style.opacity = '1';
+                // Sync immediately, then again after a short delay in case AdSense resizes boxes
+                syncHeight();
+                setTimeout(syncHeight, 800);
+                setTimeout(syncHeight, 2000);
             }, 350);
         }
         async function loadSidebarTikTokAd() {
