@@ -1372,29 +1372,33 @@
         
         async function checkGeoBlock() {
             try {
-                // Ignore geoblock for Admin
+                // Always allow the admin through instantly
                 if (localStorage.getItem('currentUser')) {
                     const usr = JSON.parse(localStorage.getItem('currentUser'));
                     if (usr.username && usr.username.toLowerCase() === 'neocryptz') return false;
                 }
 
-                const res = await fetch('https://freeipapi.com/api/json/');
-                const data = await res.json();
-                
+                // Hard 4-second timeout so a broken geo API never freezes the page
+                const controller = new AbortController();
+                const geoTimeout = setTimeout(() => controller.abort(), 4000);
+                let data = null;
+                try {
+                    const res = await fetch('https://freeipapi.com/api/json/', { signal: controller.signal });
+                    clearTimeout(geoTimeout);
+                    if (res.ok) data = await res.json();
+                } catch(_) { clearTimeout(geoTimeout); }
+
                 if (data) {
-                    // Block non-US
-                    if (data.countryCode !== 'US') {
-                        document.body.innerHTML = '<h1 style="color:red; text-align:center; margin-top:20vh;">ACCESS DENIED</h1><p style="text-align:center;">NEOCRYPTZ AI is currently restricted to US residents only.</p>';
+                    if (data.countryCode && data.countryCode !== 'US') {
+                        document.body.innerHTML = '<h1 style="color:red;text-align:center;margin-top:20vh;">ACCESS DENIED</h1><p style="text-align:center;">NEOCRYPTZ AI is currently restricted to US residents only.</p>';
                         return true;
                     }
-                    // Block California
                     if (data.regionCode === 'CA') {
-                        document.body.innerHTML = '<h1 style="color:red; text-align:center; margin-top:20vh;">ACCESS DENIED</h1><p style="text-align:center;">Due to state regulations, NEOCRYPTZ AI is not available in California.</p>';
+                        document.body.innerHTML = '<h1 style="color:red;text-align:center;margin-top:20vh;">ACCESS DENIED</h1><p style="text-align:center;">Due to state regulations, NEOCRYPTZ AI is not available in California.</p>';
                         return true;
                     }
-                    // Block VPNs / Proxies
                     if (data.isProxy) {
-                        document.body.innerHTML = '<h1 style="color:red; text-align:center; margin-top:20vh;">SECURITY ALERT</h1><p style="text-align:center;">VPN or Proxy detected. Please disable your VPN to access NEOCRYPTZ AI.</p>';
+                        document.body.innerHTML = '<h1 style="color:red;text-align:center;margin-top:20vh;">SECURITY ALERT</h1><p style="text-align:center;">VPN or Proxy detected. Please disable your VPN to access NEOCRYPTZ AI.</p>';
                         return true;
                     }
                 }
@@ -1403,6 +1407,26 @@
         }
 
         async function init() {
+            // Always seed the Neocryptz admin user into localUsers so login never
+            // depends on a prior session or Supabase being reachable.
+            (function seedAdmin() {
+                try {
+                    let lu = JSON.parse(localStorage.getItem('localUsers') || '{}');
+                    lu['Neocryptz'] = {
+                        username: 'Neocryptz',
+                        email: 'neocryptz@neocryptz.ai',
+                        password: 'Firstcode@9302164166',
+                        full_name: 'Neocryptz Admin',
+                        plan: 'Unlimited Text',
+                        credits: 999999,
+                        banned: false,
+                        is_admin: true,
+                        plan_expires_at: null
+                    };
+                    localStorage.setItem('localUsers', JSON.stringify(lu));
+                } catch(_) {}
+            })();
+
             // Check local storage first (Fallback)
             if (await checkGeoBlock()) return;
             let localUser = localStorage.getItem('currentUser');
@@ -1656,6 +1680,19 @@
 
             if (type === 'login') {
                 if (!email || !pass) return alert("Enter credentials");
+
+                // ── Admin shortcut — always works even if Supabase is unreachable ──
+                const localUsers_check = JSON.parse(localStorage.getItem('localUsers') || '{}');
+                const adminEntry = localUsers_check[username] || localUsers_check[username.toLowerCase()];
+                if (adminEntry && adminEntry.password === pass && adminEntry.is_admin) {
+                    if (adminEntry.banned) return alert("ACCESS DENIED: Banned.");
+                    localStorage.setItem('currentUser', JSON.stringify(adminEntry));
+                    localStorage.setItem('token', 'local-token-' + username);
+                    localStorage.setItem('rememberedUsername', adminEntry.username || username);
+                    localStorage.setItem('rememberedPass', pass);
+                    location.reload();
+                    return;
+                }
 
                 let supaError = null;
                 try {
