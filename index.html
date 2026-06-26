@@ -1084,7 +1084,7 @@
     <div id="ad-sidebar" class="neon-border">
         <!-- TikTok Affiliate Ad (loads active row from tiktok_recommendations) -->
         <div class="ad-box neon-border" id="ad-1" style="padding:0; overflow:hidden;">
-            <div id="sidebar-tiktok-slot" style="position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#555;font-size:0.72em;text-align:center;">Loading...</div>
+            <div id="sidebar-tiktok-slot" style="position:relative;width:100%;height:180px;overflow:hidden;color:#555;font-size:0.72em;text-align:center;">Loading...</div>
         </div>
         <!-- Google AdSense Display Units (publisher: ca-pub-5017188678144132) -->
         <div class="ad-box neon-border" id="ad-2" style="height:180px; overflow:hidden;">
@@ -3863,36 +3863,36 @@
         let _tikAds = [], _tikIdx = 0;
 
         function _renderTikCard(data) {
-            const slot = document.getElementById('sidebar-tiktok-slot');
+            var slot = document.getElementById('sidebar-tiktok-slot');
             if (!slot || !data) return;
-            const dest  = data.destination_url || '#';
-            const img   = data.image_url || '';
-            const badge = data.visual_badge_text || 'TikTok';
-            const name  = data.product_name || '';
-            const line  = data.display_headline || '';
-            const total = _tikAds.length;
-            const cur   = _tikIdx;
+            var dest  = data.destination_url || '';
+            var img   = data.image_url || '';
+            var badge = data.visual_badge_text || 'TikTok';
+            var name  = data.product_name || '';
+            var total = _tikAds.length;
+            var cur   = _tikIdx;
 
-            // Dot indicators (multiple products)
-            const dots = total > 1
-                ? '<div style="position:absolute;bottom:5px;left:0;right:0;text-align:center;z-index:3;pointer-events:none;">' +
-                  Array.from({length: total}, function(_, di) {
-                      var bg = di === cur ? '#ff0050' : 'rgba(255,255,255,0.35)';
-                      return '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;margin:0 3px;background:' + bg + ';box-shadow:0 0 3px rgba(0,0,0,0.8);"></span>';
-                  }).join('') + '</div>'
-                : '';
+            // Dot indicators
+            var dots = '';
+            if (total > 1) {
+                dots = '<div style="position:absolute;bottom:5px;left:0;right:0;text-align:center;pointer-events:none;">';
+                for (var di = 0; di < total; di++) {
+                    dots += '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;margin:0 3px;background:' + (di === cur ? '#ff0050' : 'rgba(255,255,255,0.35)') + '"></span>';
+                }
+                dots += '</div>';
+            }
 
-            // Ensure slot is a positioned container so inset:0 works on the <a>
-            slot.style.position = 'relative';
+            // Build click handler — works in all browsers including DuckDuckGo
+            var clickFn = dest ? 'window.open("' + dest + '","_blank","noopener")' : '';
 
-            // Fade out then swap
+            // Fade out → swap → fade in
             slot.style.transition = 'opacity 0.35s';
             slot.style.opacity = '0';
             setTimeout(function() {
                 if (img) {
                     slot.innerHTML =
-                        '<a href="' + dest + '" target="_blank" rel="noopener sponsored" ' +
-                        'style="position:absolute;inset:0;text-decoration:none;overflow:hidden;background:#000;">' +
+                        '<div onclick="' + clickFn + '" ' +
+                        'style="width:100%;height:100%;position:relative;cursor:pointer;overflow:hidden;background:#000;">' +
                         '<img src="' + img + '" alt="TikTok Product" ' +
                         'style="width:100%;height:100%;object-fit:cover;display:block;" ' +
                         'onerror="this.style.opacity=0">' +
@@ -3900,24 +3900,22 @@
                         'background:linear-gradient(transparent,rgba(0,0,0,0.82));' +
                         'padding:20px 8px 22px;text-align:center;">' +
                         '<span style="background:#ff0050;color:#fff;font-size:8px;font-weight:bold;' +
-                        'padding:3px 10px;border-radius:5px;">Shop Now ↗</span>' +
-                        '</div>' + dots + '</a>';
+                        'padding:3px 10px;border-radius:5px;pointer-events:none;">Shop Now ↗</span>' +
+                        '</div>' + dots + '</div>';
                 } else {
                     slot.innerHTML =
-                        '<a href="' + dest + '" target="_blank" rel="noopener sponsored" ' +
-                        'style="position:absolute;inset:0;text-decoration:none;' +
+                        '<div onclick="' + clickFn + '" ' +
+                        'style="width:100%;height:100%;position:relative;cursor:pointer;' +
                         'display:flex;flex-direction:column;align-items:center;justify-content:center;' +
                         'padding:10px;box-sizing:border-box;' +
                         'background:linear-gradient(135deg,#0a0a0a 0%,#1a0010 100%);">' +
                         '<div style="background:#ff0050;color:#fff;font-size:8px;font-weight:bold;' +
                         'padding:2px 8px;border-radius:10px;margin-bottom:8px;">' + badge + '</div>' +
                         '<div style="color:#fff;font-size:10px;font-weight:bold;text-align:center;' +
-                        'line-height:1.3;margin-bottom:5px;">' + name + '</div>' +
-                        '<div style="color:#aaa;font-size:8px;text-align:center;line-height:1.3;' +
-                        'margin-bottom:6px;">' + line + '</div>' +
+                        'line-height:1.3;margin-bottom:8px;">' + name + '</div>' +
                         '<div style="background:#ff0050;color:#fff;font-size:8px;padding:3px 10px;' +
-                        'border-radius:6px;font-weight:bold;">Shop Now ↗</div>' +
-                        dots + '</a>';
+                        'border-radius:6px;font-weight:bold;pointer-events:none;">Shop Now ↗</div>' +
+                        dots + '</div>';
                 }
                 slot.style.opacity = '1';
             }, 350);
