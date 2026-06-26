@@ -1084,7 +1084,7 @@
     <div id="ad-sidebar" class="neon-border">
         <!-- TikTok Affiliate Ad (loads active row from tiktok_recommendations) -->
         <div class="ad-box neon-border" id="ad-1" style="height:250px; padding:0; overflow:hidden;">
-            <div id="sidebar-tiktok-slot" style="position:relative;width:100%;height:250px;overflow:hidden;color:#555;font-size:0.72em;text-align:center;">Loading...</div>
+            <div id="sidebar-tiktok-slot" style="position:relative;width:100%;height:250px;overflow:hidden;display:flex;flex-direction:column;">Loading...</div>
         </div>
         <!-- Google AdSense Display Units (publisher: ca-pub-5017188678144132) -->
         <div class="ad-box neon-border" id="ad-2" style="height:250px; overflow:hidden;">
@@ -3872,8 +3872,6 @@
             var total = _tikAds.length;
             var cur   = _tikIdx;
 
-            // Route through our own server — DuckDuckGo won't block our domain
-            // Same tab (no target="_blank") so it's never treated as a popup
             var href = id ? '/api/recommendations/go?id=' + encodeURIComponent(id) : '';
 
             // Dot indicators
@@ -3887,8 +3885,9 @@
                 dots += '</div>';
             }
 
-            var aOpen = href ? '<a href="' + href + '" style="display:block;width:100%;height:100%;text-decoration:none;cursor:pointer;position:relative;overflow:hidden;">'
-                              : '<div style="width:100%;height:100%;position:relative;overflow:hidden;">';
+            // flex:1;min-height:0 makes the <a> fill the flex-column slot reliably in all browsers
+            var linkStyle = 'flex:1;min-height:0;text-decoration:none;cursor:pointer;position:relative;overflow:hidden;display:block;';
+            var aOpen  = href ? '<a href="' + href + '" style="' + linkStyle + '">' : '<div style="' + linkStyle + '">';
             var aClose = href ? '</a>' : '</div>';
 
             slot.style.transition = 'opacity 0.35s';
@@ -3897,8 +3896,7 @@
                 if (img) {
                     slot.innerHTML = aOpen
                         + '<img src="' + img + '" alt="TikTok Product" '
-                        + 'style="width:100%;height:100%;object-fit:cover;display:block;" '
-                        + 'onerror="this.style.opacity=0">'
+                        + 'style="width:100%;height:100%;object-fit:cover;display:block;position:absolute;top:0;left:0;">'
                         + '<div style="position:absolute;bottom:0;left:0;right:0;'
                         + 'background:linear-gradient(transparent,rgba(0,0,0,0.85));'
                         + 'padding:18px 8px 20px;text-align:center;">'
@@ -3907,7 +3905,7 @@
                         + '</div>' + dots + aClose;
                 } else {
                     slot.innerHTML = aOpen
-                        + '<div style="width:100%;height:100%;display:flex;flex-direction:column;'
+                        + '<div style="position:absolute;inset:0;display:flex;flex-direction:column;'
                         + 'align-items:center;justify-content:center;padding:10px;box-sizing:border-box;'
                         + 'background:linear-gradient(135deg,#0a0a0a 0%,#1a0010 100%);">'
                         + '<div style="background:#ff0050;color:#fff;font-size:8px;font-weight:bold;'
