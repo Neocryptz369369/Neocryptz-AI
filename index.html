@@ -790,10 +790,32 @@
     </div>
 
     <div id="ad-sidebar" class="neon-border">
-        <div class="ad-box neon-border" id="ad-1">Sponsored Content</div>
-        <div class="ad-box neon-border" id="ad-2">Sponsored Content</div>
-        <div class="ad-box neon-border" id="ad-3">Sponsored Content</div>
-        <div class="ad-box neon-border" id="ad-4">Sponsored Content</div>
+        <!-- Google AdSense Display Units (publisher: ca-pub-5017188678144132) -->
+        <div class="ad-box neon-border" id="ad-1" style="height:auto; min-height:160px; overflow:hidden;">
+            <ins class="adsbygoogle"
+                 style="display:block; width:180px; min-height:150px;"
+                 data-ad-client="ca-pub-5017188678144132"
+                 data-ad-format="auto"
+                 data-full-width-responsive="false"></ins>
+        </div>
+        <div class="ad-box neon-border" id="ad-2" style="height:auto; min-height:160px; overflow:hidden;">
+            <ins class="adsbygoogle"
+                 style="display:block; width:180px; min-height:150px;"
+                 data-ad-client="ca-pub-5017188678144132"
+                 data-ad-format="auto"
+                 data-full-width-responsive="false"></ins>
+        </div>
+        <div class="ad-box neon-border" id="ad-3" style="height:auto; min-height:160px; overflow:hidden;">
+            <ins class="adsbygoogle"
+                 style="display:block; width:180px; min-height:150px;"
+                 data-ad-client="ca-pub-5017188678144132"
+                 data-ad-format="auto"
+                 data-full-width-responsive="false"></ins>
+        </div>
+        <!-- TikTok Affiliate Ad (loads active row from tiktok_recommendations) -->
+        <div class="ad-box neon-border" id="ad-4" style="padding:0; overflow:hidden;">
+            <div id="sidebar-tiktok-slot" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#555;font-size:0.72em;text-align:center;">Loading...</div>
+        </div>
     </div>
 
     <!-- Watch Ad Modal -->
@@ -3173,6 +3195,23 @@
             }
         }
 
+        // Push AdSense units and load TikTok affiliate on first interaction
+        function initSidebarAds() {
+            try {
+                (window.adsbygoogle = window.adsbygoogle || []);
+                // Push each ins unit once
+                document.querySelectorAll('#ad-sidebar ins.adsbygoogle').forEach(() => {
+                    adsbygoogle.push({});
+                });
+            } catch(e) { /* AdSense not ready yet */ }
+            loadSidebarTikTokAd();
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initSidebarAds);
+        } else {
+            setTimeout(initSidebarAds, 500);
+        }
+
         function setPersona(val) {
             localStorage.setItem('activePersona', val);
             alert("AI Persona updated to: " + val);
@@ -3446,6 +3485,44 @@
 
         // Admin
         
+        // ── Sidebar TikTok affiliate card ──────────────────────────────────────
+        async function loadSidebarTikTokAd() {
+            const slot = document.getElementById('sidebar-tiktok-slot');
+            if (!slot) return;
+            try {
+                const { data, error } = await supabaseClient
+                    .from('tiktok_recommendations')
+                    .select('*')
+                    .eq('is_active', true)
+                    .limit(1)
+                    .maybeSingle();
+                if (error || !data) {
+                    slot.innerHTML = '<span style="color:#555;font-size:0.7em;">No affiliate ad<br>active yet</span>';
+                    return;
+                }
+                slot.innerHTML = `<a href="${escapeHtml(data.destination_url)}" target="_blank" rel="noopener sponsored"
+                       style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+                              width:100%;height:100%;text-decoration:none;padding:10px;box-sizing:border-box;
+                              background:linear-gradient(135deg,#0a0a0a 0%,#1a0010 100%);">
+                    <div style="background:#ff0050;color:#fff;font-size:9px;font-weight:bold;
+                                padding:2px 8px;border-radius:10px;margin-bottom:8px;letter-spacing:1px;">
+                        ${escapeHtml(data.visual_badge_text || 'TikTok')}
+                    </div>
+                    <div style="color:#fff;font-size:11px;font-weight:bold;text-align:center;line-height:1.3;margin-bottom:6px;">
+                        ${escapeHtml(data.product_name)}
+                    </div>
+                    <div style="color:#aaa;font-size:9px;text-align:center;line-height:1.3;">
+                        ${escapeHtml(data.display_headline)}
+                    </div>
+                    <div style="margin-top:8px;background:#ff0050;color:#fff;font-size:9px;
+                                padding:3px 10px;border-radius:8px;font-weight:bold;">Shop Now ↗</div>
+                </a>`;
+            } catch(e) {
+                slot.innerHTML = '<span style="color:#555;font-size:0.7em;">Affiliate ad<br>unavailable</span>';
+                console.warn('sidebar tiktok ad:', e.message);
+            }
+        }
+
         async function loadTikTokLinks() {
             const container = document.getElementById('tiktok-links-container');
             container.innerHTML = '<p style="color: #aaa; text-align: center;">Loading links...</p>';
