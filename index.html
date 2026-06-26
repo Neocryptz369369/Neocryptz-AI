@@ -4062,49 +4062,6 @@
             status.textContent = '✓ ' + uploaded.length + ' of ' + files.length + ' uploaded — ready to save';
             status.style.color = '#0f0';
         }
-        async function uploadTikTokImageFile(input) {
-            const file = input.files[0];
-            if (!file) return;
-            const status = document.getElementById('tk-img-upload-status');
-            const preview = document.getElementById('tk-img-preview');
-            const previewImg = document.getElementById('tk-img-preview-img');
-            const urlField = document.getElementById('tk-image');
-
-            // Show local preview immediately
-            const reader = new FileReader();
-            reader.onload = e => {
-                previewImg.src = e.target.result;
-                preview.style.display = 'block';
-            };
-            reader.readAsDataURL(file);
-
-            status.textContent = 'Uploading...';
-            status.style.color = '#ff0050';
-
-            try {
-                const b64 = await new Promise((res, rej) => {
-                    const r2 = new FileReader();
-                    r2.onload = e2 => res(e2.target.result.split(',')[1]);
-                    r2.onerror = rej;
-                    r2.readAsDataURL(file);
-                });
-
-                const resp = await fetch('/api/admin/upload-image', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ fileName: file.name, contentType: file.type, data: b64 })
-                });
-                const data = await resp.json();
-                if (!resp.ok || !data.url) throw new Error(data.error || 'Upload failed');
-
-                urlField.value = data.url;
-                status.textContent = '✓ Uploaded — ready to save';
-                status.style.color = '#0f0';
-            } catch(e) {
-                status.textContent = '✗ Upload failed: ' + e.message;
-                status.style.color = '#f00';
-            }
-        }
 
         async function saveTikTokLink() {
             const idEl  = document.getElementById('tk-id');
