@@ -1,9 +1,8 @@
-import express from 'express';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+'use strict';
+const express = require('express');
+const path = require('path');
 
 const app = express();
-const __dirname = dirname(fileURLToPath(import.meta.url));
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -24,28 +23,31 @@ const routes = [
   ['/api/recommendations/go',     './api/recommendations/go.js'],
 ];
 
-// Load each route handler — failures are isolated so the server still starts
-for (const [route, file] of routes) {
-  try {
-    const mod = await import(file);
-    const handler = mod.default;
-    app.all(route, async (req, res) => {
-      try { await handler(req, res); }
-      catch (err) {
-        console.error('[' + route + ']', err.message);
-        if (!res.headersSent) res.status(500).json({ error: 'Internal server error' });
-      }
-    });
-    console.log('✓', route);
-  } catch (err) {
-    console.error('✗ Could not load', route, '—', err.message);
-    app.all(route, (_req, res) => res.status(503).json({ error: 'Route unavailable' }));
+async function start() {
+  for (const [route, file] of routes) {
+    try {
+      const mod = await import(file);
+      const handler = mod.default;
+      app.all(route, async (req, res) => {
+        try { await handler(req, res); }
+        catch (err) {
+          console.error('[' + route + ']', err.message);
+          if (!res.headersSent) res.status(500).json({ error: 'Internal server error' });
+        }
+      });
+      console.log('loaded', route);
+    } catch (err) {
+      console.error('skipped', route, '-', err.message);
+      app.all(route, (_req, res) => res.status(503).json({ error: 'Route unavailable' }));
+    }
   }
+
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+  });
+
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => console.log('Neocryptz AI running on port ' + PORT));
 }
 
-app.get('*', (req, res) => {
-  res.sendFile(join(__dirname, 'index.html'));
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log('Neocryptz AI running on port ' + PORT));
+start().catch(err => { console.error('Startup failed:', err); process.exit(1); });
