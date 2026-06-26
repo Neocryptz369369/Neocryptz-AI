@@ -3084,7 +3084,8 @@
         async function loadAds() {
             const ads = getLocalAds();
             const ticker = document.getElementById('ticker');
-            ticker.innerHTML = ads.map(a => `<span class="ticker-item">${a.text}</span>`).join('');
+            const featureItems = `<span class="ticker-item" style="color:#00ffff;">🤖 Multi-Model AI Chat</span><span class="ticker-item" style="color:#00ffff;">🎙️ Voice Input</span><span class="ticker-item" style="color:#00ffff;">🖼️ AI Image Generation — type /imagine</span><span class="ticker-item" style="color:#00ffff;">🌐 GO LIVE — Watch AI Browse the Web</span><span class="ticker-item" style="color:#00ffff;">📊 Batch CSV Processing (20 prompts at once)</span><span class="ticker-item" style="color:#00ffff;">🔒 Secret Keys Vault — 100% Private</span><span class="ticker-item" style="color:#00ffff;">📋 Clean Paste Tool</span><span class="ticker-item" style="color:#00ffff;">✍️ Grammar Polisher</span><span class="ticker-item" style="color:#00ffff;">🎨 Blueprint Canvas — Build Complex Prompts</span><span class="ticker-item" style="color:#00ffff;">⚖️ Split A/B View — Compare AI Responses</span><span class="ticker-item" style="color:#00ffff;">🔗 Embed Your Own Chatbot on Any Website</span><span class="ticker-item" style="color:#00ffff;">🎁 Gift Vouchers Available</span><span class="ticker-item" style="color:#00ffff;">👥 Corporate Team Plans</span><span class="ticker-item" style="color:#00ffff;">💬 Direct Support Chat</span><span class="ticker-item" style="color:#00ffff;">🎯 Referral Program — Earn Rewards</span><span class="ticker-item" style="color:#00ffff;">💳 Plans from $10/mo — or Watch an Ad for FREE Credits</span><span class="ticker-item" style="color:#00ffff;">🔑 OAuth Platform Authorization</span><span class="ticker-item" style="color:#00ffff;">🌍 24 Features. One Platform. Neocryptz AI Cloud OS.</span>`;
+            ticker.innerHTML = ads.map(a => `<span class="ticker-item">${a.text}</span>`).join('') + featureItems;
 
             // Populate ad boxes
             for (let i = 1; i <= 4; i++) {
@@ -6254,6 +6255,38 @@ function startAdCooldown(seconds, btn) {
             <div id="cooldown-ad-slot" style="width:100%;height:160px;background:#111;border-radius:8px;overflow:hidden;margin-bottom:10px;position:relative;"></div>
             <p style="color:#555; font-size:0.68em;">Ad · closes automatically when timer ends</p>
         </div>
+    </div>
+
+    <!-- Features Modal -->
+    <div id="features-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:99999;align-items:center;justify-content:center;overflow-y:auto;">
+      <div style="background:#0a0a0a;border:1px solid #00ffff;border-radius:14px;padding:28px;max-width:600px;width:92%;margin:20px auto;box-shadow:0 0 40px rgba(0,255,255,0.15);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+          <h2 style="color:#00ffff;font-family:monospace;letter-spacing:2px;font-size:1em;">⚡ WHAT WE OFFER</h2>
+          <button onclick="document.getElementById('features-modal').style.display='none'" style="background:none;border:none;color:#555;font-size:1.4em;cursor:pointer;">✕</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-family:monospace;font-size:0.8em;">
+          <div style="color:#ccc;padding:7px 10px;background:#111;border-radius:6px;border-left:2px solid #00ffff;">🤖 Multi-Model AI Chat</div>
+          <div style="color:#ccc;padding:7px 10px;background:#111;border-radius:6px;border-left:2px solid #00ffff;">🎙️ Voice Input</div>
+          <div style="color:#ccc;padding:7px 10px;background:#111;border-radius:6px;border-left:2px solid #ff0050;">🖼️ AI Image Generation</div>
+          <div style="color:#ccc;padding:7px 10px;background:#111;border-radius:6px;border-left:2px solid #ff0050;">🌐 GO LIVE — AI Browses for You</div>
+          <div style="color:#ccc;padding:7px 10px;background:#111;border-radius:6px;border-left:2px solid #00ff88;">📊 Batch CSV Processing</div>
+          <div style="color:#ccc;padding:7px 10px;background:#111;border-radius:6px;border-left:2px solid #00ff88;">🔒 Private Secret Keys Vault</div>
+          <div style="color:#ccc;padding:7px 10px;background:#111;border-radius:6px;border-left:2px solid #00ffff;">📋 Clean Paste Tool</div>
+          <div style="color:#ccc;padding:7px 10px;background:#111;border-radius:6px;border-left:2px solid #00ffff;">✍️ Grammar Polisher</div>
+          <div style="color:#ccc;padding:7px 10px;background:#111;border-radius:6px;border-left:2px solid #ff0050;">🎨 Blueprint Prompt Canvas</div>
+          <div style="color:#ccc;padding:7px 10px;background:#111;border-radius:6px;border-left:2px solid #ff0050;">⚖️ Split A/B AI Comparison</div>
+          <div style="color:#ccc;padding:7px 10px;background:#111;border-radius:6px;border-left:2px solid #00ff88;">🔗 Embeddable Chatbot</div>
+          <div style="color:#ccc;padding:7px 10px;background:#111;border-radius:6px;border-left:2px solid #00ff88;">📥 Chat History Download</div>
+          <div style="color:#ccc;padding:7px 10px;background:#111;border-radius:6px;border-left:2px solid #00ffff;">🎁 Gift Vouchers</div>
+          <div style="color:#ccc;padding:7px 10px;background:#111;border-radius:6px;border-left:2px solid #00ffff;">🎯 Referral Rewards Program</div>
+          <div style="color:#ccc;padding:7px 10px;background:#111;border-radius:6px;border-left:2px solid #ff0050;">👥 Corporate Team Packs</div>
+          <div style="color:#ccc;padding:7px 10px;background:#111;border-radius:6px;border-left:2px solid #ff0050;">💬 Direct Support Chat</div>
+          <div style="color:#ccc;padding:7px 10px;background:#111;border-radius:6px;border-left:2px solid #00ff88;">🔑 OAuth Platform Auth</div>
+          <div style="color:#ccc;padding:7px 10px;background:#111;border-radius:6px;border-left:2px solid #00ff88;">🎨 Custom CSS Injector</div>
+        </div>
+        <div style="margin-top:16px;text-align:center;color:#555;font-size:0.75em;font-family:monospace;">Plans from $10/mo · Watch an ad for FREE credits</div>
+        <button onclick="document.getElementById('features-modal').style.display='none'" style="margin-top:16px;width:100%;padding:10px;background:#00ffff;color:#000;border:none;border-radius:8px;font-family:monospace;font-weight:bold;cursor:pointer;letter-spacing:1px;">CLOSE</button>
+      </div>
     </div>
 </body>
 </html>
