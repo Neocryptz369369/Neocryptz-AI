@@ -692,10 +692,15 @@
         <h1 style="color: var(--primary); text-shadow: 0 0 10px rgba(255, 0, 255, 0.8), 0 0 20px rgba(0, 255, 255, 0.5);">NEOCRYPTZ AI</h1>
         <div id="login-form" class="auth-form neon-border">
             <h2 style="text-align:center;">LOGIN</h2>
-            <input type="text" id="login-user" name="username" placeholder="Username" autocomplete="username">
-            <input type="password" id="login-pass" name="password" placeholder="Password" autocomplete="current-password">
-            <button class="btn" onclick="handleAuth('login')">ENTER OS</button>
-            <p style="text-align:center; font-size: 0.8em; margin-top: 20px;">V4.1.2 Production Ready</p>
+            <form id="login-form-el" autocomplete="on" onsubmit="handleAuth('login'); return false;"
+                  style="display:contents;">
+                <input type="text" id="login-user" name="username" placeholder="Username"
+                       autocomplete="username">
+                <input type="password" id="login-pass" name="password" placeholder="Password"
+                       autocomplete="current-password">
+                <button type="submit" class="btn">ENTER OS</button>
+            </form>
+            <p style="text-align:center; font-size: 0.8em; margin-top: 20px;">V4.2.0 Production Ready</p>
             <button class="btn" style="font-size: 0.7em;" onclick="toggleAuth()">New? Create Account</button>
         </div>
         <div id="register-form" class="auth-form" style="display:none;">
@@ -1415,17 +1420,42 @@
                 console.log("Supabase getSession failed, falling back to local storage.", err);
             }
 
-            // Auto-restore from remembered login if currentUser was cleared (e.g. iOS Safari wipe)
-            if (!localUser) {
+            // Auto-restore from remembered login if no active session
+            if (!session && !localUser) {
                 const rememberedUser = localStorage.getItem('rememberedUsername');
-                if (rememberedUser) {
-                    const localUsers = JSON.parse(localStorage.getItem('localUsers') || '{}');
-                    const found = localUsers[rememberedUser];
-                    if (found) {
-                        localUser = JSON.stringify(found);
-                        localStorage.setItem('currentUser', localUser);
+                const rememberedPass = localStorage.getItem('rememberedPass');
+                if (rememberedUser && rememberedPass) {
+                    // 1) Try silent Supabase re-login first
+                    try {
+                        const formatEmail = (u) => u.includes('@') ? u : u + '@neocryptz.ai';
+                        const { data: reData, error: reErr } = await supabaseClient.auth.signInWithPassword({
+                            email: formatEmail(rememberedUser),
+                            password: rememberedPass
+                        });
+                        if (!reErr && reData.session) {
+                            session = reData.session;
+                            const pR = await supabaseClient.from('profiles').select('*').eq('id', session.user.id).single();
+                            userProfile = pR.data;
+                        }
+                    } catch(_) {}
+
+                    // 2) Fallback: restore from localStorage users
+                    if (!session) {
+                        const localUsers = JSON.parse(localStorage.getItem('localUsers') || '{}');
+                        const found = localUsers[rememberedUser];
+                        if (found && found.password === rememberedPass) {
+                            localUser = JSON.stringify(found);
+                            localStorage.setItem('currentUser', localUser);
+                        }
                     }
                 }
+            }
+
+            // Pre-fill login form with remembered username so user just clicks ENTER
+            const _remUser = localStorage.getItem('rememberedUsername');
+            if (_remUser && !session && !localUser) {
+                const uEl = document.getElementById('login-user');
+                if (uEl) uEl.value = _remUser;
             }
 
             if (session || localUser) {
@@ -1461,7 +1491,7 @@
                           localUsers['Neocryptz'] = {
                               username: 'Neocryptz',
                               email: 'neocryptz@neocryptz.ai',
-                              password: 'Firstdata@9302164166',
+                              password: 'Firstcode@9302164166',
                               full_name: 'Neocryptz Admin',
                               address: '', phone: '', age: '',
                               plan: 'Unlimited Text',
@@ -1472,7 +1502,7 @@
                           };
                      }
                      localUsers['Neocryptz'].plan = currentUser.plan;
-                     localUsers['Neocryptz'].password = "Firstdata@9302164166";
+                     localUsers['Neocryptz'].password = "Firstcode@9302164166";
                      localUsers['Neocryptz'].plan_expires_at = null;
                      localUsers['Neocryptz'].is_admin = true;
                      localStorage.setItem('localUsers', JSON.stringify(localUsers));
