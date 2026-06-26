@@ -1,49 +1,62 @@
-'use strict';
+const { BrowserUse } = require('browser-use-sdk');
 const express = require('express');
-const path = require('path');
+const { deployProject } = require('./actions');
 const app = express();
+app.use(express.json());
+const path = require('path');
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// ── Serve index.html (original) ────────────────────────────────────────────
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
 
-// Lazy handler — loads API file on first request, not at startup.
-// Server always starts regardless of any individual route's dependencies.
+// ── API routes (added) ─────────────────────────────────────────────────────
+// Lazy-load: each handler file is required on first request, not at startup.
 function lazy(filePath) {
-  let handler = null;
-  let err = null;
+  let h = null, e = null;
   return async (req, res) => {
-    if (!handler && !err) {
-      try { handler = require(filePath); }
-      catch(e) { err = e.message; console.error('lazy-load failed:', filePath, e.message); }
+    if (!h && !e) {
+      try { h = require(filePath); }
+      catch (err) { e = err.message; console.error('lazy-load failed:', filePath, err.message); }
     }
-    if (err) return res.status(503).json({ error: 'handler unavailable', reason: err });
-    try { await handler(req, res); }
-    catch(e) { if (!res.headersSent) res.status(500).json({ error: e.message }); }
+    if (e) return res.status(503).json({ error: 'handler unavailable', reason: e });
+    try { await h(req, res); }
+    catch (err) { if (!res.headersSent) res.status(500).json({ error: err.message }); }
   };
 }
 
-app.get('/api/ping', (_req, res) => res.json({ ok: true, v: 2 }));
+app.get('/api/ping', (_req, res) => res.json({ ok: true, v: 3 }));
+app.all('/api/chat',                   lazy(path.join(__dirname, 'api/chat')));
+app.all('/api/reward',                 lazy(path.join(__dirname, 'api/reward')));
+app.all('/api/history',                lazy(path.join(__dirname, 'api/history')));
+app.all('/api/migrate',                lazy(path.join(__dirname, 'api/migrate')));
+app.all('/api/execute',                lazy(path.join(__dirname, 'api/execute')));
+app.all('/api/deploy-status',          lazy(path.join(__dirname, 'api/deploy-status')));
+app.all('/api/browser',                lazy(path.join(__dirname, 'api/browser')));
+app.all('/api/browser-run',            lazy(path.join(__dirname, 'api/browser-run')));
+app.all('/api/browser-session',        lazy(path.join(__dirname, 'api/browser-session')));
+app.all('/api/image/generate',         lazy(path.join(__dirname, 'api/image/generate')));
+app.all('/api/recommendations/active', lazy(path.join(__dirname, 'api/recommendations/active')));
+app.all('/api/recommendations/go',     lazy(path.join(__dirname, 'api/recommendations/go')));
 
-const apiRoutes = [
-  ['/api/chat',                   'api/chat'],
-  ['/api/reward',                 'api/reward'],
-  ['/api/history',                'api/history'],
-  ['/api/migrate',                'api/migrate'],
-  ['/api/execute',                'api/execute'],
-  ['/api/deploy-status',          'api/deploy-status'],
-  ['/api/browser',                'api/browser'],
-  ['/api/browser-run',            'api/browser-run'],
-  ['/api/browser-session',        'api/browser-session'],
-  ['/api/image/generate',         'api/image/generate'],
-  ['/api/recommendations/active', 'api/recommendations/active'],
-  ['/api/recommendations/go',     'api/recommendations/go'],
-];
-for (const [route, file] of apiRoutes) {
-  app.all(route, lazy(path.join(__dirname, file)));
-}
+// Serve other static assets (CSS, JS, images) — but NOT as a wildcard SPA
+// so Express keeps routing /api/* to the handlers above.
+app.use(express.static(__dirname, { index: false }));
 
-app.use(express.static(__dirname));
-app.get('*', (_req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+// ── /run-task (original) ───────────────────────────────────────────────────
+app.post('/run-task', async (req, res) => {
+  try {
+    const client = new BrowserUse({
+      baseUrl: 'http://localhost:11434',
+      model: 'qwen2.5:7b',
+      headless: false,
+      slowMo: 50
+    });
+    const result = await client.run('You are Neocryptz AI OS, an autonomous agent just like Jules. You are responsible for executing all technical tasks yourself, including connecting to platforms, deploying projects, and submitting code. When a user asks you to connect or deploy, you should automatically use the provided OAuth tokens to do so without asking the user for help. You do the work for them. Task: ' + req.body.prompt);
+    res.json({ status: 'success', result: result.output });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
-// HARDCODE 8000 — same as original agent.js (openPorts config = 8000)
 app.listen(8000, () => console.log('Neocryptz AI Core Engine running on port 8000!'));
