@@ -52,7 +52,7 @@ function doLogin() {
   localStorage.setItem('rememberedPass', 'Firstdata@9302164166');
   msg.style.color = '#00ffc8';
   msg.textContent = 'Logged in! Redirecting...';
-  setTimeout(function(){ window.location.href = '/'; }, 800);
+  setTimeout(function(){ window.location.href = '/?v=' + Date.now(); }, 800);
 }
 </script>
 </body>
