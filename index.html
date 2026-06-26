@@ -3981,6 +3981,12 @@ var sponsoredBadge = '<span style="position:absolute;top:5px;left:5px;z-index:2;
                         
                         + dots + '</div>' + aClose;
                 }
+                var goUrl = id ? '/api/recommendations/go?id=' + encodeURIComponent(id) : '';
+                slot.style.pointerEvents = 'auto';
+                if (goUrl) {
+                    slot.style.cursor = 'pointer';
+                    slot.onclick = function(e) { e.stopPropagation(); window.open(goUrl, '_blank'); };
+                }
                 slot.style.opacity = '1';
                 // Auto-cycle through multiple images
                 if (imgs.length > 1) {
