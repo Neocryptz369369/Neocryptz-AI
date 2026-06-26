@@ -1,7 +1,7 @@
 // Unified browser run — creates session, navigates, clicks every button,
 // screenshots after each action, returns real frames from the actual page
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
     const { url: rawUrl, task } = req.body || {};
