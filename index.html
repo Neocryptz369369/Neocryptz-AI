@@ -2210,7 +2210,7 @@
             const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
             recognition = new SpeechRec();
             recognition.lang = 'en-US';
-            recognition.continuous = true;
+            recognition.continuous = false;
             recognition.interimResults = true;
             recognition.maxAlternatives = 1;
 
@@ -2245,11 +2245,13 @@
                 input.placeholder = "Enter command or question...";
                 recognition = null;
                 if (event.error === 'not-allowed') {
-                    alert('🎤 Microphone access was denied.\n\nTo fix: click the camera/mic icon in your browser address bar and allow microphone access, then try again.');
+                    alert('🎤 Microphone access denied.\n\nClick the lock/camera icon in the address bar → allow microphone → refresh and try again.');
+                } else if (event.error === 'service-not-allowed') {
+                    alert('🎤 Chrome blocked its speech service.\n\nFix in 3 steps:\n1. In Chrome address bar go to: chrome://settings/content/microphone\n2. Make sure this site is listed under \"Allowed\"\n3. Also check: chrome://flags → search \"speech\" → disable any blocks\n\nOr try in a different browser (Edge also works).');
                 } else if (event.error === 'no-speech') {
                     input.placeholder = '🎤 No speech detected — try again.';
                 } else if (event.error !== 'aborted') {
-                    input.placeholder = '🎤 Error: ' + event.error + '. Try again.';
+                    input.placeholder = '🎤 Error (' + event.error + ') — try again.';
                 }
             };
 
