@@ -1,7 +1,7 @@
 // Creates a Browserbase session and returns the live view URL immediately
 // Frontend embeds this URL in an iframe so the user can watch live
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
     const apiKey = process.env.BROWSERBASE_API_KEY;
