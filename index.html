@@ -2417,10 +2417,13 @@
                     var chref = cad.destination_url || '';
                     var cimg = cad.image_url || '';
                     if (cimg) {
-                        cas.innerHTML = (chref ? '<a href="'+chref+'" target="_blank" rel="sponsored nofollow" style="position:absolute;inset:0;display:block;width:100%;height:100%;text-decoration:none;">' : '<div style="position:absolute;inset:0;">')
+                        cas.innerHTML = '<div style="position:absolute;inset:0;overflow:hidden;">'
                             + '<img src="'+cimg+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" alt="TikTok Product">'
-                            
-                            + (chref ? '</a>' : '</div>');
+                            + '<span style="position:absolute;top:5px;left:5px;z-index:2;background:rgba(0,0,0,0.62);color:#fff;font-size:9px;padding:2px 7px;border-radius:3px;pointer-events:none;">Sponsored</span>'
+                            + '</div>';
+                        var chGoUrl = cad.id ? '/api/recommendations/go?id=' + encodeURIComponent(cad.id) : '';
+                        cas.style.pointerEvents = 'auto';
+                        if (chGoUrl) { cas.style.cursor = 'pointer'; cas.onclick = function(e) { e.stopPropagation(); window.open(chGoUrl, '_blank'); }; }
                     }
                 } else {
                     cas.innerHTML = '<ins class="adsbygoogle" style="display:block;width:100%;height:160px;" data-ad-client="ca-pub-5017188678144132" data-ad-format="auto" data-full-width-responsive="false"></ins>';
@@ -6085,10 +6088,13 @@ async function watchAdForCredits() {
         const href = ad.destination_url || '';
         const imgUrl = ad.image_url || '';
         if (imgUrl) {
-            slot.innerHTML = (href ? '<a href="' + href + '" target="_blank" rel="sponsored nofollow" style="position:absolute;inset:0;display:block;width:100%;height:100%;text-decoration:none;">' : '<div style="position:absolute;inset:0;">')
+            slot.innerHTML = '<div style="position:absolute;inset:0;overflow:hidden;">'
                 + '<img src="' + imgUrl + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" alt="TikTok Product">'
-                
-                + (href ? '</a>' : '</div>');
+                + '<span style="position:absolute;top:5px;left:5px;z-index:2;background:rgba(0,0,0,0.62);color:#fff;font-size:9px;padding:2px 7px;border-radius:3px;pointer-events:none;">Sponsored</span>'
+                + '</div>';
+            var waGoUrl = ad.id ? '/api/recommendations/go?id=' + encodeURIComponent(ad.id) : '';
+            slot.style.pointerEvents = 'auto';
+            if (waGoUrl) { slot.style.cursor = 'pointer'; slot.onclick = function(e) { e.stopPropagation(); window.open(waGoUrl, '_blank'); }; }
         } else {
             slot.innerHTML = '<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#0a0a0a,#1a0010);">'
                 + '<div style="background:#ff0050;color:#fff;font-size:10px;font-weight:bold;padding:4px 14px;border-radius:10px;margin-bottom:8px;">TikTok Deal</div>'
