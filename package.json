@@ -1,21 +1,15 @@
 {
   "name": "neocryptz-ai",
   "version": "1.0.0",
-  "description": "",
-  "scripts": {
-    "start": "node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "type": "commonjs",
+  "scripts": {
+    "start": "node agent.js",
+    "dev": "node agent.js"
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",
-    "acorn": "^8.17.0",
     "browser-use-sdk": "^3.8.1",
     "dotenv": "^17.4.2",
-    "express": "^5.2.1",
-    "playwright-core": "^1.44.0"
+    "express": "^5.2.1"
   }
 }
