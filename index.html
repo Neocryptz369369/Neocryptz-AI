@@ -13,154 +13,217 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ═══════════════════════════════════════════════════════════════════════
-//  STANDALONE AUTH — runs before the main script, always works
+//  STANDALONE AUTH v3 — runs before main script, always works
 // ═══════════════════════════════════════════════════════════════════════
 (function() {
   var SUPA_URL  = 'https://bxzvxgjnlvbexeuocbey.supabase.co';
   var SUPA_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ4enZ4Z2pubHZiZXhldW9jYmV5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNzY3NjQsImV4cCI6MjA5NTY1Mjc2NH0.DWlzaP_xciNKfBDO-c_VTxTsaFVZjdfANesVY9Kjih0';
+  var ADMIN_UN  = 'Neocryptz';
   var ADMIN_PWD = 'Firstcode@9302164166';
 
-  // Seed admin user into localStorage immediately
-  function seedAdmin() {
+  // Always seed the admin account into localStorage on every page load
+  try {
+    var _lu = JSON.parse(localStorage.getItem('localUsers') || '{}');
+    _lu[ADMIN_UN] = {
+      username: ADMIN_UN, email: 'neocryptz@neocryptz.ai',
+      password: ADMIN_PWD, full_name: 'Neocryptz Admin',
+      plan: 'Unlimited Text', credits: 999999,
+      banned: false, is_admin: true, plan_expires_at: null
+    };
+    localStorage.setItem('localUsers', JSON.stringify(_lu));
+  } catch(e) {}
+
+  // Case-insensitive search over all localUsers keys, by username OR email
+  function findLocalUser(query) {
     try {
       var lu = JSON.parse(localStorage.getItem('localUsers') || '{}');
-      lu['Neocryptz'] = {
-        username: 'Neocryptz', email: 'neocryptz@neocryptz.ai',
-        password: ADMIN_PWD, full_name: 'Neocryptz Admin',
-        plan: 'Unlimited Text', credits: 999999,
-        banned: false, is_admin: true, plan_expires_at: null
-      };
-      localStorage.setItem('localUsers', JSON.stringify(lu));
+      var q = (query || '').toLowerCase().trim();
+      // Exact key match first
+      if (lu[query]) return lu[query];
+      // Case-insensitive key match
+      var keys = Object.keys(lu);
+      for (var i = 0; i < keys.length; i++) {
+        var u = lu[keys[i]];
+        if ((u.username || keys[i]).toLowerCase() === q) return u;
+        if ((u.email || '').toLowerCase() === q) return u;
+      }
     } catch(e) {}
+    return null;
   }
-  seedAdmin();
 
-  // Show the login form and hide register (or vice-versa)
+  // Show/hide login vs register form
   window.toggleAuth = function() {
-    var l = document.getElementById('login-form');
+    var l   = document.getElementById('login-form');
     var reg = document.getElementById('register-form');
-    if (!l || !reg) return;
-    var showReg = (l.style.display !== 'none');
-    l.style.display   = showReg ? 'none' : '';
-    reg.style.display = showReg ? 'flex' : 'none';
-    // Check if registrations are locked
-    if (showReg && localStorage.getItem('regLocked') === 'true') {
-      reg.innerHTML = '<h2 style="color:#ff0000;text-align:center;">Not taking new customers right now.</h2>' +
-                      '<p style="text-align:center;cursor:pointer;color:#0ff;" onclick="toggleAuth()">Back to Login</p>';
+    if (!l || !reg) { console.warn('toggleAuth: forms not found'); return; }
+    var showingLogin = (l.style.display !== 'none');
+    l.style.display   = showingLogin ? 'none' : '';
+    reg.style.display = showingLogin ? 'flex' : 'none';
+    if (showingLogin && localStorage.getItem('regLocked') === 'true') {
+      reg.innerHTML = '<h2 style="color:#f00;text-align:center;">Not taking new sign-ups right now.</h2>' +
+                      '<p style="text-align:center;cursor:pointer;color:#0ff;" onclick="toggleAuth()">&#8592; Back to Login</p>';
     }
   };
 
-  // Main auth handler
+  // Main auth handler — called by onclick="handleAuth('login')" etc.
   window.handleAuth = function(type) {
+
+    // ── LOGIN ──────────────────────────────────────────────────────────
     if (type === 'login') {
-      var username = (document.getElementById('login-user') || {}).value || '';
-      var pass     = (document.getElementById('login-pass') || {}).value || '';
-      username = username.trim(); pass = pass.trim();
+      var username = ((document.getElementById('login-user')  || {}).value || '').trim();
+      var pass     = ((document.getElementById('login-pass')  || {}).value || '').trim();
       if (!username || !pass) { alert('Please enter your username and password.'); return; }
 
       var btn = document.querySelector('#login-form .btn');
-      if (btn) { btn.disabled = true; btn.textContent = 'LOGGING IN...'; }
+      function resetBtn() { if (btn) { btn.disabled = false; btn.textContent = 'ENTER OS'; } }
+      if (btn) { btn.disabled = true; btn.textContent = 'LOGGING IN…'; }
 
-      // Always check local users first (admin shortcut — no network needed)
-      var lu = JSON.parse(localStorage.getItem('localUsers') || '{}');
-      var localUser = lu[username] || lu[username.toLowerCase()];
-      if (localUser && localUser.password === pass) {
-        if (localUser.banned) { alert('ACCESS DENIED: This account is banned.'); if(btn){btn.disabled=false;btn.textContent='ENTER OS';} return; }
+      // 1. Check localStorage (no network needed — admin always works here)
+      var localUser = findLocalUser(username);
+      if (localUser) {
+        if (localUser.password !== pass) {
+          resetBtn();
+          alert('Incorrect password. Please try again.');
+          return;
+        }
+        if (localUser.banned) { resetBtn(); alert('ACCESS DENIED: This account is banned.'); return; }
         var remChk = document.getElementById('login-remember');
         if (remChk && remChk.checked) {
           localStorage.setItem('rememberedUsername', username);
           localStorage.setItem('rememberedPass', pass);
         }
         localStorage.setItem('currentUser', JSON.stringify(localUser));
-        localStorage.setItem('token', 'local-' + username);
+        localStorage.setItem('token', 'local-' + (localUser.username || username));
         location.reload(); return;
       }
 
-      // Try Supabase login
-      var email = username.indexOf('@') >= 0 ? username : username + '@neocryptz.ai';
+      // 2. Try Supabase — support email login OR username@neocryptz.ai
+      var tryEmail = username.indexOf('@') >= 0 ? username : username + '@neocryptz.ai';
       fetch(SUPA_URL + '/auth/v1/token?grant_type=password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY },
-        body: JSON.stringify({ email: email, password: pass })
+        body: JSON.stringify({ email: tryEmail, password: pass })
       })
       .then(function(res) { return res.json(); })
       .then(function(data) {
         if (data.access_token) {
-          var remChk = document.getElementById('login-remember');
-          if (remChk && remChk.checked) {
+          var remChk2 = document.getElementById('login-remember');
+          if (remChk2 && remChk2.checked) {
             localStorage.setItem('rememberedUsername', username);
             localStorage.setItem('rememberedPass', pass);
           }
           localStorage.setItem('token', data.access_token);
+          if (data.user) {
+            var supaUser = {
+              username: (data.user.user_metadata && data.user.user_metadata.username) || username,
+              email: data.user.email, plan: 'Free', credits: 40,
+              banned: false, is_admin: false
+            };
+            localStorage.setItem('currentUser', JSON.stringify(supaUser));
+          }
           location.reload();
         } else {
-          if(btn){btn.disabled=false;btn.textContent='ENTER OS';}
-          alert('Login failed: ' + (data.error_description || data.msg || 'Invalid username or password.'));
+          resetBtn();
+          var msg = data.error_description || data.msg || '';
+          if (msg.toLowerCase().indexOf('not confirmed') >= 0 || msg.toLowerCase().indexOf('email') >= 0) {
+            alert('Your account email is not confirmed yet. Please check your inbox for a confirmation link, or contact support.');
+          } else if (msg.toLowerCase().indexOf('invalid') >= 0 || msg.toLowerCase().indexOf('credentials') >= 0) {
+            alert('Incorrect username or password. If you just registered, please wait a moment and try again.');
+          } else {
+            alert('Login failed. Please check your username and password and try again.' + (msg ? ' (' + msg + ')' : ''));
+          }
         }
       })
-      .catch(function(e) {
-        if(btn){btn.disabled=false;btn.textContent='ENTER OS';}
-        alert('Connection error. Please check your internet and try again.');
-      });
+      .catch(function() { resetBtn(); alert('Connection error — please check your internet and try again.'); });
 
+    // ── REGISTER ───────────────────────────────────────────────────────
     } else if (type === 'register') {
-      var rUser = (document.getElementById('reg-user') || {}).value || '';
-      var rEmail = (document.getElementById('reg-email') || {}).value || '';
-      var rPass  = (document.getElementById('reg-pass') || {}).value || '';
+      var rUser  = ((document.getElementById('reg-user')  || {}).value || '').trim();
+      var rEmail = ((document.getElementById('reg-email') || {}).value || '').trim();
+      var rPass  = ((document.getElementById('reg-pass')  || {}).value || '').trim();
       var rTos   = document.getElementById('reg-tos');
-      rUser = rUser.trim(); rEmail = rEmail.trim(); rPass = rPass.trim();
-      if (!rUser || !rEmail || !rPass) { alert('Please fill in username, email, and password.'); return; }
-      if (!rTos || !rTos.checked) { alert('Please agree to the Terms of Service.'); return; }
+      if (!rUser || !rEmail || !rPass) { alert('Please fill in all fields (username, email, and password).'); return; }
+      if (!rTos || !rTos.checked) { alert('Please tick the Terms of Service checkbox before registering.'); return; }
+      if (rPass.length < 6) { alert('Password must be at least 6 characters.'); return; }
 
       var btn2 = document.querySelector('#register-form .btn');
-      if (btn2) { btn2.disabled = true; btn2.textContent = 'CREATING ACCOUNT...'; }
+      function resetBtn2() { if (btn2) { btn2.disabled = false; btn2.textContent = 'CREATE ACCOUNT'; } }
+      if (btn2) { btn2.disabled = true; btn2.textContent = 'CREATING ACCOUNT…'; }
 
-      fetch(SUPA_URL + '/auth/v1/signup', {
+      // Try the server-side endpoint first (auto-confirms the account)
+      fetch('/api/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY },
-        body: JSON.stringify({
-          email: rEmail,
-          password: rPass,
-          data: { username: rUser }
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: rUser, email: rEmail, password: rPass })
       })
-      .then(function(res) { return res.json(); })
-      .then(function(data) {
-        if (data.id || data.user) {
-          // Save locally too so they can log in immediately
-          var lu2 = JSON.parse(localStorage.getItem('localUsers') || '{}');
-          lu2[rUser] = {
-            username: rUser, email: rEmail, password: rPass,
-            plan: 'Free', credits: 40, banned: false, is_admin: false
-          };
-          localStorage.setItem('localUsers', JSON.stringify(lu2));
-          localStorage.setItem('currentUser', JSON.stringify(lu2[rUser]));
-          alert('Account created! Logging you in now...');
-          location.reload();
+      .then(function(res) { return res.json().then(function(d){ return {s:res.status, b:d}; }); })
+      .then(function(resp) {
+        if (resp.b.ok || resp.b.id) {
+          _saveAndLogin(rUser, rEmail, rPass);
+        } else if (resp.b.error && resp.b.error.toLowerCase().indexOf('already') >= 0) {
+          // Already registered — just try logging them in
+          resetBtn2();
+          alert('That email is already registered. Please go back and log in instead.');
         } else {
-          if(btn2){btn2.disabled=false;btn2.textContent='CREATE ACCOUNT';}
-          alert('Registration failed: ' + (data.error_description || data.msg || data.message || 'Please try again.'));
+          // Fall back to direct Supabase signup
+          _directSupabaseSignup(rUser, rEmail, rPass, resetBtn2);
         }
       })
-      .catch(function(e) {
-        if(btn2){btn2.disabled=false;btn2.textContent='CREATE ACCOUNT';}
-        alert('Connection error. Please try again.');
+      .catch(function() {
+        // Server unreachable — fall back to direct Supabase
+        _directSupabaseSignup(rUser, rEmail, rPass, resetBtn2);
       });
     }
   };
 
-  // On load: pre-fill credentials if remembered
+  function _saveAndLogin(username, email, pass) {
+    try {
+      var lu = JSON.parse(localStorage.getItem('localUsers') || '{}');
+      lu[username] = { username: username, email: email, password: pass, plan: 'Free', credits: 40, banned: false, is_admin: false };
+      localStorage.setItem('localUsers', JSON.stringify(lu));
+      localStorage.setItem('currentUser', JSON.stringify(lu[username]));
+    } catch(e) {}
+    alert('Account created! Logging you in now…');
+    location.reload();
+  }
+
+  function _directSupabaseSignup(rUser, rEmail, rPass, resetBtn2) {
+    fetch(SUPA_URL + '/auth/v1/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY },
+      body: JSON.stringify({ email: rEmail, password: rPass, data: { username: rUser } })
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (data.id || data.user || data.access_token) {
+        _saveAndLogin(rUser, rEmail, rPass);
+      } else {
+        resetBtn2();
+        var msg = data.error_description || data.msg || data.message || '';
+        if (msg.toLowerCase().indexOf('already') >= 0) {
+          alert('That email is already registered. Please log in instead.');
+        } else {
+          alert('Registration failed: ' + (msg || 'Please try again.'));
+        }
+      }
+    })
+    .catch(function() { resetBtn2(); alert('Connection error. Please try again.'); });
+  }
+
+  // Pre-fill credentials on page load if "remember me" was checked
   document.addEventListener('DOMContentLoaded', function() {
-    var remUser = localStorage.getItem('rememberedUsername');
-    var remPass = localStorage.getItem('rememberedPass');
-    if (remUser) {
-      var uEl = document.getElementById('login-user');
-      var pEl = document.getElementById('login-pass');
-      var cEl = document.getElementById('login-remember');
-      if (uEl) uEl.value = remUser;
-      if (pEl && remPass) pEl.value = remPass;
-      if (cEl) cEl.checked = true;
-    }
+    try {
+      var remUser = localStorage.getItem('rememberedUsername');
+      var remPass = localStorage.getItem('rememberedPass');
+      if (remUser) {
+        var uEl = document.getElementById('login-user');
+        var pEl = document.getElementById('login-pass');
+        var cEl = document.getElementById('login-remember');
+        if (uEl) uEl.value = remUser;
+        if (pEl && remPass) pEl.value = remPass;
+        if (cEl) cEl.checked = true;
+      }
+    } catch(e) {}
   });
 })();
 </script>
