@@ -782,7 +782,7 @@
         pre { position: relative; background: #222; padding: 15px; overflow-x: auto; }
         .copy-btn { position: absolute; bottom: 5px; right: 5px; font-size: 10px; background: var(--primary); color: #000; border: none; padding: 2px 5px; cursor: pointer; }
 
-        #ad-sidebar { width: 200px; border-left: 1px solid var(--primary); padding: 10px; display: flex; flex-direction: column; box-shadow: -2px 0 10px rgba(255, 0, 255, 0.2); }
+        #ad-sidebar { width: 200px; border-left: 1px solid var(--primary); padding: 55px 10px 10px 10px; display: flex; flex-direction: column; box-shadow: -2px 0 10px rgba(255, 0, 255, 0.2); overflow-y: auto; }
         .ad-box { width: 180px; height: 180px; border: 1px solid #333; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; padding: 5px; transition: border-color 0.3s ease; }
         .ad-box:hover { border-color: var(--secondary); box-shadow: 0 0 5px rgba(0, 255, 255, 0.3); }
 
@@ -917,7 +917,7 @@
 <body>
 
     <!-- Google Translate Element -->
-    <div style="position: absolute; top: 10px; right: 10px; z-index: 9999; display: flex; align-items: center; gap: 10px;">
+    <div style="position: fixed; top: 10px; right: 10px; z-index: 10000; display: flex; align-items: center; gap: 10px;">
         <select id="global-lang-select" class="neon-border" onchange="setGlobalLanguage(this.value)" style="background: #111; color: var(--secondary); border: 1px solid var(--secondary); padding: 5px; font-size: 0.8em; outline: none; border-radius: 3px;">
             <option value="English">🇺🇸 English</option>
             <option value="Spanish">🇪🇸 Spanish</option>
