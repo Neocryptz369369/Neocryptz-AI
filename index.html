@@ -1172,6 +1172,24 @@
                 <button class="btn" onclick="closeModal('user-menu-modal'); openModal('feedback-modal')">PROVIDE FEEDBACK</button>
                 <button class="btn" style="border-color: #f00; color: #f00; margin-top: 20px;" onclick="logout()">LOGOUT</button>
             </div>
+            <!-- Quick API Key / Token Vault -->
+            <div style="margin-top:14px; border-top:1px solid #333; padding-top:12px;">
+                <div onclick="var p=document.getElementById('qv-panel');p.style.display=p.style.display==='none'?'block':'none';"
+                     style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;color:#f59e0b;font-size:0.82em;font-weight:bold;margin-bottom:6px;user-select:none;">
+                    <span>🔐 API KEYS &amp; TOKENS</span><span id="qv-arrow">▼</span>
+                </div>
+                <div id="qv-panel" style="display:none;">
+                    <div id="qv-list" style="margin-bottom:8px; max-height:100px; overflow-y:auto;"></div>
+                    <div style="display:flex;gap:6px;margin-bottom:4px;">
+                        <input type="text" id="qv-label" placeholder="Label (e.g. OpenAI Key)" style="flex:1;padding:6px 8px;background:#111;border:1px solid #f59e0b;border-radius:4px;color:#fff;font-size:0.78em;min-width:0;">
+                    </div>
+                    <div style="display:flex;gap:6px;margin-bottom:6px;">
+                        <input type="password" id="qv-value" placeholder="Paste key or token here" style="flex:1;padding:6px 8px;background:#111;border:1px solid #f59e0b;border-radius:4px;color:#fff;font-size:0.78em;min-width:0;">
+                        <button onclick="qvSave()" style="background:#f59e0b;color:#000;border:none;border-radius:4px;padding:6px 10px;font-weight:bold;cursor:pointer;font-size:0.78em;white-space:nowrap;">✔ SAVE</button>
+                    </div>
+                    <div id="qv-status" style="font-size:0.72em;color:#00ff88;min-height:14px;"></div>
+                </div>
+            </div>
             <button class="btn" onclick="closeModal('user-menu-modal')" style="margin-top: 20px;">CLOSE</button>
         </div>
     </div>
@@ -3228,6 +3246,7 @@
                 const _ads = document.getElementById('ad-sidebar');
                 if (_ads) _ads.style.display = 'none';
             }
+            if (id === 'user-menu-modal') { qvRender(); }
             if (id === 'settings-modal') { renderOAuthList(); loadAIAuthStatus(); loadSecretKeys(); }
             if(document.getElementById('anonymizer-toggle')) document.getElementById('anonymizer-toggle').checked = localStorage.getItem('anonymizerEnabled') === 'true';
             if (id === 'share-modal') generateReferral();
@@ -5332,6 +5351,41 @@
                 const dec = await crypto.subtle.decrypt({ name:'AES-GCM', iv: buf.slice(0,12) }, key, buf.slice(12));
                 return new TextDecoder().decode(dec);
             } catch(e) { return stored; } // fallback: return as-is if not encrypted yet
+        }
+
+        // Quick-access vault functions (user-menu-modal panel)
+        async function qvSave() {
+            const label = (document.getElementById('qv-label')||{}).value?.trim();
+            const value = (document.getElementById('qv-value')||{}).value?.trim();
+            const status = document.getElementById('qv-status');
+            if (!label || !value) { if(status) status.textContent = '⚠ Enter both a label and a key.'; return; }
+            if(status) status.textContent = 'Encrypting...';
+            const encrypted = await _encryptVaultValue(value);
+            const keys = JSON.parse(localStorage.getItem('user_secret_keys') || '[]');
+            keys.push({ label, value: encrypted, encrypted: true, saved: new Date().toLocaleString() });
+            localStorage.setItem('user_secret_keys', JSON.stringify(keys));
+            document.getElementById('qv-label').value = '';
+            document.getElementById('qv-value').value = '';
+            if(status) { status.textContent = '✓ Encrypted and saved — AI will use it automatically.'; setTimeout(()=>{ if(status) status.textContent=''; },3000); }
+            qvRender(); loadSecretKeys();
+        }
+        function qvRender() {
+            const list = document.getElementById('qv-list');
+            if (!list) return;
+            const keys = JSON.parse(localStorage.getItem('user_secret_keys') || '[]');
+            if (!keys.length) { list.innerHTML = '<p style="color:#555;font-size:0.75em;margin:0;">No keys saved yet.</p>'; return; }
+            list.innerHTML = keys.map((k,i) =>
+                '<div style="display:flex;align-items:center;justify-content:space-between;background:#111;border:1px solid #f59e0b33;border-radius:4px;padding:4px 8px;margin-bottom:3px;">'
+                +'<span style="color:#f59e0b;font-size:0.78em;">🔐 '+escapeHtml(k.label)+'</span>'
+                +'<button onclick="qvDelete('+i+')" style="background:none;border:none;color:#f00;cursor:pointer;font-size:0.8em;padding:0 4px;">✕</button>'
+                +'</div>'
+            ).join('');
+        }
+        function qvDelete(i) {
+            const keys = JSON.parse(localStorage.getItem('user_secret_keys') || '[]');
+            keys.splice(i,1);
+            localStorage.setItem('user_secret_keys', JSON.stringify(keys));
+            qvRender(); loadSecretKeys();
         }
 
         async function saveSecretKey() {
