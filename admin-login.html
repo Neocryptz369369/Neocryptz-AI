@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>Neocryptz Admin Access</title>
+<style>
+  body { margin:0; background:#000; color:#00ffc8; font-family:monospace; display:flex; align-items:center; justify-content:center; min-height:100vh; }
+  .box { border:1px solid #00ffc8; padding:40px; width:300px; text-align:center; }
+  h2 { color:#ff0050; letter-spacing:3px; margin-bottom:30px; }
+  input { width:100%; padding:12px; margin:8px 0; background:#111; border:1px solid #00ffc8; color:#00ffc8; font-family:monospace; font-size:1em; box-sizing:border-box; }
+  button { width:100%; padding:14px; margin-top:16px; background:#ff0050; color:#fff; border:none; font-family:monospace; font-size:1em; letter-spacing:2px; cursor:pointer; }
+  button:hover { background:#cc003f; }
+  #msg { margin-top:16px; font-size:0.85em; color:#ff0050; min-height:20px; }
+  .eye { position:relative; }
+  .eye span { position:absolute; right:10px; top:50%; transform:translateY(-50%); cursor:pointer; font-size:1.1em; }
+</style>
+</head>
+<body>
+<div class="box">
+  <h2>NEOCRYPTZ<br>ADMIN ACCESS</h2>
+  <input type="text" id="u" placeholder="Username" value="Neocryptz">
+  <div class="eye">
+    <input type="password" id="p" placeholder="Password">
+    <span onclick="var x=document.getElementById('p');x.type=x.type==='password'?'text':'password'">👁</span>
+  </div>
+  <button onclick="doLogin()">ENTER</button>
+  <div id="msg"></div>
+</div>
+<script>
+var CORRECT_PASS = 'Firstdata@9302164166';
+var CORRECT_USER = 'neocryptz';
+document.getElementById('p').addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
+function doLogin() {
+  var u = document.getElementById('u').value.trim();
+  var p = document.getElementById('p').value.trim();
+  var msg = document.getElementById('msg');
+  if (!u || !p) { msg.textContent = 'Please fill in both fields.'; return; }
+  if (u.toLowerCase() !== CORRECT_USER) { msg.textContent = 'Unknown username.'; return; }
+  if (p !== CORRECT_PASS) { msg.textContent = 'Wrong password. Check caps and spelling.'; return; }
+  // Success — write session to localStorage then go to main app
+  var adminObj = {
+    username: 'Neocryptz', email: 'neocryptz@neocryptz.ai',
+    full_name: 'Neocryptz Admin', plan: 'Unlimited Text',
+    credits: 999999, banned: false, is_admin: true, plan_expires_at: null,
+    password: 'Firstdata@9302164166'
+  };
+  localStorage.setItem('currentUser', JSON.stringify(adminObj));
+  localStorage.setItem('token', 'admin-bypass');
+  localStorage.setItem('rememberedUsername', 'Neocryptz');
+  localStorage.setItem('rememberedPass', 'Firstdata@9302164166');
+  msg.style.color = '#00ffc8';
+  msg.textContent = 'Logged in! Redirecting...';
+  setTimeout(function(){ window.location.href = '/'; }, 800);
+}
+</script>
+</body>
+</html>
