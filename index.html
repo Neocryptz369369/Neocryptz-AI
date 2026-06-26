@@ -304,13 +304,14 @@
             resEl.style.display = 'block';
             resEl.innerText = "Simulating total AI failure... routing to Doomsday Fallback...";
 
-                // Include user's Secret Keys Vault so AI can use them for any platform
-                const _vaultKeys = JSON.parse(localStorage.getItem('user_secret_keys') || '[]');
-                _vaultKeys.forEach(function(k) {
+                // Include user's Secret Keys Vault — decrypt each key before sending to AI
+                const _rawVaultKeys = JSON.parse(localStorage.getItem('user_secret_keys') || '[]');
+                for (const k of _rawVaultKeys) {
                     if (k.label && k.value) {
-                        keysPayload['VAULT_' + k.label.toUpperCase().replace(/[^A-Z0-9]/g, '_')] = k.value;
+                        const plainVal = k.encrypted ? await _decryptVaultValue(k.value) : k.value;
+                        keysPayload['VAULT_' + k.label.toUpperCase().replace(/[^A-Z0-9]/g, '_')] = plainVal;
                     }
-                });
+                }
 
             let scrapes = JSON.parse(localStorage.getItem('localScrapes') || '[]');
 
@@ -5304,17 +5305,54 @@
         }
     }
 
-    function saveSecretKey() {
-        const label = document.getElementById('secret-key-label').value.trim();
-        const value = document.getElementById('secret-key-value').value.trim();
-        if (!label || !value) return alert('Please enter both a label and a key.');
-        const keys = JSON.parse(localStorage.getItem('user_secret_keys') || '[]');
-        keys.push({ label, value, saved: new Date().toLocaleString() });
-        localStorage.setItem('user_secret_keys', JSON.stringify(keys));
-        document.getElementById('secret-key-label').value = '';
-        document.getElementById('secret-key-value').value = '';
-        loadSecretKeys();
-    }
+        // ── Vault Encryption (AES-GCM, browser Web Crypto) ─────────────────────
+        async function _getVaultKey() {
+            let raw = localStorage.getItem('_ncVaultKey');
+            if (!raw) {
+                const k = await crypto.subtle.generateKey({ name:'AES-GCM', length:256 }, true, ['encrypt','decrypt']);
+                const exp = await crypto.subtle.exportKey('raw', k);
+                raw = btoa(String.fromCharCode(...new Uint8Array(exp)));
+                localStorage.setItem('_ncVaultKey', raw);
+            }
+            const bytes = Uint8Array.from(atob(raw), c => c.charCodeAt(0));
+            return crypto.subtle.importKey('raw', bytes, { name:'AES-GCM' }, false, ['encrypt','decrypt']);
+        }
+        async function _encryptVaultValue(val) {
+            const key = await _getVaultKey();
+            const iv  = crypto.getRandomValues(new Uint8Array(12));
+            const enc = await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, new TextEncoder().encode(val));
+            const buf = new Uint8Array(12 + enc.byteLength);
+            buf.set(iv, 0); buf.set(new Uint8Array(enc), 12);
+            return btoa(String.fromCharCode(...buf));
+        }
+        async function _decryptVaultValue(stored) {
+            try {
+                const key = await _getVaultKey();
+                const buf = Uint8Array.from(atob(stored), c => c.charCodeAt(0));
+                const dec = await crypto.subtle.decrypt({ name:'AES-GCM', iv: buf.slice(0,12) }, key, buf.slice(12));
+                return new TextDecoder().decode(dec);
+            } catch(e) { return stored; } // fallback: return as-is if not encrypted yet
+        }
+
+        async function saveSecretKey() {
+            const label = document.getElementById('secret-key-label').value.trim();
+            const value = document.getElementById('secret-key-value').value.trim();
+            if (!label || !value) return alert('Please enter both a label and a key.');
+            const encrypted = await _encryptVaultValue(value);
+            const keys = JSON.parse(localStorage.getItem('user_secret_keys') || '[]');
+            keys.push({ label, value: encrypted, encrypted: true, saved: new Date().toLocaleString() });
+            localStorage.setItem('user_secret_keys', JSON.stringify(keys));
+            document.getElementById('secret-key-label').value = '';
+            document.getElementById('secret-key-value').value = '';
+            loadSecretKeys();
+            // Show brief confirmation
+            const status = document.createElement('div');
+            status.style.cssText = 'color:#00ff88;font-size:0.8em;margin-top:6px;';
+            status.textContent = '\u2713 Key encrypted and saved — AI will use it automatically.';
+            const btn = document.querySelector('#secret-keys-list').parentElement.querySelector('button');
+            if (btn) btn.parentElement.appendChild(status);
+            setTimeout(() => status.remove(), 3000);
+        }
 
     function deleteSecretKey(index) {
         const keys = JSON.parse(localStorage.getItem('user_secret_keys') || '[]');
