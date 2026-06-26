@@ -1111,56 +1111,18 @@
     </div>
 
     <!-- Watch Ad Modal -->
-    <div id="watch-ad-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.88); z-index:99999; align-items:center; justify-content:center;">
-        <div style="background:#0a0a0a; border:1px solid #00ff88; border-radius:14px; padding:36px 40px; text-align:center; max-width:420px; box-shadow:0 0 40px rgba(0,255,136,0.2);">
-            <h2 style="color:#00ff88; margin:0 0 10px; font-family:monospace; letter-spacing:2px; font-size:1.1em;">EARNING CREDITS</h2>
-            <div style="margin:0 0 16px;"><span style="font-size:2.2em;">📺</span></div>
-            <p style="color:#aaa; margin:0 0 18px; font-size:0.85em; line-height:1.5;">Hold on for a moment — your<br><strong style="color:#00ff88;">+5 free questions</strong> are being unlocked.</p>
-            <!-- countdown label -->
-            <p style="color:#aaa; margin:0 0 6px; font-size:0.85em;">Credits unlock in</p>
-            <div id="ad-countdown" style="font-size:4em; color:#00ffff; font-weight:bold; font-family:monospace; line-height:1;">20</div>
-            <p style="color:#555; font-size:0.72em; margin-top:10px;">seconds · keep this tab open</p>
+    <div id="watch-ad-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.92); z-index:99999; align-items:center; justify-content:center;">
+        <div style="background:#0a0a0a; border:1px solid #00ff88; border-radius:14px; padding:24px 28px; text-align:center; max-width:380px; width:90%; box-shadow:0 0 40px rgba(0,255,136,0.2);">
+            <h2 style="color:#00ff88; margin:0 0 8px; font-family:monospace; letter-spacing:2px; font-size:1em;">EARNING CREDITS</h2>
+            <p style="color:#aaa; margin:0 0 12px; font-size:0.82em; line-height:1.4;">Your <strong style="color:#00ff88;">+5 free questions</strong> unlock when the timer hits zero.</p>
+            <!-- Ad slot — shows TikTok or AdSense alternately -->
+            <div id="watch-ad-slot" style="width:100%;height:160px;background:#111;border-radius:8px;overflow:hidden;margin-bottom:12px;position:relative;"></div>
+            <!-- countdown -->
+            <p style="color:#aaa; margin:0 0 4px; font-size:0.8em;">Credits unlock in</p>
+            <div id="ad-countdown" style="font-size:3.6em; color:#00ffff; font-weight:bold; font-family:monospace; line-height:1;">20</div>
+            <p style="color:#555; font-size:0.7em; margin-top:6px;">seconds · keep this tab open</p>
         </div>
     </div>
-
-    <!-- Modals -->
-    <div id="history-modal" class="modal neon-border">
-        <div class="modal-content" style="max-width: 600px;">
-            <h2 style="color: var(--primary);">PERSONAL CHAT HISTORY</h2>
-            <div id="personal-chat-logs" style="max-height: 400px; overflow-y: auto; text-align: left; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid #333; border-radius: 5px;">
-                <p style="color: #aaa; text-align: center;">No chat history recorded yet.</p>
-            </div>
-            <button class="btn" onclick="closeModal('history-modal')" style="margin-top: 20px;">CLOSE</button>
-        </div>
-    </div>
-
-    <div id="user-menu-modal" class="modal neon-border">
-        <div class="modal-content" style="max-width: 400px; text-align: center;">
-            <h2 style="color: var(--primary);">USER MENU</h2>
-            <div style="margin-bottom: 20px;">
-                <label style="color: var(--secondary); font-size: 0.8em; display:block; margin-bottom: 5px;">AI PERSONA MODULE</label>
-                <select id="persona-select" class="neon-border" onchange="setPersona(this.value)" style="width: 100%; padding: 10px; background: #111; color: var(--text); border: 1px solid var(--primary); outline: none;">
-                    <option value="default">Default: NEOCRYPTZ Assistant</option>
-                    <option value="seo">SEO Keyword Shortener</option>
-                    <option value="code">Code Bug Finder</option>
-                    <option value="copywriter">Catchy Copywriter</option>
-                    <option value="sarcastic">Sarcastic & Witty</option>
-                    <option value="json">Raw JSON/Regex Builder</option>
-                </select>
-                <div style="margin-top: 20px; border-top: 1px solid #333; padding-top: 10px;">
-                    <h3 style="color: var(--secondary);">CSV BATCH PROCESSOR</h3>
-                    <p style="font-size: 0.8em; color: #aaa;">Upload a CSV of items (1 column). The AI will process them iteratively.</p>
-                    <input type="text" id="csv-batch-prompt" placeholder="Prompt (e.g. Write a slogan for:)" style="width: 100%; padding: 5px; background: #222; border: 1px solid var(--primary); color: #fff; margin-bottom: 5px;">
-                    <input type="file" id="csv-upload" accept=".csv" style="color: #fff; width: 100%; margin-bottom: 5px;">
-                    <button class="btn" onclick="processCSV()" style="width: 100%;">RUN BATCH (Uses Daily Tokens)</button>
-                </div>
-                <div style="margin-top: 20px; border-top: 1px solid #333; padding-top: 10px;">
-                    <h3 style="color: var(--secondary);">ZAPIER / MAKE WEBHOOK</h3>
-                    <p style="font-size: 0.8em; color: #aaa;">Enter a webhook URL to automatically push all AI responses to your external automations.</p>
-                    <input type="url" id="user-webhook-url" placeholder="https://hooks.zapier.com/..." style="width: 100%; padding: 5px; background: #222; border: 1px solid var(--primary); color: #fff;">
-                    <button class="btn" onclick="saveWebhook()" style="width: 100%; margin-top: 5px;">SAVE WEBHOOK</button>
-                </div>
-            </div>
             
             <div style="margin-bottom: 20px;">
                 
@@ -2379,10 +2341,41 @@
                 micBtn.disabled = false;
                 btn.innerText = 'EXECUTE';
             } else {
+            // Show ad overlay during 60s cooldown
+            (function showCooldownAd() {
+                var cam = document.getElementById('cooldown-ad-modal');
+                var cat = document.getElementById('cooldown-ad-timer');
+                var cas = document.getElementById('cooldown-ad-slot');
+                if (!cam) return;
+                // Populate cooldown ad slot — alternate TikTok/AdSense
+                var cCycle = parseInt(localStorage.getItem('cooldownAdCycle')||'0');
+                localStorage.setItem('cooldownAdCycle', cCycle+1);
+                cas.innerHTML = '';
+                if (cCycle % 2 === 0 && typeof _tikAds !== 'undefined' && _tikAds && _tikAds.length > 0) {
+                    var cad = _tikAds[typeof _tikIdx!=='undefined'?_tikIdx:0] || _tikAds[0];
+                    var chref = cad.id ? '/api/recommendations/go?id='+encodeURIComponent(cad.id) : '';
+                    var cimg = cad.image_url || '';
+                    if (cimg) {
+                        cas.innerHTML = (chref ? '<a href="'+chref+'" target="_blank" style="position:absolute;inset:0;display:block;overflow:hidden;text-decoration:none;">' : '<div style="position:absolute;inset:0;">')
+                            + '<img src="'+cimg+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" alt="TikTok Product">'
+                            + '<div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.85));padding:10px 8px 12px;text-align:center;">'
+                            + '<span style="background:#ff0050;color:#fff;font-size:9px;font-weight:bold;padding:3px 12px;border-radius:5px;">Shop Now ↗</span></div>'
+                            + (chref ? '</a>' : '</div>');
+                    }
+                } else {
+                    cas.innerHTML = '<ins class="adsbygoogle" style="display:block;width:100%;height:160px;" data-ad-client="ca-pub-5017188678144132" data-ad-format="auto" data-full-width-responsive="false"></ins>';
+                    try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch(e) {}
+                }
+                var cdLeft = countdown;
+                if (cat) cat.textContent = cdLeft;
+                cam.style.display = 'flex';
+            })();
                 const timer = setInterval(() => {
                     btn.innerText = `WAIT ${--countdown}s`;
+                    var _cat = document.getElementById('cooldown-ad-timer'); if(_cat) _cat.textContent = countdown;
                     if (countdown <= 0) {
                         clearInterval(timer);
+                        var cam2 = document.getElementById('cooldown-ad-modal'); if(cam2) cam2.style.display='none';
                         btn.disabled = false;
                         input.disabled = false;
                         micBtn.disabled = false;
@@ -5901,24 +5894,46 @@ let adCooldownTimer = null;
 
 async function watchAdForCredits() {
     const authToken = localStorage.getItem('token');
-    if (!currentUser) {
-        showAdMessage('⚠️ Please log in to earn credits.', '#ffaa00');
-        return;
-    }
-    if (!authToken) {
-        showAdMessage('⚠️ To earn credits via ads, please log out and log back in with your email and password.', '#ffaa00');
-        return;
-    }
+    if (!currentUser) { showAdMessage('⚠️ Please log in to earn credits.', '#ffaa00'); return; }
+    if (!authToken) { showAdMessage('⚠️ To earn credits via ads, please log out and log back in with your email and password.', '#ffaa00'); return; }
 
     const btn = document.getElementById('watch-ad-btn');
     if (btn.disabled) return;
 
-    // Open Adsterra ad in new tab — only if URL is confirmed working
-    if (ADSTERRA_DIRECT_LINK && ADSTERRA_DIRECT_LINK !== 'YOUR_ADSTERRA_DIRECT_LINK_URL' && ADSTERRA_DIRECT_LINK !== 'DISABLED') {
-        try { window.open(ADSTERRA_DIRECT_LINK, '_blank', 'noopener'); } catch(e) { /* ignore popup blockers */ }
+    // Alternate: even cycle = TikTok ad, odd cycle = AdSense
+    const cycle = parseInt(localStorage.getItem('adWatchCycle') || '0');
+    localStorage.setItem('adWatchCycle', cycle + 1);
+    const showTikTok = (cycle % 2 === 0);
+
+    // Populate the ad slot inside the modal
+    const slot = document.getElementById('watch-ad-slot');
+    slot.innerHTML = '';
+    if (showTikTok && _tikAds && _tikAds.length > 0) {
+        const ad = _tikAds[_tikIdx] || _tikAds[0];
+        const href = ad.id ? '/api/recommendations/go?id=' + encodeURIComponent(ad.id) : '';
+        const imgUrl = ad.image_url || '';
+        if (imgUrl) {
+            slot.innerHTML = (href ? '<a href="' + href + '" target="_blank" style="position:absolute;inset:0;display:block;overflow:hidden;text-decoration:none;">' : '<div style="position:absolute;inset:0;">')
+                + '<img src="' + imgUrl + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" alt="TikTok Product">'
+                + '<div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.85));padding:10px 8px 12px;text-align:center;">'
+                + '<span style="background:#ff0050;color:#fff;font-size:9px;font-weight:bold;padding:3px 12px;border-radius:5px;">Shop Now ↗</span></div>'
+                + (href ? '</a>' : '</div>');
+        } else {
+            slot.innerHTML = '<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#0a0a0a,#1a0010);">'
+                + '<div style="background:#ff0050;color:#fff;font-size:10px;font-weight:bold;padding:4px 14px;border-radius:10px;margin-bottom:8px;">TikTok Deal</div>'
+                + '<div style="color:#fff;font-size:11px;font-weight:bold;text-align:center;line-height:1.4;">' + (ad.product_name||'') + '</div></div>';
+        }
+    } else {
+        // AdSense fallback
+        slot.innerHTML = '<ins class="adsbygoogle" style="display:block;width:100%;height:160px;" data-ad-client="ca-pub-5017188678144132" data-ad-format="auto" data-full-width-responsive="false"></ins>';
+        try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch(e) {}
     }
 
-    // Show countdown overlay
+    // Open Adsterra ad in new tab
+    if (typeof ADSTERRA_DIRECT_LINK !== 'undefined' && ADSTERRA_DIRECT_LINK && ADSTERRA_DIRECT_LINK !== 'YOUR_ADSTERRA_DIRECT_LINK_URL' && ADSTERRA_DIRECT_LINK !== 'DISABLED') {
+        try { window.open(ADSTERRA_DIRECT_LINK, '_blank', 'noopener'); } catch(e) {}
+    }
+
     const modal = document.getElementById('watch-ad-modal');
     const countdownEl = document.getElementById('ad-countdown');
     modal.style.display = 'flex';
@@ -5930,11 +5945,9 @@ async function watchAdForCredits() {
     const interval = setInterval(async () => {
         timeLeft--;
         countdownEl.textContent = timeLeft;
-
         if (timeLeft <= 0) {
             clearInterval(interval);
             modal.style.display = 'none';
-            // Local-token users get credits granted client-side
             if (authToken && authToken.startsWith('local-token-')) {
                 if (currentUser) {
                     currentUser.credits = (currentUser.credits || 0) + 5;
@@ -6048,3 +6061,16 @@ function startAdCooldown(seconds, btn) {
 </body>
 </html>
 <script async data-explicit-opt-in="true" data-deployment-id="dpl_AVdUybesgSfRoXJCpSyoY8CvpBMe" src="https://vercel.live/_next-live/feedback/feedback.js"></script>
+
+    <!-- Cooldown Ad Modal — shown during 60-second question cooldown -->
+    <div id="cooldown-ad-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.82); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:#0a0a0a; border:1px solid #ff00ff; border-radius:14px; padding:22px 26px; text-align:center; max-width:360px; width:90%; box-shadow:0 0 30px rgba(255,0,255,0.2); position:relative;">
+            <button onclick="document.getElementById('cooldown-ad-modal').style.display='none'" style="position:absolute;top:8px;right:12px;background:none;border:none;color:#666;font-size:1.2em;cursor:pointer;">✕</button>
+            <p style="color:#aaa; margin:0 0 10px; font-size:0.8em;">Next question available in</p>
+            <div id="cooldown-ad-timer" style="font-size:3em; color:#ff00ff; font-weight:bold; font-family:monospace; line-height:1; margin-bottom:14px;">60</div>
+            <!-- ad shown while waiting -->
+            <div id="cooldown-ad-slot" style="width:100%;height:160px;background:#111;border-radius:8px;overflow:hidden;margin-bottom:10px;position:relative;"></div>
+            <p style="color:#555; font-size:0.68em;">Ad · closes automatically when timer ends</p>
+        </div>
+    </div>
+
