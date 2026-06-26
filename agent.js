@@ -28,6 +28,13 @@ function lazy(filePath) {
   };
 }
 
+
+app.get('/admin-login', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.sendFile(path.join(__dirname, 'admin-login.html'));
+});
 app.get('/api/ping', (_req, res) => res.json({ ok: true, v: 3 }));
 app.all('/api/chat',                   lazy(path.join(__dirname, 'api/chat')));
 app.all('/api/reward',                 lazy(path.join(__dirname, 'api/reward')));
