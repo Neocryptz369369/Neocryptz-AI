@@ -253,9 +253,31 @@
     .catch(function() { resetBtn2(); alert('Connection error. Please try again.'); });
   }
 
-  // Pre-fill credentials on page load if "remember me" was checked
   document.addEventListener('DOMContentLoaded', function() {
     try {
+      // If currentUser is already set in localStorage, hide the auth screen
+      // immediately — do NOT wait for init() which may crash or be slow
+      var cu = localStorage.getItem('currentUser');
+      if (cu) {
+        var parsed = JSON.parse(cu);
+        var authEl = document.getElementById('auth-screen');
+        if (authEl) authEl.style.display = 'none';
+        // Show user info immediately so the app feels instant
+        var uiEl = document.getElementById('user-info');
+        if (uiEl && parsed.username) {
+          var credits = (parsed.credits >= 999999 || parsed.credits === null) ? 'Unlimited' : parsed.credits;
+          uiEl.innerHTML = 'USER: ' + parsed.username + '<br>PLAN: ' + (parsed.plan||'Free') + '<br>CREDITS: ' + credits;
+        }
+        // Show admin icon if admin
+        if (parsed.is_admin) {
+          var adminWrap = document.getElementById('admin-icon-wrap');
+          if (adminWrap) adminWrap.style.display = 'inline-block';
+        }
+      }
+    } catch(e) {}
+
+    try {
+      // Pre-fill credentials if remember-me was checked
       var remUser = localStorage.getItem('rememberedUsername');
       var remPass = localStorage.getItem('rememberedPass');
       if (remUser) {
