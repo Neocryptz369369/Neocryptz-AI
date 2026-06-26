@@ -1,8 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
+const { createClient } = require('@supabase/supabase-js');
 
 // Bootstrap endpoint — creates the chat_history table via Supabase pg REST.
 // Called once automatically; safe to call repeatedly (IF NOT EXISTS).
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
     const supabaseUrl = process.env.SUPABASE_URL || 'https://bxzvxgjnlvbexeuocbey.supabase.co';
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!key) return res.status(500).json({ error: 'Missing service role key' });
