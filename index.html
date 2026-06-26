@@ -5353,6 +5353,24 @@ async function watchAdForCredits() {
         if (timeLeft <= 0) {
             clearInterval(interval);
             modal.style.display = 'none';
+            // Local-token users get credits granted client-side
+            if (authToken && authToken.startsWith('local-token-')) {
+                if (currentUser) {
+                    currentUser.credits = (currentUser.credits || 0) + 5;
+                    const cDisp = currentUser.credits >= 999999 ? 'Unlimited' : currentUser.credits;
+                    document.getElementById('user-info').innerHTML =
+                        `USER: ${currentUser.username}<br>PLAN: ${currentUser.plan}<br>CREDITS: ${cDisp}`;
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                }
+                const msg = document.createElement('div');
+                msg.className = 'message assistant neon-border';
+                msg.style.cssText = 'border-color:#00ff88;color:#00ff88;';
+                msg.textContent = '✅ Ad watched! +5 Questions added. Next reward in 60 seconds.';
+                const cw = document.getElementById('chat-window');
+                cw.appendChild(msg); cw.scrollTop = cw.scrollHeight;
+                startAdCooldown(60, btn);
+                return;
+            }
             await claimAdReward(authToken, btn);
         }
     }, 1000);
