@@ -3990,7 +3990,7 @@
                             '<button class="btn" style="padding:2px 6px;font-size:0.75em;background:#ff0050;color:#fff;border-color:#ff0050;margin-bottom:3px;" ' +
                                 'onclick="editTikTokLink(window._tiktokItemsList[' + _tikIdx + '])">EDIT</button><br>' +
                             '<button class="btn" style="padding:2px 6px;font-size:0.75em;margin-bottom:3px;" ' +
-                                'onclick="toggleTikTokLink(' + item.id + ',' + (!item.is_active) + ')">' + (item.is_active ? 'DISABLE' : 'ACTIVATE') + '</button><br>' +
+                                'onclick="toggleTikTokLink(\'' + item.id + '\',' + (!item.is_active) + ')">'  + (item.is_active ? 'DISABLE' : 'ACTIVATE') + '</button><br>' +
                             '<button class="btn" style="padding:2px 6px;font-size:0.75em;border-color:#f00;color:#f00;" ' +
                                 'onclick="deleteTikTokLink(' + item.id + ')">DELETE</button>' +
                         '</td>' +
