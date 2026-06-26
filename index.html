@@ -3959,7 +3959,10 @@
             container.innerHTML = '<p style="color: #aaa; text-align: center;">Loading links...</p>';
             
             try {
-                const { data, error } = await supabaseClient.from('tiktok_recommendations').select('*').order('id');
+                const resp = await fetch('/api/admin/tiktok', { method: 'GET' });
+                if (!resp.ok) throw new Error('list failed: ' + resp.status);
+                const data = await resp.json();
+                const error = null;
                 if (error) throw error;
                 
                 if (!data || data.length === 0) {
