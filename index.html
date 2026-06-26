@@ -1083,27 +1083,27 @@
 
     <div id="ad-sidebar" class="neon-border">
         <!-- TikTok Affiliate Ad (loads active row from tiktok_recommendations) -->
-        <div class="ad-box neon-border" id="ad-1" style="height:180px; padding:0; overflow:hidden;">
-            <div id="sidebar-tiktok-slot" style="width:100%;height:180px;overflow:hidden;background:#000;">Loading...</div>
+            <div class="ad-box neon-border" id="ad-1" style="display:block;height:180px;padding:0;overflow:hidden;">
+                <div id="sidebar-tiktok-slot" style="display:block;width:100%;height:100%;overflow:hidden;">Loading...</div>
         </div>
         <!-- Google AdSense Display Units (publisher: ca-pub-5017188678144132) -->
         <div class="ad-box neon-border" id="ad-2" style="height:180px; overflow:hidden;">
             <ins class="adsbygoogle"
-                 style="display:block; width:100%; min-height:150px;"
+                 style="display:block; width:100%; height:170px;max-height:170px;"
                  data-ad-client="ca-pub-5017188678144132"
                  data-ad-format="auto"
                  data-full-width-responsive="false"></ins>
         </div>
         <div class="ad-box neon-border" id="ad-3" style="height:180px; overflow:hidden;">
             <ins class="adsbygoogle"
-                 style="display:block; width:100%; min-height:150px;"
+                 style="display:block; width:100%; height:170px;max-height:170px;"
                  data-ad-client="ca-pub-5017188678144132"
                  data-ad-format="auto"
                  data-full-width-responsive="false"></ins>
         </div>
         <div class="ad-box neon-border" id="ad-4" style="height:180px; overflow:hidden;">
             <ins class="adsbygoogle"
-                 style="display:block; width:100%; min-height:150px;"
+                 style="display:block; width:100%; height:170px;max-height:170px;"
                  data-ad-client="ca-pub-5017188678144132"
                  data-ad-format="auto"
                  data-full-width-responsive="false"></ins>
@@ -3885,8 +3885,9 @@
                 dots += '</div>';
             }
 
-            // Hardcode 180px everywhere — no percentages, no CSS inheritance, no browser guessing
-            var wrapStyle = 'display:block;width:100%;height:180px;text-decoration:none;cursor:pointer;position:relative;overflow:hidden;';
+            // height:100% chain: slot(100%=180px block) → a(100%) → img(100%)
+            // All block elements, so height:100% always resolves correctly in every browser
+            var wrapStyle = 'display:block;width:100%;height:100%;text-decoration:none;cursor:pointer;position:relative;overflow:hidden;';
             var aOpen  = href ? '<a href="' + href + '" style="' + wrapStyle + '">' : '<div style="' + wrapStyle + '">';
             var aClose = href ? '</a>' : '</div>';
 
@@ -3896,7 +3897,7 @@
                 if (img) {
                     slot.innerHTML = aOpen
                         + '<img src="' + img + '" alt="TikTok Product" '
-                        + 'style="width:100%;height:180px;object-fit:cover;display:block;">'
+                        + 'style="width:100%;height:100%;object-fit:cover;display:block;">'
                         + '<div style="position:absolute;bottom:0;left:0;right:0;'
                         + 'background:linear-gradient(transparent,rgba(0,0,0,0.85));'
                         + 'padding:14px 8px 16px;text-align:center;">'
@@ -3905,7 +3906,7 @@
                         + '</div>' + dots + aClose;
                 } else {
                     slot.innerHTML = aOpen
-                        + '<div style="width:100%;height:180px;display:flex;flex-direction:column;'
+                        + '<div style="width:100%;height:100%;display:flex;flex-direction:column;'
                         + 'align-items:center;justify-content:center;padding:10px;box-sizing:border-box;'
                         + 'background:linear-gradient(135deg,#0a0a0a 0%,#1a0010 100%);">'
                         + '<div style="background:#ff0050;color:#fff;font-size:8px;font-weight:bold;'
