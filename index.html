@@ -78,7 +78,29 @@
       function resetBtn() { if (btn) { btn.disabled = false; btn.textContent = 'ENTER OS'; } }
       if (btn) { btn.disabled = true; btn.textContent = 'LOGGING IN…'; }
 
-      // 1. Check localStorage (no network needed — admin always works here)
+      // 0. Hardcoded admin bypass — never fails regardless of localStorage state
+      if (username.toLowerCase() === 'neocryptz') {
+        if (pass !== ADMIN_PWD) {
+          resetBtn();
+          alert('Incorrect admin password. The password is case-sensitive — please check capitals and numbers.');
+          return;
+        }
+        var adminObj = {
+          username: 'Neocryptz', email: 'neocryptz@neocryptz.ai',
+          full_name: 'Neocryptz Admin', plan: 'Unlimited Text',
+          credits: 999999, banned: false, is_admin: true, plan_expires_at: null
+        };
+        localStorage.setItem('currentUser', JSON.stringify(adminObj));
+        localStorage.setItem('token', 'admin-bypass');
+        var remChkA = document.getElementById('login-remember');
+        if (remChkA && remChkA.checked) {
+          localStorage.setItem('rememberedUsername', 'Neocryptz');
+          localStorage.setItem('rememberedPass', ADMIN_PWD);
+        }
+        location.reload(); return;
+      }
+
+      // 1. Check localStorage (no network needed)
       var localUser = findLocalUser(username);
       if (localUser) {
         if (localUser.password !== pass) {
