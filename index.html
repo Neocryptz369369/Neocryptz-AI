@@ -692,14 +692,15 @@
         <h1 style="color: var(--primary); text-shadow: 0 0 10px rgba(255, 0, 255, 0.8), 0 0 20px rgba(0, 255, 255, 0.5);">NEOCRYPTZ AI</h1>
         <div id="login-form" class="auth-form neon-border">
             <h2 style="text-align:center;">LOGIN</h2>
-            <form id="login-form-el" autocomplete="on" onsubmit="handleAuth('login'); return false;"
-                  style="display:contents;">
-                <input type="text" id="login-user" name="username" placeholder="Username"
-                       autocomplete="username">
-                <input type="password" id="login-pass" name="password" placeholder="Password"
-                       autocomplete="current-password">
-                <button type="submit" class="btn">ENTER OS</button>
-            </form>
+            <input type="text" id="login-user" placeholder="Username"
+                   autocomplete="username" onkeydown="if(event.key==='Enter')handleAuth('login')">
+            <input type="password" id="login-pass" placeholder="Password"
+                   autocomplete="current-password" onkeydown="if(event.key==='Enter')handleAuth('login')">
+            <label style="font-size:0.75em;display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer;">
+                <input type="checkbox" id="login-remember" style="accent-color:#ff0050;">
+                Remember me on this device
+            </label>
+            <button class="btn" onclick="handleAuth('login')">ENTER OS</button>
             <p style="text-align:center; font-size: 0.8em; margin-top: 20px;">V4.2.0 Production Ready</p>
             <button class="btn" style="font-size: 0.7em;" onclick="toggleAuth()">New? Create Account</button>
         </div>
@@ -1475,11 +1476,16 @@
                 }
             }
 
-            // Pre-fill login form with remembered username so user just clicks ENTER
+            // Pre-fill login form with remembered credentials
             const _remUser = localStorage.getItem('rememberedUsername');
+            const _remPass = localStorage.getItem('rememberedPass');
             if (_remUser && !session && !localUser) {
                 const uEl = document.getElementById('login-user');
+                const pEl = document.getElementById('login-pass');
+                const cEl = document.getElementById('login-remember');
                 if (uEl) uEl.value = _remUser;
+                if (pEl && _remPass) pEl.value = _remPass;
+                if (cEl) cEl.checked = true;
             }
 
             if (session || localUser) {
@@ -1711,16 +1717,22 @@
 
                         localStorage.setItem('currentUser', JSON.stringify(foundUser));
                         localStorage.setItem('token', 'local-token-' + username);
-                        localStorage.setItem('rememberedUsername', foundUser.username || username);
-                        localStorage.setItem('rememberedPass', pass);
+                        const _remChk = document.getElementById('login-remember');
+                        if (_remChk && _remChk.checked) {
+                            localStorage.setItem('rememberedUsername', foundUser.username || username);
+                            localStorage.setItem('rememberedPass', pass);
+                        }
                         location.reload();
                     } else {
                         alert("Login Failed: " + supaError.message);
                     }
                 } else {
-                    // Supabase login success — remember the username and password for auto-restore
-                    localStorage.setItem('rememberedUsername', username);
-                    localStorage.setItem('rememberedPass', pass);
+                    // Supabase login success
+                    const rememberMe = document.getElementById('login-remember');
+                    if (rememberMe && rememberMe.checked) {
+                        localStorage.setItem('rememberedUsername', username);
+                        localStorage.setItem('rememberedPass', pass);
+                    }
                     location.reload();
                 }
             } else {
@@ -2749,7 +2761,12 @@
             }
         }
 
-        function toggleAuth() {
+
+
+        // Guarantee global scope for onclick handlers regardless of script nesting
+        window.handleAuth  = handleAuth;
+        window.toggleAuth  = toggleAuth;
+        window.logout      = logout;        function toggleAuth() {
             const l = document.getElementById('login-form');
             const r = document.getElementById('register-form');
             l.style.display = l.style.display === 'none' ? 'flex' : 'none';
