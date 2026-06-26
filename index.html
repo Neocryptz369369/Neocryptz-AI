@@ -2416,7 +2416,7 @@
                     var chref = cad.id ? '/api/recommendations/go?id='+encodeURIComponent(cad.id) : '';
                     var cimg = cad.image_url || '';
                     if (cimg) {
-                        cas.innerHTML = (chref ? '<a href="'+chref+'" target="_blank" style="position:absolute;inset:0;display:block;width:100%;height:100%;text-decoration:none;">' : '<div style="position:absolute;inset:0;">')
+                        cas.innerHTML = (chref ? '<a href="'+chref+'" target="_blank" rel="sponsored nofollow" style="position:absolute;inset:0;display:block;width:100%;height:100%;text-decoration:none;">' : '<div style="position:absolute;inset:0;">')
                             + '<img src="'+cimg+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" alt="TikTok Product">'
                             
                             + (chref ? '</a>' : '</div>');
@@ -3957,7 +3957,8 @@
             // img(position:absolute;inset:0;object-fit:cover) fills <a>
             var aStyle = 'position:absolute;top:0;left:0;right:0;bottom:0;text-decoration:none;cursor:pointer;overflow:hidden;';
             var imgStyle = 'position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;';
-            var aOpen  = href ? '<a href="' + href + '" style="' + aStyle + '">' : '<div style="' + aStyle + '">';
+            var aOpen  = href ? '<a href="' + href + '" rel="sponsored nofollow" target="_blank" style="' + aStyle + '">' : '<div style="' + aStyle + '">';
+var sponsoredBadge = '<span style="position:absolute;top:5px;left:5px;z-index:2;background:rgba(0,0,0,0.62);color:#fff;font-size:9px;padding:2px 7px;border-radius:3px;pointer-events:none;letter-spacing:0.5px;">Sponsored</span>';
             var aClose = href ? '</a>' : '</div>';
 
             slot.style.opacity = '0';
@@ -6077,7 +6078,7 @@ async function watchAdForCredits() {
         const href = ad.id ? '/api/recommendations/go?id=' + encodeURIComponent(ad.id) : '';
         const imgUrl = ad.image_url || '';
         if (imgUrl) {
-            slot.innerHTML = (href ? '<a href="' + href + '" target="_blank" style="position:absolute;inset:0;display:block;width:100%;height:100%;text-decoration:none;">' : '<div style="position:absolute;inset:0;">')
+            slot.innerHTML = (href ? '<a href="' + href + '" target="_blank" rel="sponsored nofollow" style="position:absolute;inset:0;display:block;width:100%;height:100%;text-decoration:none;">' : '<div style="position:absolute;inset:0;">')
                 + '<img src="' + imgUrl + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" alt="TikTok Product">'
                 
                 + (href ? '</a>' : '</div>');
