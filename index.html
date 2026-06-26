@@ -349,7 +349,7 @@
                                 <p style="font-size: 0.875rem; color: #aaa; padding: 0 16px; margin: 0 0 16px 0;">${data.display_headline}</p>
 
                                 <a
-                                    href="${data.destination_url}"
+                                    href="/api/recommendations/go?id=${data.id}"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     class="btn neon-border"
@@ -874,7 +874,8 @@
         #sidebar-tiktok-slot a, #sidebar-tiktok-slot img { position:absolute; inset:0; display:block; width:100%; height:100%; object-fit:cover; }
 
         /* Clickability — targeted, no broad wildcard */
-        .ad-box.neon-border a, .ad-box.neon-border iframe, .ad-box.neon-border ins.adsbygoogle { pointer-events:auto; }
+        .ad-box.neon-border a, .ad-box.neon-border div, .ad-box.neon-border iframe, .ad-box.neon-border ins.adsbygoogle { pointer-events:auto; }
+        #sidebar-tiktok-slot, #sidebar-tiktok-slot * { pointer-events:auto; }
 
         /* AdSense <ins> — clean sizing, no z-index gymnastics */
         ins.adsbygoogle { display:block !important; width:100% !important; height:170px !important; }
