@@ -1152,6 +1152,11 @@
                             <label style="display:block; font-size: 10px; color: #ff0050; font-weight: bold; text-transform: uppercase; margin-bottom: 5px;">Raw TikTok Tracking URL (Bakes in your Affiliate ID)</label>
                             <input type="url" id="tk-url" placeholder="https://tiktok.com/..." style="width: 100%; padding: 12px; background: #111; border: 1px solid #333; border-radius: 6px; color: #fff; box-sizing: border-box;">
                         </div>
+                        <div>
+                            <label style="display:block; font-size: 10px; color: #ff0050; font-weight: bold; text-transform: uppercase; margin-bottom: 5px;">Product Image URL 📷</label>
+                            <input type="url" id="tk-image" placeholder="https://... (right-click product photo on TikTok Shop → Copy image address)" style="width: 100%; padding: 12px; background: #111; border: 1px solid #333; border-radius: 6px; color: #fff; box-sizing: border-box;">
+                            <p style="font-size:9px; color:#666; margin:4px 0 0;">Paste the direct image URL. Leave blank for text-only card.</p>
+                        </div>
                     </div>
                     <button class="btn neon-border" style="width: 100%; margin-top: 20px; padding: 15px; background: #ff0050; color: #fff; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; text-transform: uppercase;" onclick="saveTikTokLink()">Save to Admin Panel</button>
                 </div>
@@ -3485,33 +3490,70 @@
 
         // Admin
         
-        // ── Sidebar TikTok affiliate card ──────────────────────────────────────
+        // ── Sidebar TikTok affiliate card (image-first, 5-min rotation) ──────────
+        let _tikAds = [], _tikIdx = 0;
+
+        function _renderTikCard(data) {
+            const slot = document.getElementById('sidebar-tiktok-slot');
+            if (!slot || !data) return;
+            const dest  = data.destination_url || '#';
+            const img   = data.image_url || '';
+            const badge = data.visual_badge_text || 'TikTok';
+            const name  = data.product_name || '';
+            const line  = data.display_headline || '';
+            if (img) {
+                slot.innerHTML =
+                    '<a href="' + dest + '" target="_blank" rel="noopener sponsored" ' +
+                    'style="display:flex;flex-direction:column;width:100%;height:100%;' +
+                    'text-decoration:none;overflow:hidden;background:#0a0a0a;">' +
+                    '<div style="position:relative;flex:1;overflow:hidden;">' +
+                    '<img src="' + img + '" alt="' + name + '" ' +
+                    'style="width:100%;height:100%;object-fit:cover;" ' +
+                    'onerror="this.parentElement.style.display='none'">' +
+                    '<div style="position:absolute;top:6px;left:6px;background:#ff0050;color:#fff;' +
+                    'font-size:8px;font-weight:bold;padding:2px 7px;border-radius:8px;">' + badge + '</div>' +
+                    '</div>' +
+                    '<div style="padding:6px 8px 8px;background:#111;flex-shrink:0;">' +
+                    '<div style="color:#fff;font-size:10px;font-weight:bold;line-height:1.2;' +
+                    'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + name + '</div>' +
+                    '<div style="margin-top:5px;background:#ff0050;color:#fff;font-size:8px;' +
+                    'padding:3px 0;border-radius:5px;font-weight:bold;text-align:center;">Shop Now ↗</div>' +
+                    '</div></a>';
+            } else {
+                slot.innerHTML =
+                    '<a href="' + dest + '" target="_blank" rel="noopener sponsored" ' +
+                    'style="display:flex;flex-direction:column;align-items:center;justify-content:center;' +
+                    'width:100%;height:100%;text-decoration:none;padding:10px;box-sizing:border-box;' +
+                    'background:linear-gradient(135deg,#0a0a0a 0%,#1a0010 100%);">' +
+                    '<div style="background:#ff0050;color:#fff;font-size:8px;font-weight:bold;' +
+                    'padding:2px 8px;border-radius:10px;margin-bottom:8px;">' + badge + '</div>' +
+                    '<div style="color:#fff;font-size:10px;font-weight:bold;text-align:center;' +
+                    'line-height:1.3;margin-bottom:5px;">' + name + '</div>' +
+                    '<div style="color:#aaa;font-size:8px;text-align:center;line-height:1.3;' +
+                    'margin-bottom:6px;">' + line + '</div>' +
+                    '<div style="background:#ff0050;color:#fff;font-size:8px;padding:3px 10px;' +
+                    'border-radius:6px;font-weight:bold;">Shop Now ↗</div>' +
+                    '</a>';
+            }
+        }
+
         async function loadSidebarTikTokAd() {
             const slot = document.getElementById('sidebar-tiktok-slot');
             if (!slot) return;
             try {
                 const resp = await fetch('/api/recommendations/active');
                 if (!resp.ok) throw new Error('status ' + resp.status);
-                const data = await resp.json();
-                if (!data || !data.product_name) throw new Error('no data');
-                const dest = data.destination_url || '#';
-                slot.innerHTML = `<a href="${dest}" target="_blank" rel="noopener sponsored"
-                       style="display:flex;flex-direction:column;align-items:center;justify-content:center;
-                              width:100%;height:100%;text-decoration:none;padding:10px;box-sizing:border-box;
-                              background:linear-gradient(135deg,#0a0a0a 0%,#1a0010 100%);">
-                    <div style="background:#ff0050;color:#fff;font-size:9px;font-weight:bold;
-                                padding:2px 8px;border-radius:10px;margin-bottom:8px;letter-spacing:1px;">
-                        ${data.visual_badge_text || 'TikTok'}
-                    </div>
-                    <div style="color:#fff;font-size:11px;font-weight:bold;text-align:center;line-height:1.3;margin-bottom:6px;">
-                        ${data.product_name}
-                    </div>
-                    <div style="color:#aaa;font-size:9px;text-align:center;line-height:1.3;">
-                        ${data.display_headline || ''}
-                    </div>
-                    <div style="margin-top:8px;background:#ff0050;color:#fff;font-size:9px;
-                                padding:3px 10px;border-radius:8px;font-weight:bold;">Shop Now ↗</div>
-                </a>`;
+                const raw = await resp.json();
+                _tikAds = Array.isArray(raw) ? raw : [raw];
+                if (!_tikAds.length) throw new Error('empty');
+                _tikIdx = 0;
+                _renderTikCard(_tikAds[0]);
+                if (_tikAds.length > 1) {
+                    setInterval(() => {
+                        _tikIdx = (_tikIdx + 1) % _tikAds.length;
+                        _renderTikCard(_tikAds[_tikIdx]);
+                    }, 5 * 60 * 1000);
+                }
             } catch(e) {
                 slot.innerHTML = '<span style="color:#555;font-size:0.7em;">Affiliate ad<br>unavailable</span>';
                 console.warn('sidebar tiktok ad:', e.message);
@@ -3563,34 +3605,27 @@
             const name = document.getElementById('tk-name').value.trim();
             const headline = document.getElementById('tk-headline').value.trim();
             const url = document.getElementById('tk-url').value.trim();
+            const image = (document.getElementById('tk-image') || {}).value?.trim() || '';
 
-            if (!id || !badge || !name || !headline || !url) return alert("Please fill out all fields.");
+            if (!id || !badge || !name || !headline || !url) return alert('Please fill out all fields.');
 
             try {
-                // If we set one active, we usually want to deactivate the others so only one shows at a time.
-                await supabaseClient.from('tiktok_recommendations').update({ is_active: false }).neq('id', id);
-                
-                const { error } = await supabaseClient.from('tiktok_recommendations').upsert({
-                    id: id,
-                    visual_badge_text: badge,
-                    product_name: name,
-                    display_headline: headline,
-                    destination_url: url,
-                    is_active: true
-                });
+                const payload = { id, visual_badge_text: badge, product_name: name,
+                                  display_headline: headline, destination_url: url,
+                                  image_url: image, is_active: true };
+                const { error } = await supabaseClient.from('tiktok_recommendations').upsert(payload);
                 if (error) throw error;
-                
-                alert("Successfully loaded into your database! It is now ready to rotation-serve.");
-                
-                document.getElementById('tk-id').value = '';
-                document.getElementById('tk-badge').value = '';
-                document.getElementById('tk-name').value = '';
-                document.getElementById('tk-headline').value = '';
-                document.getElementById('tk-url').value = '';
-                
+
+                alert('Saved! Your ad will appear in the sidebar rotation.');
+                ['tk-id','tk-badge','tk-name','tk-headline','tk-url','tk-image']
+                    .forEach(f => { const el = document.getElementById(f); if (el) el.value = ''; });
                 loadTikTokLinks();
             } catch(e) {
-                alert("Failed to save link: " + e.message);
+                if (e.message && e.message.includes('image_url')) {
+                    alert('One-time setup needed!\n\nRun this SQL in your Supabase dashboard → SQL Editor:\n\nALTER TABLE tiktok_recommendations ADD COLUMN IF NOT EXISTS image_url text;\n\nThen save again.');
+                } else {
+                    alert('Failed to save: ' + e.message);
+                }
             }
         }
 
