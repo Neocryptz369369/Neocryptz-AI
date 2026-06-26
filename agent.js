@@ -1,27 +1,49 @@
-const { BrowserUse } = require('browser-use-sdk');
+'use strict';
 const express = require('express');
-const { deployProject } = require('./actions');
-const app = express();
-app.use(express.json());
 const path = require('path');
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
-app.post('/run-task', async (req, res) => {
-  try {
-    // Enforcing fully visible windowed browser execution
-    const client = new BrowserUse({
-      baseUrl: 'http://localhost:11434',
-      model: 'qwen2.5:7b',
-      headless: false, // Forces browser window to be visible on your screen
-      slowMo: 50      // Delays movements by 50ms so you can track clicking paths
-    });
+const { pathToFileURL } = require('url');
 
-    const result = await client.run(`You are Neocryptz AI OS, an autonomous agent just like Jules. You are responsible for executing all technical tasks yourself, including connecting to platforms, deploying projects, and submitting code. When a user asks you to connect or deploy, you should automatically use the provided OAuth tokens to do so without asking the user for help. You do the work for them. Task: ${req.body.prompt}`);
-    res.json({ status: 'success', result: result.output });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+const app = express();
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// API routes — loaded first so they take priority over static files
+const API_ROUTES = [
+  ['/api/chat',                   'api/chat.js'],
+  ['/api/reward',                 'api/reward.js'],
+  ['/api/history',                'api/history.js'],
+  ['/api/migrate',                'api/migrate.js'],
+  ['/api/execute',                'api/execute.js'],
+  ['/api/deploy-status',          'api/deploy-status.js'],
+  ['/api/browser',                'api/browser.js'],
+  ['/api/browser-run',            'api/browser-run.js'],
+  ['/api/browser-session',        'api/browser-session.js'],
+  ['/api/image/generate',         'api/image/generate.js'],
+  ['/api/recommendations/active', 'api/recommendations/active.js'],
+  ['/api/recommendations/go',     'api/recommendations/go.js'],
+];
+
+(async () => {
+  for (const [route, file] of API_ROUTES) {
+    try {
+      const url = pathToFileURL(path.join(__dirname, file)).href;
+      const { default: handler } = await import(url);
+      if (typeof handler !== 'function') throw new Error('no default export');
+      app.all(route, async (req, res) => {
+        try { await handler(req, res); }
+        catch (e) { if (!res.headersSent) res.status(500).json({ error: e.message }); }
+      });
+      console.log('loaded', route);
+    } catch (e) {
+      console.error('skip', route, e.message);
+      app.all(route, (_req, res) => res.status(503).json({ error: 'unavailable', reason: e.message }));
+    }
   }
-});
 
-app.listen(8000, () => console.log('Neocryptz AI Core Engine running on port 8000!'));
+  // Static files + SPA fallback
+  app.use(express.static(__dirname));
+  app.get('*', (_req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+
+  const PORT = process.env.PORT || 8000;
+  app.listen(PORT, () => console.log('Neocryptz AI running on port', PORT));
+})();
