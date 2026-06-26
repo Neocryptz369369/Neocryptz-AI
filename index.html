@@ -2423,7 +2423,7 @@
                             + '</div>';
                         var chGoUrl = cad.id ? '/api/recommendations/go?id=' + encodeURIComponent(cad.id) : '';
                         cas.style.pointerEvents = 'auto';
-                        if (chGoUrl) { cas.style.cursor = 'pointer'; cas.onclick = function(e) { e.stopPropagation(); window.open(chGoUrl, '_blank'); }; }
+                        if (chGoUrl) { cas.style.cursor = 'pointer'; cas.onclick = function(e) { e.stopPropagation(); _tikOpen(chGoUrl); }; }
                     }
                 } else {
                     cas.innerHTML = '<ins class="adsbygoogle" style="display:block;width:100%;height:160px;" data-ad-client="ca-pub-5017188678144132" data-ad-format="auto" data-full-width-responsive="false"></ins>';
@@ -3927,6 +3927,8 @@
         // ── Sidebar TikTok affiliate card (image-first, 5-min rotation) ──────────
         let _tikAds = [], _tikIdx = 0;
 
+        function _tikOpen(url) {     var a = document.createElement('a');     a.href = url; a.target = '_blank'; a.rel = 'noreferrer';     document.body.appendChild(a); a.click(); document.body.removeChild(a); }
+
         function _renderTikCard(data) {
             var slot = document.getElementById('sidebar-tiktok-slot');
             if (!slot || !data) return;
@@ -3988,7 +3990,7 @@ var sponsoredBadge = '<span style="position:absolute;top:5px;left:5px;z-index:2;
                 slot.style.pointerEvents = 'auto';
                 if (goUrl) {
                     slot.style.cursor = 'pointer';
-                    slot.onclick = function(e) { e.stopPropagation(); window.open(goUrl, '_blank'); };
+                    slot.onclick = function(e) { e.stopPropagation(); _tikOpen(goUrl); };
                 }
                 slot.style.opacity = '1';
                 // Auto-cycle through multiple images
@@ -6094,7 +6096,7 @@ async function watchAdForCredits() {
                 + '</div>';
             var waGoUrl = ad.id ? '/api/recommendations/go?id=' + encodeURIComponent(ad.id) : '';
             slot.style.pointerEvents = 'auto';
-            if (waGoUrl) { slot.style.cursor = 'pointer'; slot.onclick = function(e) { e.stopPropagation(); window.open(waGoUrl, '_blank'); }; }
+            if (waGoUrl) { slot.style.cursor = 'pointer'; slot.onclick = function(e) { e.stopPropagation(); _tikOpen(waGoUrl); }; }
         } else {
             slot.innerHTML = '<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#0a0a0a,#1a0010);">'
                 + '<div style="background:#ff0050;color:#fff;font-size:10px;font-weight:bold;padding:4px 14px;border-radius:10px;margin-bottom:8px;">TikTok Deal</div>'
