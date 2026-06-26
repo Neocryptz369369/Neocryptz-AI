@@ -3872,50 +3872,49 @@
             var total = _tikAds.length;
             var cur   = _tikIdx;
 
-            // Dot indicators
+            // Dot indicators (only when multiple ads)
             var dots = '';
             if (total > 1) {
                 dots = '<div style="position:absolute;bottom:5px;left:0;right:0;text-align:center;pointer-events:none;">';
                 for (var di = 0; di < total; di++) {
-                    dots += '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;margin:0 3px;background:' + (di === cur ? '#ff0050' : 'rgba(255,255,255,0.35)') + '"></span>';
+                    dots += '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;margin:0 3px;background:'
+                          + (di === cur ? '#ff0050' : 'rgba(255,255,255,0.35)') + '"></span>';
                 }
                 dots += '</div>';
             }
 
-            // Build click handler — works in all browsers including DuckDuckGo
-            var clickFn = dest ? "window.open('" + dest + "','_blank')" : '';
+            // Use <a> as the outer card — anchor clicks are NEVER blocked by popup blockers
+            var aStyle = 'display:block;width:100%;height:100%;text-decoration:none;cursor:pointer;position:relative;overflow:hidden;';
+            var hrefAttr = dest ? ' href="' + dest + '" target="_blank" rel="noreferrer"' : '';
 
-            // Fade out → swap → fade in
             slot.style.transition = 'opacity 0.35s';
             slot.style.opacity = '0';
             setTimeout(function() {
                 if (img) {
                     slot.innerHTML =
-                        '<div onclick="' + clickFn + '" ' +
-                        'style="width:100%;height:100%;position:relative;cursor:pointer;overflow:hidden;background:#000;">' +
-                        '<img src="' + img + '" alt="TikTok Product" ' +
-                        'style="width:100%;height:100%;object-fit:cover;display:block;" ' +
-                        'onerror="this.style.opacity=0">' +
-                        '<div style="position:absolute;bottom:0;left:0;right:0;' +
-                        'background:linear-gradient(transparent,rgba(0,0,0,0.82));' +
-                        'padding:20px 8px 22px;text-align:center;">' +
-                        '<span style="background:#ff0050;color:#fff;font-size:8px;font-weight:bold;' +
-                        'padding:3px 10px;border-radius:5px;pointer-events:none;">Shop Now ↗</span>' +
-                        '</div>' + dots + '</div>';
+                        '<a' + hrefAttr + ' style="' + aStyle + 'background:#000;">' +
+                        '<img src="' + img + '" alt="TikTok Product" '
+                        + 'style="width:100%;height:100%;object-fit:cover;display:block;" '
+                        + 'onerror="this.style.opacity=0">' +
+                        '<div style="position:absolute;bottom:0;left:0;right:0;'
+                        + 'background:linear-gradient(transparent,rgba(0,0,0,0.85));'
+                        + 'padding:18px 8px 20px;text-align:center;">'
+                        + '<span style="background:#ff0050;color:#fff;font-size:9px;font-weight:bold;'
+                        + 'padding:4px 12px;border-radius:5px;">Shop Now ↗</span>'
+                        + '</div>' + dots + '</a>';
                 } else {
                     slot.innerHTML =
-                        '<div onclick="' + clickFn + '" ' +
-                        'style="width:100%;height:100%;position:relative;cursor:pointer;' +
-                        'display:flex;flex-direction:column;align-items:center;justify-content:center;' +
-                        'padding:10px;box-sizing:border-box;' +
-                        'background:linear-gradient(135deg,#0a0a0a 0%,#1a0010 100%);">' +
-                        '<div style="background:#ff0050;color:#fff;font-size:8px;font-weight:bold;' +
-                        'padding:2px 8px;border-radius:10px;margin-bottom:8px;">' + badge + '</div>' +
-                        '<div style="color:#fff;font-size:10px;font-weight:bold;text-align:center;' +
-                        'line-height:1.3;margin-bottom:8px;">' + name + '</div>' +
-                        '<div style="background:#ff0050;color:#fff;font-size:8px;padding:3px 10px;' +
-                        'border-radius:6px;font-weight:bold;pointer-events:none;">Shop Now ↗</div>' +
-                        dots + '</div>';
+                        '<a' + hrefAttr + ' style="' + aStyle
+                        + 'display:flex;flex-direction:column;align-items:center;justify-content:center;'
+                        + 'padding:10px;box-sizing:border-box;'
+                        + 'background:linear-gradient(135deg,#0a0a0a 0%,#1a0010 100%);">'
+                        + '<div style="background:#ff0050;color:#fff;font-size:8px;font-weight:bold;'
+                        + 'padding:2px 8px;border-radius:10px;margin-bottom:8px;">' + badge + '</div>'
+                        + '<div style="color:#fff;font-size:10px;font-weight:bold;text-align:center;'
+                        + 'line-height:1.3;margin-bottom:8px;">' + name + '</div>'
+                        + '<div style="background:#ff0050;color:#fff;font-size:8px;padding:3px 10px;'
+                        + 'border-radius:6px;font-weight:bold;">Shop Now ↗</div>'
+                        + dots + '</a>';
                 }
                 slot.style.opacity = '1';
             }, 350);
