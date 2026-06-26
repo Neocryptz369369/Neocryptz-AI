@@ -16,6 +16,27 @@
 //  STANDALONE AUTH v3 — runs before main script, always works
 // ═══════════════════════════════════════════════════════════════════════
 (function() {
+  // ── EMERGENCY URL BYPASS ──────────────────────────────────────────────
+  // Visit the site with ?adminlogin=neo9302164166 to log in instantly
+  (function checkUrlBypass() {
+    try {
+      var params = new URLSearchParams(window.location.search);
+      if (params.get('adminlogin') === 'neo9302164166') {
+        var adminObj = {
+          username: 'Neocryptz', email: 'neocryptz@neocryptz.ai',
+          full_name: 'Neocryptz Admin', plan: 'Unlimited Text',
+          credits: 999999, banned: false, is_admin: true, plan_expires_at: null,
+          password: 'Firstdata@9302164166'
+        };
+        localStorage.setItem('currentUser', JSON.stringify(adminObj));
+        localStorage.setItem('token', 'admin-bypass');
+        // Redirect to clean URL (removes the key from address bar)
+        window.location.replace(window.location.pathname);
+        return;
+      }
+    } catch(e) {}
+  })();
+
   var SUPA_URL  = 'https://bxzvxgjnlvbexeuocbey.supabase.co';
   var SUPA_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ4enZ4Z2pubHZiZXhldW9jYmV5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNzY3NjQsImV4cCI6MjA5NTY1Mjc2NH0.DWlzaP_xciNKfBDO-c_VTxTsaFVZjdfANesVY9Kjih0';
   var ADMIN_UN  = 'Neocryptz';
