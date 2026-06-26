@@ -4382,7 +4382,7 @@ var sponsoredBadge = '<span style="position:absolute;top:5px;left:5px;z-index:2;
                 // Save securely to Supabase
                 const { error } = await supabaseClient
                     .from('scrapes')
-                    .insert([{ url: url, text_content: rawText }]);
+                    .insert([{ url: url, content: rawText }]);
 
                 // Regardless of Supabase success, we must ALWAYS save to localStorage so the
                 // AI "Doomsday" fallback in sendMessage() can instantly access the scrapes without latency!
@@ -4420,7 +4420,7 @@ var sponsoredBadge = '<span style="position:absolute;top:5px;left:5px;z-index:2;
                 .order('created_at', { ascending: false });
 
             if (!error && data) {
-                scrapes = data.map(d => ({ url: d.url, text: d.text_content, timestamp: d.created_at }));
+                scrapes = data.map(d => ({ url: d.url, text: d.content, timestamp: d.created_at }));
             } else {
                 console.log("Supabase fetch failed, loading local fallback scrapes.");
                 scrapes = JSON.parse(localStorage.getItem('localScrapes') || '[]');
