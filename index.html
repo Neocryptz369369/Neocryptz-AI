@@ -3955,11 +3955,11 @@
             // slot(position:absolute;inset:0) already in HTML
             // <a>(position:absolute;inset:0) fills slot since slot is a positioned element
             // img(position:absolute;inset:0;object-fit:cover) fills <a>
-            var aStyle = 'position:absolute;top:0;left:0;right:0;bottom:0;text-decoration:none;cursor:pointer;overflow:hidden;';
+            var aStyle = 'position:absolute;top:0;left:0;right:0;bottom:0;cursor:pointer;overflow:hidden;';
             var imgStyle = 'position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;';
-            var aOpen  = href ? '<a href="' + href + '" rel="sponsored noreferrer" target="_blank" style="' + aStyle + '">' : '<div style="' + aStyle + '">';;
+            var aOpen  = '<div style="' + aStyle + '">';
+            var aClose = '</div>';
 var sponsoredBadge = '<span style="position:absolute;top:5px;left:5px;z-index:2;background:rgba(0,0,0,0.62);color:#fff;font-size:9px;padding:2px 7px;border-radius:3px;pointer-events:none;letter-spacing:0.5px;">Sponsored</span>';
-            var aClose = href ? '</a>' : '</div>';
 
             slot.style.opacity = '0';
             slot.style.transition = 'opacity 0.35s';
