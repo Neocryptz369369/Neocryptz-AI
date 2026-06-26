@@ -861,6 +861,28 @@
             animation: neonGlow 3s linear infinite alternate;
         }
 
+        /* ── Ad sidebar — DuckDuckGo recommended structure ───────────── */
+        /* Ensure decoration never sits above ad content */
+        .neon-border * { position: relative; }
+
+        #ad-sidebar { width:220px; padding:10px; padding-top:60px; display:flex; flex-direction:column; gap:14px; overflow-y:auto; flex-shrink:0; }
+
+        .ad-box { width:100%; box-sizing:border-box; flex-shrink:0; height:180px; overflow:visible; background:transparent; isolation:isolate; }
+        .ad-box:hover { border-color: var(--secondary); box-shadow: 0 0 5px rgba(0,255,255,0.3); }
+
+        /* Inner layer that receives clicks — sits at z-index:0 inside isolated context */
+        .ad-content { position:relative; width:100%; height:100%; z-index:0; }
+
+        /* TikTok slot */
+        #sidebar-tiktok-slot { position:absolute; inset:0; z-index:0; }
+        #sidebar-tiktok-slot a, #sidebar-tiktok-slot img { position:absolute; inset:0; display:block; width:100%; height:100%; object-fit:cover; }
+
+        /* Clickability — targeted, no broad wildcard */
+        .ad-box.neon-border a, .ad-box.neon-border iframe, .ad-box.neon-border ins.adsbygoogle { pointer-events:auto; }
+
+        /* AdSense <ins> — clean sizing, no z-index gymnastics */
+        ins.adsbygoogle { display:block !important; width:100% !important; height:170px !important; }
+
         .provider-btn { position: relative; }
         .provider-btn.authorized::after {
             content: "";
@@ -1097,31 +1119,29 @@
     </div>
 
     <div id="ad-sidebar" class="neon-border">
-        <!-- TikTok Affiliate Ad (loads active row from tiktok_recommendations) -->
-            <div class="ad-box neon-border" id="ad-1" style="position:relative;display:block;height:180px;padding:0;">
-                <div id="sidebar-tiktok-slot" style="position:absolute;top:0;left:0;right:0;bottom:0;z-index:1;"></div>
+        <!-- Box 1: TikTok affiliate image — JS fills this slot dynamically -->
+        <div class="ad-box neon-border" id="ad-1" style="height:180px; padding:0;">
+            <div class="ad-content" aria-label="Sponsored TikTok product">
+                <div id="sidebar-tiktok-slot"></div>
+            </div>
         </div>
-        <!-- Google AdSense Display Units (publisher: ca-pub-5017188678144132) -->
+        <!-- Box 2: Google AdSense -->
         <div class="ad-box neon-border" id="ad-2" style="height:180px;">
-            <ins class="adsbygoogle"
-                 style="display:block !important; width:100% !important; height:170px !important;"
-                 data-ad-client="ca-pub-5017188678144132"
-                 data-ad-format="auto"
-                 data-full-width-responsive="false"></ins>
+            <div class="ad-content">
+                <ins class="adsbygoogle"
+                     data-ad-client="ca-pub-5017188678144132"
+                     data-ad-format="auto"
+                     data-full-width-responsive="false"></ins>
+            </div>
         </div>
+        <!-- Box 3: Google AdSense -->
         <div class="ad-box neon-border" id="ad-3" style="height:180px;">
-            <ins class="adsbygoogle"
-                 style="display:block !important; width:100% !important; height:170px !important;"
-                 data-ad-client="ca-pub-5017188678144132"
-                 data-ad-format="auto"
-                 data-full-width-responsive="false"></ins>
-        </div>
-        <div class="ad-box neon-border" id="ad-4" style="height:180px; overflow:hidden;">
-            <ins class="adsbygoogle"
-                 style="display:block !important; width:100% !important; height:170px !important;"
-                 data-ad-client="ca-pub-5017188678144132"
-                 data-ad-format="auto"
-                 data-full-width-responsive="false"></ins>
+            <div class="ad-content">
+                <ins class="adsbygoogle"
+                     data-ad-client="ca-pub-5017188678144132"
+                     data-ad-format="auto"
+                     data-full-width-responsive="false"></ins>
+            </div>
         </div>
     </div>
 
@@ -2393,7 +2413,7 @@
                     var chref = cad.id ? '/api/recommendations/go?id='+encodeURIComponent(cad.id) : '';
                     var cimg = cad.image_url || '';
                     if (cimg) {
-                        cas.innerHTML = (chref ? '<a href="'+chref+'" target="_blank" style="position:absolute;inset:0;display:block;text-decoration:none;">' : '<div style="position:absolute;inset:0;">')
+                        cas.innerHTML = (chref ? '<a href="'+chref+'" target="_blank" style="position:absolute;inset:0;display:block;width:100%;height:100%;text-decoration:none;">' : '<div style="position:absolute;inset:0;">')
                             + '<img src="'+cimg+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" alt="TikTok Product">'
                             
                             + (chref ? '</a>' : '</div>');
@@ -6054,7 +6074,7 @@ async function watchAdForCredits() {
         const href = ad.id ? '/api/recommendations/go?id=' + encodeURIComponent(ad.id) : '';
         const imgUrl = ad.image_url || '';
         if (imgUrl) {
-            slot.innerHTML = (href ? '<a href="' + href + '" target="_blank" style="position:absolute;inset:0;display:block;text-decoration:none;">' : '<div style="position:absolute;inset:0;">')
+            slot.innerHTML = (href ? '<a href="' + href + '" target="_blank" style="position:absolute;inset:0;display:block;width:100%;height:100%;text-decoration:none;">' : '<div style="position:absolute;inset:0;">')
                 + '<img src="' + imgUrl + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" alt="TikTok Product">'
                 
                 + (href ? '</a>' : '</div>');
