@@ -1391,15 +1391,15 @@
                             <input type="url" id="tk-url" placeholder="https://www.tiktok.com/t/..." style="width: 100%; padding: 12px; background: #111; border: 1px solid #333; border-radius: 6px; color: #fff; box-sizing: border-box;">
                         </div>
                         <div>
-                            <label style="display:block; font-size: 10px; color: #ff0050; font-weight: bold; text-transform: uppercase; margin-bottom: 5px;">Product Image 📷</label>
-                            <input type="file" id="tk-image-file" accept="image/*" style="display:none;" onchange="uploadTikTokImageFile(this)">
+                            <label style="display:block; font-size: 10px; color: #ff0050; font-weight: bold; text-transform: uppercase; margin-bottom: 5px;">Product Images 📷 <span style="color:#aaa;font-weight:normal;text-transform:none;">(select multiple if product has several photos)</span></label>
+                            <input type="file" id="tk-image-file" accept="image/*" multiple style="display:none;" onchange="uploadTikTokImageFile(this)">
                             <button type="button" onclick="document.getElementById('tk-image-file').click()" style="width:100%;padding:12px;background:#1a0010;border:2px dashed #ff0050;border-radius:6px;color:#ff0050;font-weight:bold;cursor:pointer;font-size:13px;margin-bottom:8px;">
-                                📂 Choose Photo from Device
+                                📂 Choose Photos from Device
                             </button>
-                            <div id="tk-img-preview" style="display:none;margin-bottom:8px;text-align:center;">
-                                <img id="tk-img-preview-img" src="" style="max-height:100px;max-width:100%;border-radius:6px;border:1px solid #ff0050;">
-                                <div id="tk-img-upload-status" style="font-size:9px;color:#0f0;margin-top:4px;"></div>
+                            <div id="tk-img-preview" style="display:none;margin-bottom:8px;display:flex;flex-wrap:wrap;gap:6px;">
                             </div>
+                            <div id="tk-img-upload-status" style="font-size:9px;color:#0f0;margin-top:4px;"></div>
+                            <input type="hidden" id="tk-image-urls">
                             <input type="url" id="tk-image" placeholder="Or paste a direct image URL (optional)" style="width: 100%; padding: 10px; background: #111; border: 1px solid #333; border-radius: 6px; color: #aaa; font-size:11px; box-sizing: border-box;">
                         </div>
                     </div>
@@ -3860,7 +3860,11 @@
             var slot = document.getElementById('sidebar-tiktok-slot');
             if (!slot || !data) return;
             var id    = data.id || '';
-            var img   = data.image_url || '';
+            var imgRaw = data.image_url || '';
+            var imgs   = [];
+            if (imgRaw.trim().startsWith('[')) { try { imgs = JSON.parse(imgRaw); } catch(e) { imgs = [imgRaw]; } }
+            else if (imgRaw) { imgs = [imgRaw]; }
+            var img = imgs[0] || '';
             var badge = data.visual_badge_text || 'TikTok';
             var name  = data.product_name || '';
             var total = _tikAds.length;
@@ -3915,6 +3919,16 @@
                         + dots + '</div>' + aClose;
                 }
                 slot.style.opacity = '1';
+                // Auto-cycle through multiple images
+                if (imgs.length > 1) {
+                    var _imgI = 0;
+                    if (slot._imgCycleTimer) clearInterval(slot._imgCycleTimer);
+                    slot._imgCycleTimer = setInterval(function() {
+                        _imgI = (_imgI + 1) % imgs.length;
+                        var imgEl = slot.querySelector('img');
+                        if (imgEl) { imgEl.style.transition='opacity 0.4s'; imgEl.style.opacity='0'; setTimeout(function(){ imgEl.src=imgs[_imgI]; imgEl.style.opacity='1'; }, 400); }
+                    }, 3000);
+                }
             }, 350);
         }
         async function loadSidebarTikTokAd() {
@@ -4002,6 +4016,53 @@
         }
 
         async function uploadTikTokImageFile(input) {
+            const files = Array.from(input.files);
+            if (!files.length) return;
+            const status  = document.getElementById('tk-img-upload-status');
+            const preview = document.getElementById('tk-img-preview');
+            const urlsEl  = document.getElementById('tk-image-urls');
+
+            status.textContent = 'Uploading 0/' + files.length + '...';
+            status.style.color = '#ff0050';
+            preview.style.display = 'flex';
+            preview.innerHTML = '';
+            urlsEl.value = '';
+
+            const uploaded = [];
+            for (let fi = 0; fi < files.length; fi++) {
+                const file = files[fi];
+                // Local preview thumbnail
+                const thumbUrl = await new Promise(res => { const fr = new FileReader(); fr.onload = e => res(e.target.result); fr.readAsDataURL(file); });
+                const thumb = document.createElement('div');
+                thumb.style.cssText = 'position:relative;width:60px;height:60px;border-radius:4px;overflow:hidden;border:1px solid #333;';
+                thumb.innerHTML = '<img src="'+thumbUrl+'" style="width:100%;height:100%;object-fit:cover;">';
+                preview.appendChild(thumb);
+
+                try {
+                    const b64 = thumbUrl.split(',')[1];
+                    const resp = await fetch('/api/admin/upload-image', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ fileName: file.name, contentType: file.type, data: b64 })
+                    });
+                    const data = await resp.json();
+                    if (!resp.ok || !data.url) throw new Error(data.error || 'Upload failed');
+                    uploaded.push(data.url);
+                    thumb.innerHTML += '<div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,200,0,0.7);text-align:center;font-size:8px;color:#fff;">✓</div>';
+                    status.textContent = 'Uploading ' + uploaded.length + '/' + files.length + '...';
+                } catch(e) {
+                    thumb.innerHTML += '<div style="position:absolute;bottom:0;left:0;right:0;background:rgba(200,0,0,0.7);text-align:center;font-size:8px;color:#fff;">✗</div>';
+                }
+            }
+
+            urlsEl.value = JSON.stringify(uploaded);
+            if (uploaded.length > 0) {
+                document.getElementById('tk-image').value = uploaded[0];
+            }
+            status.textContent = '✓ ' + uploaded.length + ' of ' + files.length + ' uploaded — ready to save';
+            status.style.color = '#0f0';
+        }
+        async function uploadTikTokImageFile(input) {
             const file = input.files[0];
             if (!file) return;
             const status = document.getElementById('tk-img-upload-status');
@@ -4048,7 +4109,17 @@
         async function saveTikTokLink() {
             const idEl  = document.getElementById('tk-id');
             const url   = (document.getElementById('tk-url')   || {}).value?.trim() || '';
-            const image = (document.getElementById('tk-image') || {}).value?.trim() || '';
+            const urlsEl  = document.getElementById('tk-image-urls');
+            const rawUrls = urlsEl ? urlsEl.value.trim() : '';
+            let   image   = (document.getElementById('tk-image') || {}).value?.trim() || '';
+            // If multiple images were uploaded, store as JSON array
+            if (rawUrls) {
+                try {
+                    const arr = JSON.parse(rawUrls);
+                    if (Array.isArray(arr) && arr.length > 1) image = JSON.stringify(arr);
+                    else if (Array.isArray(arr) && arr.length === 1) image = arr[0];
+                } catch(e) {}
+            }
 
             if (!url) return alert('Please enter the TikTok product link.');
 
@@ -4073,7 +4144,9 @@
                 if (!r.ok) throw new Error(d.error || 'Save failed');
 
                 alert('Saved! Your ad will appear in the sidebar.');
-                ['tk-id','tk-url','tk-image'].forEach(f => { const el = document.getElementById(f); if (el) el.value = ''; });
+                ['tk-id','tk-url','tk-image','tk-image-urls'].forEach(f => { const el = document.getElementById(f); if (el) el.value = ''; });
+                const prev = document.getElementById('tk-img-preview'); if (prev) prev.innerHTML = '';
+                const stat = document.getElementById('tk-img-upload-status'); if (stat) stat.textContent = '';
                 loadTikTokLinks();
             } catch(e) {
                 alert('Failed to save: ' + e.message);
