@@ -4001,22 +4001,33 @@
             if (!id || !badge || !name || !headline || !url) return alert('Please fill out all fields.');
 
             try {
+                // Try with image_url first
                 const payload = { id, visual_badge_text: badge, product_name: name,
                                   display_headline: headline, destination_url: url,
                                   image_url: image, is_active: true };
-                const { error } = await supabaseClient.from('tiktok_recommendations').upsert(payload);
-                if (error) throw error;
+                let { error } = await supabaseClient.from('tiktok_recommendations').upsert(payload);
+
+                // If image_url column doesn't exist yet, retry without it
+                if (error && error.message && error.message.includes('image_url')) {
+                    const payloadNoImg = { id, visual_badge_text: badge, product_name: name,
+                                          display_headline: headline, destination_url: url, is_active: true };
+                    const retry = await supabaseClient.from('tiktok_recommendations').upsert(payloadNoImg);
+                    if (retry.error) throw retry.error;
+                    // Show soft notice (non-blocking) about image_url
+                    const notice = document.getElementById('tk-img-notice');
+                    if (notice) { notice.style.display = 'block'; notice.textContent = 'Saved (without image). To enable images, run in Supabase SQL Editor: ALTER TABLE tiktok_recommendations ADD COLUMN IF NOT EXISTS image_url text;'; }
+                } else if (error) {
+                    throw error;
+                }
 
                 alert('Saved! Your ad will appear in the sidebar rotation.');
                 ['tk-id','tk-badge','tk-name','tk-headline','tk-url','tk-image']
                     .forEach(f => { const el = document.getElementById(f); if (el) el.value = ''; });
+                const notice = document.getElementById('tk-img-notice');
+                if (notice) notice.style.display = 'none';
                 loadTikTokLinks();
             } catch(e) {
-                if (e.message && e.message.includes('image_url')) {
-                    alert('One-time setup needed!\n\nRun this SQL in your Supabase dashboard → SQL Editor:\n\nALTER TABLE tiktok_recommendations ADD COLUMN IF NOT EXISTS image_url text;\n\nThen save again.');
-                } else {
-                    alert('Failed to save: ' + e.message);
-                }
+                alert('Failed to save: ' + e.message);
             }
         }
 
