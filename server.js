@@ -2,17 +2,16 @@
 const express = require('express');
 const path = require('path');
 const { pathToFileURL } = require('url');
-
 const app = express();
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use(express.static(__dirname));
 
-// Health check — always available
-app.get('/api/status', (_req, res) => res.json({ ok: true, loaded: globalThis._loadedRoutes || [] }));
+// API ping — synchronous, always registered first
+app.get('/api/ping', (_req, res) => res.json({ ok: true, port: process.env.PORT }));
 
-const routes = [
+// Load API routes asynchronously
+const ROUTES = [
   ['/api/chat',                   'api/chat.js'],
   ['/api/reward',                 'api/reward.js'],
   ['/api/history',                'api/history.js'],
@@ -27,35 +26,26 @@ const routes = [
   ['/api/recommendations/go',     'api/recommendations/go.js'],
 ];
 
-globalThis._loadedRoutes = [];
-
-async function start() {
-  for (const [route, file] of routes) {
-    // Use absolute file URL — avoids CWD vs __dirname mismatch on Render
-    const absUrl = pathToFileURL(path.join(__dirname, file)).href;
+(async () => {
+  for (const [route, file] of ROUTES) {
     try {
-      const mod = await import(absUrl);
-      const handler = mod.default;
-      if (typeof handler !== 'function') throw new Error('No default export');
+      const url = pathToFileURL(path.join(__dirname, file)).href;
+      const { default: handler } = await import(url);
       app.all(route, async (req, res) => {
         try { await handler(req, res); }
-        catch (err) {
-          console.error('[' + route + '] runtime error:', err.message);
-          if (!res.headersSent) res.status(500).json({ error: 'Internal server error' });
-        }
+        catch (e) { if (!res.headersSent) res.status(500).json({ error: e.message }); }
       });
-      globalThis._loadedRoutes.push(route);
-      console.log('✓ loaded', route);
-    } catch (err) {
-      console.error('✗ failed', route, err.message);
-      app.all(route, (_req, res) => res.status(503).json({ error: 'Route unavailable', detail: err.message }));
+      console.log('OK', route);
+    } catch (e) {
+      console.error('FAIL', route, e.message);
+      app.all(route, (_req, res) => res.status(503).json({ error: 'unavailable', reason: e.message }));
     }
   }
 
+  // Static files + SPA fallback AFTER API routes
+  app.use(express.static(__dirname));
   app.get('*', (_req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
   const PORT = process.env.PORT || 3000;
-  app.listen(PORT, () => console.log('Neocryptz AI on port ' + PORT));
-}
-
-start().catch(err => { console.error('FATAL startup error:', err); process.exit(1); });
+  app.listen(PORT, () => console.log('Neocryptz AI on port', PORT));
+})();
