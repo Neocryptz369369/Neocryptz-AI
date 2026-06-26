@@ -31,19 +31,5 @@ module.exports = async function handler(req, res) {
     if (!destination && id && FALLBACK_DIRECTORY[id]) destination = FALLBACK_DIRECTORY[id];
     if (!destination) return res.redirect(302, '/');
 
-    // Serve a no-referrer HTML bounce page so TikTok never sees our site
-    // as the referrer — a plain 302 triggers TikTok's bot/security check.
-    const safe = destination.replace(/"/g, '&quot;');
-    const jsUrl = JSON.stringify(destination);
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Referrer-Policy', 'no-referrer');
-    res.status(200).send(
-        '<!DOCTYPE html><html><head>' +
-        '<meta name="referrer" content="no-referrer">' +
-        '<meta http-equiv="refresh" content="0;url=' + safe + '">' +
-        '<title>Redirecting...</title>' +
-        '</head><body>' +
-        '<script>window.location.replace(' + jsUrl + ');<\/script>' +
-        '</body></html>'
-    );
+    return res.redirect(302, destination);
 };
