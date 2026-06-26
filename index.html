@@ -1084,7 +1084,7 @@
     <div id="ad-sidebar" class="neon-border">
         <!-- TikTok Affiliate Ad (loads active row from tiktok_recommendations) -->
         <div class="ad-box neon-border" id="ad-1" style="height:180px; padding:0; overflow:hidden;">
-            <div id="sidebar-tiktok-slot" style="position:relative;width:100%;height:180px;overflow:hidden;">Loading...</div>
+            <div id="sidebar-tiktok-slot" style="width:100%;height:180px;overflow:hidden;background:#000;">Loading...</div>
         </div>
         <!-- Google AdSense Display Units (publisher: ca-pub-5017188678144132) -->
         <div class="ad-box neon-border" id="ad-2" style="height:180px; overflow:hidden;">
@@ -3885,28 +3885,27 @@
                 dots += '</div>';
             }
 
-            // position:absolute;inset:0 fills exactly the slot's 250px — works in every browser
-            // because the parent (slot) has an explicit pixel height, so inset:0 resolves definitively
-            var fillStyle = 'position:absolute;top:0;left:0;right:0;bottom:0;text-decoration:none;cursor:pointer;overflow:hidden;';
-            var aOpen  = href ? '<a href="' + href + '" style="' + fillStyle + '">' : '<div style="' + fillStyle + '">';
+            // Hardcode 180px everywhere — no percentages, no CSS inheritance, no browser guessing
+            var wrapStyle = 'display:block;width:100%;height:180px;text-decoration:none;cursor:pointer;position:relative;overflow:hidden;';
+            var aOpen  = href ? '<a href="' + href + '" style="' + wrapStyle + '">' : '<div style="' + wrapStyle + '">';
             var aClose = href ? '</a>' : '</div>';
 
-            slot.style.transition = 'opacity 0.35s';
             slot.style.opacity = '0';
+            slot.style.transition = 'opacity 0.35s';
             setTimeout(function() {
                 if (img) {
                     slot.innerHTML = aOpen
                         + '<img src="' + img + '" alt="TikTok Product" '
-                        + 'style="width:100%;height:100%;object-fit:cover;display:block;">'
+                        + 'style="width:100%;height:180px;object-fit:cover;display:block;">'
                         + '<div style="position:absolute;bottom:0;left:0;right:0;'
                         + 'background:linear-gradient(transparent,rgba(0,0,0,0.85));'
-                        + 'padding:18px 8px 20px;text-align:center;">'
+                        + 'padding:14px 8px 16px;text-align:center;">'
                         + '<span style="background:#ff0050;color:#fff;font-size:9px;font-weight:bold;'
                         + 'padding:4px 12px;border-radius:5px;pointer-events:none;">Shop Now ↗</span>'
                         + '</div>' + dots + aClose;
                 } else {
                     slot.innerHTML = aOpen
-                        + '<div style="position:absolute;inset:0;display:flex;flex-direction:column;'
+                        + '<div style="width:100%;height:180px;display:flex;flex-direction:column;'
                         + 'align-items:center;justify-content:center;padding:10px;box-sizing:border-box;'
                         + 'background:linear-gradient(135deg,#0a0a0a 0%,#1a0010 100%);">'
                         + '<div style="background:#ff0050;color:#fff;font-size:8px;font-weight:bold;'
