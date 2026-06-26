@@ -3961,10 +3961,11 @@
             // slot(position:absolute;inset:0) already in HTML
             // <a>(position:absolute;inset:0) fills slot since slot is a positioned element
             // img(position:absolute;inset:0;object-fit:cover) fills <a>
-            var aStyle = 'position:absolute;top:0;left:0;right:0;bottom:0;cursor:pointer;overflow:hidden;';
+            var aStyle = 'position:absolute;top:0;left:0;right:0;bottom:0;cursor:pointer;overflow:hidden;display:block;';
             var imgStyle = 'position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;';
-            var aOpen  = '<div style="' + aStyle + '">';
-            var aClose = '</div>';
+            var goUrl = id ? '/api/recommendations/go?id=' + encodeURIComponent(id) : '';
+            var aOpen  = goUrl ? '<a href="' + goUrl + '" target="_blank" rel="sponsored noreferrer" style="' + aStyle + '">' : '<div style="' + aStyle + '">';
+            var aClose = goUrl ? '</a>' : '</div>';
 var sponsoredBadge = '<span style="position:absolute;top:5px;left:5px;z-index:2;background:rgba(0,0,0,0.62);color:#fff;font-size:9px;padding:2px 7px;border-radius:3px;pointer-events:none;letter-spacing:0.5px;">Sponsored</span>';
 
             slot.style.opacity = '0';
@@ -3986,12 +3987,8 @@ var sponsoredBadge = '<span style="position:absolute;top:5px;left:5px;z-index:2;
                         
                         + dots + '</div>' + aClose;
                 }
-                var goUrl = id ? '/api/recommendations/go?id=' + encodeURIComponent(id) : '';
                 slot.style.pointerEvents = 'auto';
-                if (goUrl) {
-                    slot.style.cursor = 'pointer';
-                    slot.onclick = function(e) { e.stopPropagation(); _tikOpen(goUrl); };
-                }
+                slot.style.cursor = goUrl ? 'pointer' : '';
                 slot.style.opacity = '1';
                 // Auto-cycle through multiple images
                 if (imgs.length > 1) {
