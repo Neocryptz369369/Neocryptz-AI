@@ -2823,6 +2823,8 @@
             if (id === 'admin-modal') {
                 loadAdminData();
                 loadUsersAndLogs();
+                const _ads = document.getElementById('ad-sidebar');
+                if (_ads) _ads.style.display = 'none';
             }
             if (id === 'settings-modal') { renderOAuthList(); loadAIAuthStatus(); loadSecretKeys(); }
             if(document.getElementById('anonymizer-toggle')) document.getElementById('anonymizer-toggle').checked = localStorage.getItem('anonymizerEnabled') === 'true';
@@ -3163,7 +3165,13 @@
 
             logsContainer.innerHTML = html;
         }
-        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+            if (id === 'admin-modal') {
+                const _ads = document.getElementById('ad-sidebar');
+                if (_ads) _ads.style.display = '';
+            }
+        }
 
         function setPersona(val) {
             localStorage.setItem('activePersona', val);
