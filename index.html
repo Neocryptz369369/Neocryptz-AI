@@ -4001,30 +4001,27 @@
             if (!id || !badge || !name || !headline || !url) return alert('Please fill out all fields.');
 
             try {
-                // Try with image_url first
-                const payload = { id, visual_badge_text: badge, product_name: name,
-                                  display_headline: headline, destination_url: url,
-                                  image_url: image, is_active: true };
-                let { error } = await supabaseClient.from('tiktok_recommendations').upsert(payload);
+                const r = await fetch('/api/admin/tiktok', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'upsert', id, visual_badge_text: badge,
+                        product_name: name, display_headline: headline,
+                        destination_url: url, image_url: image, is_active: true })
+                });
+                const d = await r.json();
+                if (!r.ok) throw new Error(d.error || 'Save failed');
 
-                // If image_url column doesn't exist yet, retry without it
-                if (error && error.message && error.message.includes('image_url')) {
-                    const payloadNoImg = { id, visual_badge_text: badge, product_name: name,
-                                          display_headline: headline, destination_url: url, is_active: true };
-                    const retry = await supabaseClient.from('tiktok_recommendations').upsert(payloadNoImg);
-                    if (retry.error) throw retry.error;
-                    // Show soft notice (non-blocking) about image_url
+                if (d.note === 'no_image_col') {
                     const notice = document.getElementById('tk-img-notice');
-                    if (notice) { notice.style.display = 'block'; notice.textContent = 'Saved (without image). To enable images, run in Supabase SQL Editor: ALTER TABLE tiktok_recommendations ADD COLUMN IF NOT EXISTS image_url text;'; }
-                } else if (error) {
-                    throw error;
+                    if (notice) { notice.style.display = 'block'; notice.textContent = 'Saved (image not stored yet). To enable images, run in Supabase SQL Editor: ALTER TABLE tiktok_recommendations ADD COLUMN IF NOT EXISTS image_url text;'; }
+                } else {
+                    const notice = document.getElementById('tk-img-notice');
+                    if (notice) notice.style.display = 'none';
                 }
 
                 alert('Saved! Your ad will appear in the sidebar rotation.');
                 ['tk-id','tk-badge','tk-name','tk-headline','tk-url','tk-image']
                     .forEach(f => { const el = document.getElementById(f); if (el) el.value = ''; });
-                const notice = document.getElementById('tk-img-notice');
-                if (notice) notice.style.display = 'none';
                 loadTikTokLinks();
             } catch(e) {
                 alert('Failed to save: ' + e.message);
@@ -4033,10 +4030,13 @@
 
         async function toggleTikTokLink(id, makeActive) {
             try {
-                if (makeActive) {
-                    await supabaseClient.from('tiktok_recommendations').update({ is_active: false }).neq('id', id);
-                }
-                await supabaseClient.from('tiktok_recommendations').update({ is_active: makeActive }).eq('id', id);
+                const r = await fetch('/api/admin/tiktok', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'toggle', id, makeActive })
+                });
+                const d = await r.json();
+                if (!r.ok) throw new Error(d.error || 'Toggle failed');
                 loadTikTokLinks();
             } catch(e) { alert("Failed to toggle: " + e.message); }
         }
@@ -4044,7 +4044,13 @@
         async function deleteTikTokLink(id) {
             if(!confirm("Delete this TikTok affiliate link?")) return;
             try {
-                await supabaseClient.from('tiktok_recommendations').delete().eq('id', id);
+                const r = await fetch('/api/admin/tiktok', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'delete', id })
+                });
+                const d = await r.json();
+                if (!r.ok) throw new Error(d.error || 'Delete failed');
                 loadTikTokLinks();
             } catch(e) { alert("Failed to delete: " + e.message); }
         }
