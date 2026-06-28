@@ -1,27 +1,7 @@
 {
   "functions": {
-    "api/browser-session.js": { "maxDuration": 15 },
-    "api/browser-run.js":     { "maxDuration": 90 },
-    "api/browser.js":         { "maxDuration": 30 },
-    "api/chat.js":            { "maxDuration": 30 },
-    "api/execute.js":         { "maxDuration": 30 },
-    "api/stripe-webhook.js":  { "maxDuration": 15 },
-    "api/purchase-poll.js":   { "maxDuration": 10 }
-  },
-  "headers": [
-    {
-      "source": "/index.html",
-      "headers": [
-        { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate, max-age=0" },
-        { "key": "Pragma",        "value": "no-cache" }
-      ]
-    },
-    {
-      "source": "/",
-      "headers": [
-        { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate, max-age=0" },
-        { "key": "Pragma",        "value": "no-cache" }
-      ]
+    "my-ai-site/api/stripe-webhook.js": {
+      "runtime": "nodejs20.x"
     }
-  ]
+  }
 }
