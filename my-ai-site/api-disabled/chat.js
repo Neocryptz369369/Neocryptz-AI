@@ -17,7 +17,7 @@ module.exports = async function handler(req, res) {
 
     // VPN/Proxy check
     try {
-        const geoRes = await fetch(`https://freeipapi.com/api/json/${ip}`);
+        const geoRes = await fetch(`https://freeipapi.com/api-disabled/json/${ip}`);
         const geoData = await geoRes.json();
         if (geoData && geoData.isProxy) {
             return res.status(403).json({ error: "SECURITY ALERT: VPN or Proxy detected. Please disable your VPN to access Neocryptz AI." });
@@ -268,7 +268,7 @@ The vault works for API keys, bearer tokens, access tokens, or any secret string
             if (r.ok) { const d = await r.json(); return d.candidates?.[0]?.content?.parts?.[0]?.text || null; }
         }
         if (provider === 'openrouter' && activeKeys.OPENROUTER_API_KEY) {
-            const r = await fetch("https://openrouter.ai/api/v1/chat/completions",
+            const r = await fetch("https://openrouter.ai/api-disabled/v1/chat/completions",
                 { method: "POST", headers: { "Authorization": `Bearer ${activeKeys.OPENROUTER_API_KEY}`, "Content-Type": "application/json" },
                   body: JSON.stringify({ model: "openai/gpt-4o-mini", messages: [{ role: "system", content: sysPrompt }, ...msgs, { role: "user", content: lastUserMsg }] }) });
             if (r.ok) { const d = await r.json(); return d.choices?.[0]?.message?.content || null; }
@@ -327,7 +327,7 @@ The vault works for API keys, bearer tokens, access tokens, or any secret string
 
             // 2. OpenRouter
             if (provider === 'openrouter' && activeKeys.OPENROUTER_API_KEY) {
-                const orRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                const orRes = await fetch("https://openrouter.ai/api-disabled/v1/chat/completions", {
                     method: "POST",
                     headers: { "Authorization": `Bearer ${activeKeys.OPENROUTER_API_KEY}`, "Content-Type": "application/json" },
                     body: JSON.stringify({

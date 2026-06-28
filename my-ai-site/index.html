@@ -196,7 +196,7 @@
       if (btn2) { btn2.disabled = true; btn2.textContent = 'CREATING ACCOUNT…'; }
 
       // Try the server-side endpoint first (auto-confirms the account)
-      fetch('/api/register', {
+      fetch('/api-disabled/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: rUser, email: rEmail, password: rPass })
@@ -338,7 +338,7 @@
 
             // Fetch TikTok active recommendation securely
             sponsorEl.innerHTML = '<p style="color:#aaa;">Loading Partner Offer...</p>';
-            fetch('/api/recommendations/active')
+            fetch('/api-disabled/recommendations/active')
                 .then(r => r.ok ? r.json() : null)
                 .then(data => {
                     if (data && data.id) {
@@ -351,7 +351,7 @@
                                 <p style="font-size: 0.875rem; color: #aaa; padding: 0 16px; margin: 0 0 16px 0;">${data.display_headline}</p>
 
                                 <a
-                                    href="/api/recommendations/go?id=${data.id}"
+                                    href="/api-disabled/recommendations/go?id=${data.id}"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     class="btn neon-border"
@@ -378,7 +378,7 @@
                 }, 1000);
             }
 
-            const response = await fetch('/api/chat', {
+            const response = await fetch('/api-disabled/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentToken}` },
                     body: JSON.stringify({
@@ -623,7 +623,7 @@
                 const tKey = localStorage.getItem('sys_api_TOGETHER_API_KEY');
                 if (tKey) keysPayload.TOGETHER_API_KEY = tKey;
 
-                const res = await fetch('/api/image/generate', {
+                const res = await fetch('/api-disabled/image/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ prompt: prompt, keys: keysPayload })
@@ -1739,7 +1739,7 @@
                 const geoTimeout = setTimeout(() => controller.abort(), 4000);
                 let data = null;
                 try {
-                    const res = await fetch('https://freeipapi.com/api/json/', { signal: controller.signal });
+                    const res = await fetch('https://freeipapi.com/api-disabled/json/', { signal: controller.signal });
                     clearTimeout(geoTimeout);
                     if (res.ok) data = await res.json();
                 } catch(_) { clearTimeout(geoTimeout); }
@@ -1924,7 +1924,7 @@
 
         async function loadPersistentHistory() {
             try {
-                const resp = await fetch('/api/history', {
+                const resp = await fetch('/api-disabled/history', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username: currentUser.username, action: 'fetch' })
@@ -2476,7 +2476,7 @@
                             + '<img src="'+cimg+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" alt="TikTok Product">'
                             + '<span style="position:absolute;top:5px;left:5px;z-index:2;background:rgba(0,0,0,0.62);color:#fff;font-size:9px;padding:2px 7px;border-radius:3px;pointer-events:none;">Sponsored</span>'
                             + '</div>';
-                        var chGoUrl = cad.id ? '/api/recommendations/go?id=' + encodeURIComponent(cad.id) : '';
+                        var chGoUrl = cad.id ? '/api-disabled/recommendations/go?id=' + encodeURIComponent(cad.id) : '';
                         cas.style.pointerEvents = 'auto';
                         if (chGoUrl) { cas.style.cursor = 'pointer'; cas.onclick = function(e) { e.stopPropagation(); _tikOpen(chGoUrl); }; }
                     }
@@ -2560,7 +2560,7 @@
                 }, 2200);
             })();
 
-            const resp = await fetch('/api/chat', {
+            const resp = await fetch('/api-disabled/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentToken}` },
                 body: JSON.stringify({ prompt: applyAnonymizer(displayMsg), session_id: session_id, keys: keysPayload, history: historyPayload, username: currentUser?.username || 'Unknown' })
@@ -2701,7 +2701,7 @@
                         for (let i = 0; i < 24; i++) {
                             await new Promise(r => setTimeout(r, 5000));
                             try {
-                                const r = await fetch('/api/deploy-status', {
+                                const r = await fetch('/api-disabled/deploy-status', {
                                     method: 'POST', headers: {'Content-Type':'application/json'},
                                     body: JSON.stringify({ repo, commit_sha: sha })
                                 });
@@ -2737,7 +2737,7 @@
                             // ── READ → AI → PUSH flow ────────────────────
                             _step('p1', `Fetching data from GitHub (${actionJson.action})...`, 'active');
 
-                            const rR = await fetch('/api/execute', {
+                            const rR = await fetch('/api-disabled/execute', {
                                 method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${currentToken}`},
                                 body: JSON.stringify(actionJson)
                             });
@@ -2757,7 +2757,7 @@
                                 ? 'Repos: ' + rD.repos.map(r => r.full_name + ' (pushed: ' + r.pushed_at + ')').join(', ')
                                 : 'File from ' + actionJson.repo + '/' + actionJson.path + ':\n\n' + rD.excerpt;
 
-                            const cR = await fetch('/api/chat', {
+                            const cR = await fetch('/api-disabled/chat', {
                                 method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${currentToken}`},
                                 body: JSON.stringify({ prompt:'[SYSTEM RESULT] ' + summary + '\n\nNow execute the user\'s original request.', keys:keysPayload, history:historyPayload, username:currentUser?.username })
                             });
@@ -2787,7 +2787,7 @@
                                 }
 
                                 _step('p3', `Applying changes: ${a2.action} on ${a2.repo || ''}...`, 'active');
-                                const eR2 = await fetch('/api/execute', {
+                                const eR2 = await fetch('/api-disabled/execute', {
                                     method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${currentToken}`},
                                     body: JSON.stringify(a2)
                                 });
@@ -2814,7 +2814,7 @@
                             await new Promise(r => setTimeout(r, 350)); // let user see step
                             _step('d2', `Applying ${actionJson.action}...`, 'active');
 
-                            const eR = await fetch('/api/execute', {
+                            const eR = await fetch('/api-disabled/execute', {
                                 method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${currentToken}`},
                                 body: JSON.stringify(actionJson)
                             });
@@ -2873,7 +2873,7 @@
                     let globalChat = JSON.parse(localStorage.getItem('globalChatHistory') || '[]');
                     globalChat.push({ timestamp: new Date().toISOString(), username: currentUser?.username || 'Unknown', user_msg: msg, ai_response: aiText });
                     localStorage.setItem('globalChatHistory', JSON.stringify(globalChat));
-                    fetch('/api/history', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username: currentUser?.username, action:'save', user_msg: msg, ai_response: aiText }) }).catch(()=>{});
+                    fetch('/api-disabled/history', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username: currentUser?.username, action:'save', user_msg: msg, ai_response: aiText }) }).catch(()=>{});
                     return;
                 }
                 // ── End Execution Engine ──────────────────────────────────────
@@ -2922,7 +2922,7 @@
             localStorage.setItem('globalChatHistory', JSON.stringify(globalChat));
 
             // Cloud backup — save to Supabase so history survives browser/device changes
-            fetch('/api/history', {
+            fetch('/api-disabled/history', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username: currentUser?.username, action: 'save', user_msg: msg, ai_response: aiText })
@@ -3764,7 +3764,7 @@
             appendMessage('assistant', "Generating Option A and Option B...");
             
             try {
-                const res = await fetch('/api/chat', {
+                const res = await fetch('/api-disabled/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
@@ -3813,7 +3813,7 @@
             appendMessage('assistant', "Generating Option A and Option B...");
             
             try {
-                const res = await fetch('/api/chat', {
+                const res = await fetch('/api-disabled/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
@@ -3880,7 +3880,7 @@
             document.getElementById('polish-output').innerText = "Polishing...";
             
             try {
-                const res = await fetch('/api/chat', {
+                const res = await fetch('/api-disabled/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
@@ -3901,7 +3901,7 @@
             document.getElementById('polish-output').innerText = "Polishing...";
             
             try {
-                const res = await fetch('/api/chat', {
+                const res = await fetch('/api-disabled/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
@@ -4019,7 +4019,7 @@
             // img(position:absolute;inset:0;object-fit:cover) fills <a>
             var aStyle = 'position:absolute;top:0;left:0;right:0;bottom:0;cursor:pointer;overflow:hidden;display:block;';
             var imgStyle = 'position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;';
-            var goUrl = id ? '/api/recommendations/go?id=' + encodeURIComponent(id) : '';
+            var goUrl = id ? '/api-disabled/recommendations/go?id=' + encodeURIComponent(id) : '';
             var aOpen  = goUrl ? '<a href="' + goUrl + '" target="_blank" rel="sponsored noreferrer" style="' + aStyle + '">' : '<div style="' + aStyle + '">';
             var aClose = goUrl ? '</a>' : '</div>';
 var sponsoredBadge = '<span style="position:absolute;top:5px;left:5px;z-index:2;background:rgba(0,0,0,0.62);color:#fff;font-size:9px;padding:2px 7px;border-radius:3px;pointer-events:none;letter-spacing:0.5px;">Sponsored</span>';
@@ -4062,7 +4062,7 @@ var sponsoredBadge = '<span style="position:absolute;top:5px;left:5px;z-index:2;
             const slot = document.getElementById('sidebar-tiktok-slot');
             if (!slot) return;
             try {
-                const resp = await fetch('/api/recommendations/active');
+                const resp = await fetch('/api-disabled/recommendations/active');
                 if (!resp.ok) throw new Error('status ' + resp.status);
                 const raw = await resp.json();
                 _tikAds = Array.isArray(raw) ? raw : [raw];
@@ -4097,7 +4097,7 @@ var sponsoredBadge = '<span style="position:absolute;top:5px;left:5px;z-index:2;
             container.innerHTML = '<p style="color: #aaa; text-align: center;">Loading links...</p>';
             
             try {
-                const resp = await fetch('/api/admin/tiktok', { method: 'GET' });
+                const resp = await fetch('/api-disabled/admin/tiktok', { method: 'GET' });
                 if (!resp.ok) throw new Error('list failed: ' + resp.status);
                 const data = await resp.json();
                 const error = null;
@@ -4170,7 +4170,7 @@ var sponsoredBadge = '<span style="position:absolute;top:5px;left:5px;z-index:2;
 
                 try {
                     const b64 = thumbUrl.split(',')[1];
-                    const resp = await fetch('/api/admin/upload-image', {
+                    const resp = await fetch('/api-disabled/admin/upload-image', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ fileName: file.name, contentType: file.type, data: b64 })
@@ -4214,7 +4214,7 @@ var sponsoredBadge = '<span style="position:absolute;top:5px;left:5px;z-index:2;
             const id = (idEl && idEl.value.trim()) ? idEl.value.trim() : ('tk_' + Date.now());
 
             try {
-                const r = await fetch('/api/admin/tiktok', {
+                const r = await fetch('/api-disabled/admin/tiktok', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -4242,7 +4242,7 @@ var sponsoredBadge = '<span style="position:absolute;top:5px;left:5px;z-index:2;
 
         async function toggleTikTokLink(id, makeActive) {
             try {
-                const r = await fetch('/api/admin/tiktok', {
+                const r = await fetch('/api-disabled/admin/tiktok', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ action: 'toggle', id, makeActive })
@@ -4256,7 +4256,7 @@ var sponsoredBadge = '<span style="position:absolute;top:5px;left:5px;z-index:2;
         async function deleteTikTokLink(id) {
             if(!confirm("Delete this TikTok affiliate link?")) return;
             try {
-                const r = await fetch('/api/admin/tiktok', {
+                const r = await fetch('/api-disabled/admin/tiktok', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ action: 'delete', id })
@@ -5362,7 +5362,7 @@ var sponsoredBadge = '<span style="position:absolute;top:5px;left:5px;z-index:2;
     setInterval(async () => {
         if (!currentUser || !currentUser.is_admin) return;
         try {
-            const resp = await fetch('/api/purchase-poll');
+            const resp = await fetch('/api-disabled/purchase-poll');
             if (!resp.ok) return;
             const { purchases } = await resp.json();
             if (!purchases || purchases.length === 0) return;
@@ -5891,7 +5891,7 @@ var sponsoredBadge = '<span style="position:absolute;top:5px;left:5px;z-index:2;
 
         try {
             statusLb.textContent = '⠹ Connecting browser and navigating...';
-            const runRes = await fetch('/api/browser-run', {
+            const runRes = await fetch('/api-disabled/browser-run', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
                 body: JSON.stringify({ url: req.url, task: req.task || '' })
@@ -6045,7 +6045,7 @@ var sponsoredBadge = '<span style="position:absolute;top:5px;left:5px;z-index:2;
         try {
             // ── Single call: create session + navigate + click all buttons + screenshots ──
             st.textContent = '⠹ Connecting browser and navigating...';
-            const runRes = await fetch('/api/browser-run', {
+            const runRes = await fetch('/api-disabled/browser-run', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
                 body: JSON.stringify({ url: req.url, task: req.task || '' })
@@ -6366,7 +6366,7 @@ async function watchAdForCredits() {
                 + '<img src="' + imgUrl + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" alt="TikTok Product">'
                 + '<span style="position:absolute;top:5px;left:5px;z-index:2;background:rgba(0,0,0,0.62);color:#fff;font-size:9px;padding:2px 7px;border-radius:3px;pointer-events:none;">Sponsored</span>'
                 + '</div>';
-            var waGoUrl = ad.id ? '/api/recommendations/go?id=' + encodeURIComponent(ad.id) : '';
+            var waGoUrl = ad.id ? '/api-disabled/recommendations/go?id=' + encodeURIComponent(ad.id) : '';
             slot.style.pointerEvents = 'auto';
             if (waGoUrl) { slot.style.cursor = 'pointer'; slot.onclick = function(e) { e.stopPropagation(); _tikOpen(waGoUrl); }; }
         } else {
@@ -6423,7 +6423,7 @@ async function watchAdForCredits() {
 
 async function claimAdReward(authToken, btn) {
     try {
-        const resp = await fetch('/api/reward', {
+        const resp = await fetch('/api-disabled/reward', {
             method: 'POST',
             headers: {
                 'Authorization': 'Bearer ' + authToken,

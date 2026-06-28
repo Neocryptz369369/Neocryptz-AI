@@ -17,7 +17,7 @@ module.exports = async function handler(req, res) {
 
     // VPN/Proxy check
     try {
-        const geoRes = await fetch(`https://freeipapi.com/api/json/${ip}`);
+        const geoRes = await fetch(`https://freeipapi.com/api-disabled/json/${ip}`);
         const geoData = await geoRes.json();
         if (geoData && geoData.isProxy) {
             return res.status(403).json({ error: "SECURITY ALERT: VPN or Proxy detected. Please disable your VPN to access Neocryptz AI." });

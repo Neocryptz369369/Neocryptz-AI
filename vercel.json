@@ -1,6 +1,6 @@
 {
   "functions": {
-    "my-ai-site/api/stripe-webhook.js": {
+    "my-ai-site/api-disabled/stripe-webhook.js": {
       "runtime": "nodejs20.x"
     }
   }
