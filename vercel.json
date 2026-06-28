@@ -1,7 +1,6 @@
 {
-  "functions": {
-    "my-ai-site/api-disabled/stripe-webhook.js": {
-      "runtime": "nodejs20.x"
-    }
-  }
+  "rewrites": [
+    { "source": "/api-disabled/(.*)", "destination": "/my-ai-site/api-disabled/$1" },
+    { "source": "/(.*)", "destination": "/my-ai-site/$1" }
+  ]
 }
