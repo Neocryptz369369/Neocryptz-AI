@@ -23,3 +23,4 @@ app.get('*', (_req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log('Neocryptz AI on port', PORT));
+app.post('/api-disabled/stripe-webhook', require('./my-ai-site/api-disabled/stripe-webhook'));
