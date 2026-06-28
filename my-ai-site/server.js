@@ -5,10 +5,10 @@ const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-app.get('/api/ping', (_req, res) => res.json({ ok: true, port: process.env.PORT }));
+app.get('/api-disabled/ping', (_req, res) => res.json({ ok: true, port: process.env.PORT }));
 
 // Single handler to stay under Vercel function limits
-app.all('/api/:handler', async (req, res) => {
+app.all('/api-disabled/:handler', async (req, res) => {
   const handlerName = req.params.handler;
   try {
     const handler = require('./api-hidden/' + handlerName + '.js');
